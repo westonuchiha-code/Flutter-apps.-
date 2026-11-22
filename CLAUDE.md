@@ -32,6 +32,10 @@ iOS, macOS and Web are out of scope unless explicitly requested.
 - Import Material from `package:material_ui/material_ui.dart` (the template
   default); `package:flutter/material.dart` is deprecated as of Flutter 3.47.
 - Use an application ID / org of `com.westonuchiha` for new apps.
+- Camera on Windows: `camera_windows` has no frame streaming. Use
+  `packages/light_capture` when an app needs live frames on Windows/Linux.
+- Audio: `flutter_soloud` works on Android, Windows and Linux (built via Dart
+  build hooks; no extra setup).
 
 ## Toolchain
 
@@ -61,8 +65,12 @@ from a phone via the repo's Releases page).
 ## Repository layout
 
 ```
-apps/        # one folder per Flutter application (starter_app = CI smoke test)
-packages/    # shared Dart/Flutter packages used by several apps (optional)
+apps/        # one folder per Flutter application
+             #   starter_app      - CI smoke test
+             #   optical_theremin - light-controlled synthesizer (camera/webcam)
+packages/    # shared Dart/Flutter packages
+             #   light_capture - webcam brightness frames on Windows/Linux
+             #                   (the official camera plugin can't stream frames on Windows)
 tool/        # developer scripts
 ```
 

@@ -56,6 +56,33 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
+  packages:
+    name: Packages (analyze, test, native tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - name: Analyze and test every package in packages/
+        run: |
+          for dir in packages/*/; do
+            [ -f "$dir/pubspec.yaml" ] || continue
+            echo "::group::$dir"
+            (cd "$dir" && flutter pub get && dart format --output=none --set-exit-if-changed lib test \
+              && flutter analyze && { [ ! -d test ] || flutter test; }) || exit 1
+            echo "::endgroup::"
+          done
+      - name: Native unit tests
+        run: |
+          for t in packages/*/test_native/*_test.cc; do
+            [ -f "$t" ] || continue
+            pkg=$(dirname "$(dirname "$t")")
+            c++ -std=c++17 -Wall -Wextra -Werror -I "$pkg/common" "$t" -o /tmp/native_test && /tmp/native_test
+          done
+
   build-android:
     name: Android (${{ matrix.app }})
     needs: discover
@@ -157,7 +184,7 @@ jobs:
   # ("<app>-latest") so they can be downloaded and installed from a phone.
   publish:
     name: Publish latest builds (${{ matrix.app }})
-    needs: [discover, analyze-test, build-android, build-windows]
+    needs: [discover, analyze-test, packages, build-android, build-windows]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
