@@ -54,6 +54,10 @@ Runs on every push and pull request, for every app found in `apps/*/pubspec.yaml
 
 New apps are picked up automatically — no workflow edits needed.
 
+After each push, the `publish` job replaces the `<app>-latest` GitHub
+pre-release with the new APK, Windows zip and Linux tarball (installable
+from a phone via the repo's Releases page).
+
 ## Repository layout
 
 ```

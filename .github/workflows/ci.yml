@@ -152,3 +152,44 @@ jobs:
           name: ${{ matrix.app }}-linux-x64
           path: apps/${{ matrix.app }}/build/linux/x64/release/bundle/
           if-no-files-found: error
+
+  # Publishes the latest builds of each app as a GitHub pre-release
+  # ("<app>-latest") so they can be downloaded and installed from a phone.
+  publish:
+    name: Publish latest builds (${{ matrix.app }})
+    needs: [discover, analyze-test, build-android, build-windows]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.discover.outputs.apps) }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ matrix.app }}-*
+          path: dist
+      - name: Package files
+        run: |
+          mkdir out
+          cp dist/${{ matrix.app }}-android-apk/app-release.apk "out/${{ matrix.app }}-android.apk"
+          (cd dist/${{ matrix.app }}-windows-x64 && zip -qr "$GITHUB_WORKSPACE/out/${{ matrix.app }}-windows-x64.zip" .)
+          if [ -d dist/${{ matrix.app }}-linux-x64 ]; then
+            tar -czf "out/${{ matrix.app }}-linux-x64.tar.gz" -C dist/${{ matrix.app }}-linux-x64 .
+          fi
+          ls -l out
+      - name: Replace the <app>-latest pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ matrix.app }}-latest
+        run: |
+          gh release delete "$TAG" --cleanup-tag --yes || true
+          gh release create "$TAG" out/* \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "${{ matrix.app }} (latest build)" \
+            --notes "Built from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}.
+          Android: download the .apk on your phone and open it to install.
+          Windows: unzip and run ${{ matrix.app }}.exe."
