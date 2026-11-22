@@ -42,7 +42,7 @@ iOS, macOS and Web are out of scope unless explicitly requested.
 - Flutter **3.50.1** (stable), Dart 3.14. The version is pinned in
   `.github/workflows/ci.yml` (`FLUTTER_VERSION`) and `tool/setup_linux_dev.sh`;
   bump both together.
-- Android builds use JDK 17.
+- Android builds use JDK 21 (Android lint needs it).
 - `tool/setup_linux_dev.sh` installs Flutter and the Linux desktop toolchain.
 
 ## CI (`.github/workflows/ci.yml`)
