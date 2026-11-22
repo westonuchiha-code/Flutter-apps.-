@@ -68,3 +68,11 @@ The cloud container is Linux, so it can run `flutter analyze`, `flutter test`
 and `flutter build linux` (and `flutter build apk` if the Android SDK is
 installed). Windows builds must be verified on a Windows machine or in CI
 (e.g. a GitHub Actions `windows-latest` runner).
+
+## Working style
+
+The owner works from the Claude **mobile app** and often has no computer.
+Never require steps that need a desktop (environment approval cards,
+local IDEs, Windows machines). Verify through this container (analyze, test,
+Linux build) and GitHub Actions (Android + Windows builds). Make test builds
+easy to install from a phone.
