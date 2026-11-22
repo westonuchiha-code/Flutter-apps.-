@@ -27,13 +27,39 @@ iOS, macOS and Web are out of scope unless explicitly requested.
   portrait/landscape) and on desktop (mouse, keyboard, resizable window).
 - Platform channels / native code: implement for Windows and Android;
   Linux implementation is best-effort.
-- Keep `flutter analyze` clean and add tests (`flutter test`) for logic.
+- Keep `flutter analyze` clean, code formatted with `dart format`, and add
+  tests (`flutter test`) for logic.
+- Import Material from `package:material_ui/material_ui.dart` (the template
+  default); `package:flutter/material.dart` is deprecated as of Flutter 3.47.
+- Use an application ID / org of `com.westonuchiha` for new apps.
+
+## Toolchain
+
+- Flutter **3.50.1** (stable), Dart 3.14. The version is pinned in
+  `.github/workflows/ci.yml` (`FLUTTER_VERSION`) and `tool/setup_linux_dev.sh`;
+  bump both together.
+- Android builds use JDK 17.
+- `tool/setup_linux_dev.sh` installs Flutter and the Linux desktop toolchain.
+
+## CI (`.github/workflows/ci.yml`)
+
+Runs on every push and pull request, for every app found in `apps/*/pubspec.yaml`:
+
+| Job | Runner | Blocking? | Output artifact |
+|-----|--------|-----------|-----------------|
+| Analyze & test (format, analyze, test) | ubuntu | yes | — |
+| Android release APK | ubuntu | yes | `<app>-android-apk` |
+| Windows release build (+ tests) | windows | yes | `<app>-windows-x64` |
+| Linux release build | ubuntu | no (best-effort) | `<app>-linux-x64` |
+
+New apps are picked up automatically — no workflow edits needed.
 
 ## Repository layout
 
 ```
-apps/        # one folder per Flutter application
+apps/        # one folder per Flutter application (starter_app = CI smoke test)
 packages/    # shared Dart/Flutter packages used by several apps (optional)
+tool/        # developer scripts
 ```
 
 ## Note on the cloud environment

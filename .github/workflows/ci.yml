@@ -1,0 +1,154 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep in sync with the Flutter version used for local development.
+  FLUTTER_VERSION: "3.50.1"
+  FLUTTER_CHANNEL: stable
+
+jobs:
+  # Finds every Flutter app under apps/ so each one is checked and built.
+  discover:
+    name: Discover apps
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.find.outputs.apps }}
+      has_apps: ${{ steps.find.outputs.has_apps }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: find
+        run: |
+          apps=$(find apps -mindepth 2 -maxdepth 2 -name pubspec.yaml -printf '%h\n' \
+            | xargs -r -n1 basename | sort | jq -R . | jq -sc .)
+          echo "Found apps: $apps"
+          echo "apps=$apps" >> "$GITHUB_OUTPUT"
+          if [ "$apps" = "[]" ]; then echo "has_apps=false" >> "$GITHUB_OUTPUT"; else echo "has_apps=true" >> "$GITHUB_OUTPUT"; fi
+
+  analyze-test:
+    name: Analyze & test (${{ matrix.app }})
+    needs: discover
+    if: needs.discover.outputs.has_apps == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.discover.outputs.apps) }}
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test
+
+  build-android:
+    name: Android (${{ matrix.app }})
+    needs: discover
+    if: needs.discover.outputs.has_apps == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.discover.outputs.apps) }}
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - run: flutter pub get
+      - run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-android-apk
+          path: apps/${{ matrix.app }}/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+  build-windows:
+    name: Windows (${{ matrix.app }})
+    needs: discover
+    if: needs.discover.outputs.has_apps == 'true'
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.discover.outputs.apps) }}
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - run: flutter pub get
+      # Run the tests on Windows too, to catch platform-specific behaviour
+      # (paths, line endings, etc.).
+      - run: flutter test
+      - run: flutter build windows --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-windows-x64
+          path: apps/${{ matrix.app }}/build/windows/x64/runner/Release/
+          if-no-files-found: error
+
+  # Linux is a secondary target: it is built on every run, but a failure here
+  # does not fail the workflow.
+  build-linux:
+    name: Linux (${{ matrix.app }}, best-effort)
+    needs: discover
+    if: needs.discover.outputs.has_apps == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.discover.outputs.apps) }}
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux desktop build dependencies
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - run: flutter pub get
+      - run: flutter build linux --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-linux-x64
+          path: apps/${{ matrix.app }}/build/linux/x64/release/bundle/
+          if-no-files-found: error
