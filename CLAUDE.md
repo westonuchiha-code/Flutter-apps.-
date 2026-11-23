@@ -21,8 +21,9 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
 
 ## Rules for writing apps here
 
-- Create each app with only the target platforms:
-  `flutter create --platforms=windows,android,linux <app_name>` (inside `apps/`).
+- Create new apps with `tool/new_app.sh <app_name> ["Display Name"] [--android-only]`:
+  it runs `flutter create` with the right platforms/org and wires the app to
+  `packages/app_shell` (theme, settings, storage, error log, about, export).
 - Before adding a package, check pub.dev platform support: it must support
   **Windows and Android**. Prefer packages that also support Linux.
 - Never use `dart:html` / web-only APIs. Guard platform-specific code with
@@ -95,11 +96,13 @@ apps/        # one folder per Flutter application
              #                      art handed off - see apps/scan_ranch/HANDOFF.md)
              #   touch_synth      - multi-touch pad synthesizer (Android only)
 packages/    # shared Dart/Flutter packages
+             #   app_shell     - shared app foundation (theme, settings, crash-safe
+             #                   storage, error log, about page, export/share)
              #   light_capture - webcam brightness frames on Windows/Linux
              #                   (the official camera plugin can't stream frames on Windows)
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog
              #                   (used by optical_theremin and touch_synth)
-tool/        # developer scripts
+tool/        # developer scripts (setup_linux_dev.sh, new_app.sh)
 ROADMAP.md   # agreed app ideas and build order - keep it updated
 ```
 

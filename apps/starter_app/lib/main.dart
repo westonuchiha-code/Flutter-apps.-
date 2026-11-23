@@ -1,9 +1,8 @@
+import 'package:app_shell/app_shell.dart';
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
-void main() {
-  runApp(const StarterApp());
-}
+void main() => runShellApp(starterConfig, (_) => const HomePage());
 
 /// Human-readable name of the platform the app is running on.
 String platformName(TargetPlatform platform) => switch (platform) {
@@ -15,26 +14,14 @@ String platformName(TargetPlatform platform) => switch (platform) {
   TargetPlatform.fuchsia => 'Fuchsia',
 };
 
-class StarterApp extends StatelessWidget {
-  const StarterApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Starter App',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          brightness: Brightness.dark,
-        ),
-      ),
-      home: const HomePage(),
-    );
-  }
-}
+/// Shell settings for this app (name, version, theme colour).
+const starterConfig = AppShellConfig(
+  id: 'starter_app',
+  name: 'Starter App',
+  version: '1.0.0',
+  description: 'Smoke test for the Windows, Android and Linux builds.',
+  accent: Colors.indigo,
+);
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -52,7 +39,10 @@ class _HomePageState extends State<HomePage> {
     final platform = platformName(defaultTargetPlatform);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Starter App')),
+      appBar: AppBar(
+        title: const Text('Starter App'),
+        actions: shellActions(context),
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(16),

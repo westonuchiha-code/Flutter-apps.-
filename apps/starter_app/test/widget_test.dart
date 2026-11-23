@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:app_shell/app_shell.dart';
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +21,14 @@ void main() {
   ]) {
     testWidgets('counter increments on ${platform.name}', (tester) async {
       debugDefaultTargetPlatformOverride = platform;
-      await tester.pumpWidget(const StarterApp());
+      final dir = Directory.systemTemp.createTempSync('starter_test');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final services = (await tester.runAsync(
+        () => ShellServices.create(starterConfig, root: dir),
+      ))!;
+      await tester.pumpWidget(
+        ShellApp(services: services, home: (_) => const HomePage()),
+      );
 
       expect(find.text('Running on ${platformName(platform)}'), findsOneWidget);
       expect(find.text('0'), findsOneWidget);

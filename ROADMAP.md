@@ -17,9 +17,9 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
 
 ## Phase 0 · Foundations (everything else builds on these)
 
-1. ⬜ **App Shell Kit.** Shared starter for every new app: settings screen,
+1. ✅ **App Shell Kit.** Shared starter for every new app: settings screen,
    save/load, theme, about page, crash-safe storage, export/share, error
-   reporting. A package plus a template.
+   reporting. `packages/app_shell` plus `tool/new_app.sh`.
 2. ⬜ **Asset Locker + Dev Dashboard.** One on-phone library where every app
    saves and finds its creations (samples, presets, sprites, palettes, maps,
    recordings). Plus build status, one-tap install of the latest APKs, crash
