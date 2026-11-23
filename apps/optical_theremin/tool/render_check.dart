@@ -4,8 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:optical_theremin/src/synth/catalog.dart';
-import 'package:optical_theremin/src/synth/engine.dart';
+import 'package:chip_synth/chip_synth.dart';
 
 void main(List<String> args) {
   const sr = 48000.0;

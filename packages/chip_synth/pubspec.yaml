@@ -1,0 +1,11 @@
+name: chip_synth
+description: "Real-time emulations of retro sound chips (pure Dart): Game Boy, NES, SID, AY, SN76489, TIA, Namco WSG, YM2612 FM, TMS5220 speech, plus effects and WAV encoding."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.14.0
+
+dev_dependencies:
+  test: any
+  lints: any

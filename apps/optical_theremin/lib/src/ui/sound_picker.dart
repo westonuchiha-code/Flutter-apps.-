@@ -1,7 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../synth/catalog.dart';
-import '../synth/engine.dart';
+import 'package:chip_synth/chip_synth.dart';
 
 /// Chip row + sound row for choosing what the theremin plays.
 class SoundPicker extends StatelessWidget {

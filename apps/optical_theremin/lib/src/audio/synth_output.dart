@@ -6,7 +6,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_soloud/flutter_soloud.dart';
 
-import '../synth/engine.dart';
+import 'package:chip_synth/chip_synth.dart';
 
 /// Live chip-synth output.
 abstract class SynthOutput {

@@ -1,10 +1,8 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:optical_theremin/src/synth/catalog.dart';
-import 'package:optical_theremin/src/synth/chips.dart';
-import 'package:optical_theremin/src/synth/engine.dart';
+import 'package:chip_synth/chip_synth.dart';
+import 'package:test/test.dart';
 
 /// Renders [seconds] of [spec] at [hz] and returns the stereo samples.
 Float32List render(

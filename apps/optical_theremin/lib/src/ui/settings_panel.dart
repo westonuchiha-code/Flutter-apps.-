@@ -4,8 +4,9 @@ import '../app/theremin_controller.dart';
 import '../core/music.dart';
 import '../core/settings.dart';
 import '../input/camera_backend.dart';
-import '../synth/catalog.dart';
-import '../synth/engine.dart';
+
+import 'package:chip_synth/chip_synth.dart';
+
 import 'sound_picker.dart';
 
 /// All theremin settings, as a scrollable list.

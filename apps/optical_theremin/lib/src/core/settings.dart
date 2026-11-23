@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
-import '../synth/engine.dart';
+import 'package:chip_synth/chip_synth.dart';
+
 import 'music.dart';
 
 /// What the second hand (right zone / touch pad height) controls.

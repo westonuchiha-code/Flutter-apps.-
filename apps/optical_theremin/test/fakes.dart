@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:optical_theremin/src/app/exporter.dart';
 import 'package:optical_theremin/src/audio/synth_output.dart';
 import 'package:optical_theremin/src/core/luma_image.dart';
-import 'package:optical_theremin/src/synth/engine.dart';
+import 'package:chip_synth/chip_synth.dart';
 import 'package:optical_theremin/src/input/camera_backend.dart';
 
 /// Image whose left half has brightness [left] and right half [right].

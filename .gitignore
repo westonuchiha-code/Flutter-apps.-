@@ -28,3 +28,4 @@ build/
 Thumbs.db
 /optical-theremin-demo.wav
 !.github/android/debug.keystore
+/touch-synth-demo.wav

@@ -17,6 +17,7 @@ Create it with only those platforms; CI builds an app for a platform only if
 the app has that platform's folder (`android/`, `windows/`, `linux/`).
 - `sa_companion` — **Android only** (owner's request).
 - `scan_ranch` — **Android only** (owner's request).
+- `touch_synth` — **Android only** (owner's request).
 
 ## Rules for writing apps here
 
@@ -92,9 +93,12 @@ apps/        # one folder per Flutter application
              #   sa_companion     - GTA San Andreas PS2 companion (Android only)
              #   scan_ranch       - barcode monster ranch (Android only; prototype,
              #                      art handed off - see apps/scan_ranch/HANDOFF.md)
+             #   touch_synth      - multi-touch pad synthesizer (Android only)
 packages/    # shared Dart/Flutter packages
              #   light_capture - webcam brightness frames on Windows/Linux
              #                   (the official camera plugin can't stream frames on Windows)
+             #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog
+             #                   (used by optical_theremin and touch_synth)
 tool/        # developer scripts
 ```
 

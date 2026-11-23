@@ -2,8 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../app/theremin_controller.dart';
 import '../recording/take.dart';
-import '../synth/catalog.dart';
-import '../synth/engine.dart';
+
+import 'package:chip_synth/chip_synth.dart';
+
 import 'sound_picker.dart';
 
 String formatDuration(Duration d) {

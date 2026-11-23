@@ -85,8 +85,9 @@ jobs:
           for dir in packages/*/; do
             [ -f "$dir/pubspec.yaml" ] || continue
             echo "::group::$dir"
+            if grep -q "sdk: flutter" "$dir/pubspec.yaml"; then runner="flutter test"; else runner="dart test"; fi
             (cd "$dir" && flutter pub get && dart format --output=none --set-exit-if-changed lib test \
-              && flutter analyze && { [ ! -d test ] || flutter test; }) || exit 1
+              && flutter analyze && { [ ! -d test ] || $runner; }) || exit 1
             echo "::endgroup::"
           done
       - name: Native unit tests

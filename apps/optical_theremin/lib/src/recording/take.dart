@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import '../synth/engine.dart';
-import '../synth/wav.dart';
+import 'package:chip_synth/chip_synth.dart';
 
 /// Performance controls are captured this many times per second.
 const controlRate = 100;

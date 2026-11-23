@@ -7,8 +7,7 @@ import 'package:optical_theremin/src/core/music.dart';
 import 'package:optical_theremin/src/core/settings.dart';
 import 'package:optical_theremin/src/recording/take.dart';
 import 'package:optical_theremin/src/recording/take_store.dart';
-import 'package:optical_theremin/src/synth/engine.dart';
-import 'package:optical_theremin/src/synth/wav.dart';
+import 'package:chip_synth/chip_synth.dart';
 
 Take sampleTake({int frames = 50, String id = 't1'}) {
   final r = TakeRecorder(const SoundSpec(chipId: 'nes', patchId: 'pulse'));

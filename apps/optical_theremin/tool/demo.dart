@@ -5,7 +5,7 @@ import 'dart:math' as math;
 
 import 'package:optical_theremin/src/core/music.dart';
 import 'package:optical_theremin/src/recording/take.dart';
-import 'package:optical_theremin/src/synth/engine.dart';
+import 'package:chip_synth/chip_synth.dart';
 
 void main(List<String> args) {
   const sounds = [
@@ -32,7 +32,8 @@ void main(List<String> args) {
         glideMidi += (note - glideMidi) * 0.25;
         final total = t + i / controlRate;
         // Swell in, fade out at the end of the phrase; sweep the shape.
-        final level = math.min(1.0, total * 4) *
+        final level =
+            math.min(1.0, total * 4) *
             (total > 2.4 ? math.max(0.0, 1 - (total - 2.4) * 3) : 1.0);
         rec.add(
           hz: midiToHz(glideMidi),

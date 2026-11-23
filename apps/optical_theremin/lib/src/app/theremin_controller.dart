@@ -13,7 +13,9 @@ import '../core/theremin_engine.dart';
 import '../input/camera_backend.dart';
 import '../recording/take.dart';
 import '../recording/take_store.dart';
-import '../synth/engine.dart';
+
+import 'package:chip_synth/chip_synth.dart';
+
 import 'exporter.dart';
 import 'settings_store.dart';
 

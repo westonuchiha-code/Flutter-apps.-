@@ -7,7 +7,7 @@ import 'package:optical_theremin/src/app/theremin_controller.dart';
 import 'package:optical_theremin/src/core/settings.dart';
 import 'package:optical_theremin/src/input/camera_backend.dart';
 import 'package:optical_theremin/src/recording/take_store.dart';
-import 'package:optical_theremin/src/synth/engine.dart';
+import 'package:chip_synth/chip_synth.dart';
 
 import 'fakes.dart';
 
