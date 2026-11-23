@@ -22,14 +22,27 @@ jobs:
     outputs:
       apps: ${{ steps.find.outputs.apps }}
       has_apps: ${{ steps.find.outputs.has_apps }}
+      android_apps: ${{ steps.find.outputs.android_apps }}
+      windows_apps: ${{ steps.find.outputs.windows_apps }}
+      linux_apps: ${{ steps.find.outputs.linux_apps }}
     steps:
       - uses: actions/checkout@v5
       - id: find
+        # An app is built for a platform only if it has that platform's
+        # folder (e.g. an Android-only app has no windows/ or linux/).
         run: |
-          apps=$(find apps -mindepth 2 -maxdepth 2 -name pubspec.yaml -printf '%h\n' \
-            | xargs -r -n1 basename | sort | jq -R . | jq -sc .)
+          list() {
+            for d in apps/*/; do
+              [ -f "$d/pubspec.yaml" ] || continue
+              if [ -z "$1" ] || [ -d "$d/$1" ]; then basename "$d"; fi
+            done | sort | jq -R . | jq -sc .
+          }
+          apps=$(list "")
           echo "Found apps: $apps"
           echo "apps=$apps" >> "$GITHUB_OUTPUT"
+          echo "android_apps=$(list android)" >> "$GITHUB_OUTPUT"
+          echo "windows_apps=$(list windows)" >> "$GITHUB_OUTPUT"
+          echo "linux_apps=$(list linux)" >> "$GITHUB_OUTPUT"
           if [ "$apps" = "[]" ]; then echo "has_apps=false" >> "$GITHUB_OUTPUT"; else echo "has_apps=true" >> "$GITHUB_OUTPUT"; fi
 
   analyze-test:
@@ -86,12 +99,12 @@ jobs:
   build-android:
     name: Android (${{ matrix.app }})
     needs: discover
-    if: needs.discover.outputs.has_apps == 'true'
+    if: needs.discover.outputs.android_apps != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        app: ${{ fromJson(needs.discover.outputs.apps) }}
+        app: ${{ fromJson(needs.discover.outputs.android_apps) }}
     defaults:
       run:
         working-directory: apps/${{ matrix.app }}
@@ -107,6 +120,8 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
+      - name: Use the shared signing key (updates install over old builds)
+        run: mkdir -p ~/.android && cp .github/android/debug.keystore ~/.android/debug.keystore
       - run: flutter pub get
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
@@ -118,12 +133,12 @@ jobs:
   build-windows:
     name: Windows (${{ matrix.app }})
     needs: discover
-    if: needs.discover.outputs.has_apps == 'true'
+    if: needs.discover.outputs.windows_apps != '[]'
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        app: ${{ fromJson(needs.discover.outputs.apps) }}
+        app: ${{ fromJson(needs.discover.outputs.windows_apps) }}
     defaults:
       run:
         working-directory: apps/${{ matrix.app }}
@@ -150,13 +165,13 @@ jobs:
   build-linux:
     name: Linux (${{ matrix.app }}, best-effort)
     needs: discover
-    if: needs.discover.outputs.has_apps == 'true'
+    if: needs.discover.outputs.linux_apps != '[]'
     runs-on: ubuntu-latest
     continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
-        app: ${{ fromJson(needs.discover.outputs.apps) }}
+        app: ${{ fromJson(needs.discover.outputs.linux_apps) }}
     defaults:
       run:
         working-directory: apps/${{ matrix.app }}
@@ -185,7 +200,11 @@ jobs:
   publish:
     name: Publish latest builds (${{ matrix.app }})
     needs: [discover, analyze-test, packages, build-android, build-windows]
-    if: github.event_name != 'pull_request'
+    if: >-
+      always() && github.event_name != 'pull_request' &&
+      needs.discover.outputs.has_apps == 'true' &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -201,8 +220,12 @@ jobs:
       - name: Package files
         run: |
           mkdir out
-          cp dist/${{ matrix.app }}-android-apk/app-release.apk "out/${{ matrix.app }}-android.apk"
-          (cd dist/${{ matrix.app }}-windows-x64 && zip -qr "$GITHUB_WORKSPACE/out/${{ matrix.app }}-windows-x64.zip" .)
+          if [ -d dist/${{ matrix.app }}-android-apk ]; then
+            cp dist/${{ matrix.app }}-android-apk/app-release.apk "out/${{ matrix.app }}-android.apk"
+          fi
+          if [ -d dist/${{ matrix.app }}-windows-x64 ]; then
+            (cd dist/${{ matrix.app }}-windows-x64 && zip -qr "$GITHUB_WORKSPACE/out/${{ matrix.app }}-windows-x64.zip" .)
+          fi
           if [ -d dist/${{ matrix.app }}-linux-x64 ]; then
             tar -czf "out/${{ matrix.app }}-linux-x64.tar.gz" -C dist/${{ matrix.app }}-linux-x64 .
           fi
@@ -219,4 +242,4 @@ jobs:
             --title "${{ matrix.app }} (latest build)" \
             --notes "Built from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}.
           Android: download the .apk on your phone and open it to install.
-          Windows: unzip and run ${{ matrix.app }}.exe."
+          Windows (if included): unzip and run ${{ matrix.app }}.exe."

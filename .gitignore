@@ -27,3 +27,4 @@ build/
 .DS_Store
 Thumbs.db
 /optical-theremin-demo.wav
+!.github/android/debug.keystore

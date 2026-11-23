@@ -12,6 +12,11 @@ This repository holds multiple Flutter applications.
 
 iOS, macOS and Web are out of scope unless explicitly requested.
 
+**Per-app exceptions:** the owner can limit an app to fewer platforms.
+Create it with only those platforms; CI builds an app for a platform only if
+the app has that platform's folder (`android/`, `windows/`, `linux/`).
+- `sa_companion` — **Android only** (owner's request).
+
 ## Rules for writing apps here
 
 - Create each app with only the target platforms:
@@ -48,6 +53,9 @@ iOS, macOS and Web are out of scope unless explicitly requested.
   `.github/workflows/ci.yml` (`FLUTTER_VERSION`) and `tool/setup_linux_dev.sh`;
   bump both together.
 - Android builds use JDK 21 (Android lint needs it).
+- CI signs APKs with the shared, non-secret debug key in
+  `.github/android/debug.keystore`, so new builds install as updates over old
+  ones (keeping app data). Not for Play Store releases.
 - `tool/setup_linux_dev.sh` installs Flutter and the Linux desktop toolchain.
 
 ## CI (`.github/workflows/ci.yml`)
@@ -61,6 +69,8 @@ Runs on every push and pull request, for every app found in `apps/*/pubspec.yaml
 | Windows release build (+ tests) | windows | yes | `<app>-windows-x64` |
 | Linux release build | ubuntu | no (best-effort) | `<app>-linux-x64` |
 
+(Platform jobs only include apps that have that platform's folder.)
+
 New apps are picked up automatically — no workflow edits needed.
 
 After each push, the `publish` job replaces the `<app>-latest` GitHub
@@ -73,6 +83,7 @@ from a phone via the repo's Releases page).
 apps/        # one folder per Flutter application
              #   starter_app      - CI smoke test
              #   optical_theremin - light-controlled synthesizer (camera/webcam)
+             #   sa_companion     - GTA San Andreas PS2 companion (Android only)
 packages/    # shared Dart/Flutter packages
              #   light_capture - webcam brightness frames on Windows/Linux
              #                   (the official camera plugin can't stream frames on Windows)
