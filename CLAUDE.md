@@ -100,6 +100,7 @@ packages/    # shared Dart/Flutter packages
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog
              #                   (used by optical_theremin and touch_synth)
 tool/        # developer scripts
+ROADMAP.md   # agreed app ideas and build order - keep it updated
 ```
 
 ## Note on the cloud environment
