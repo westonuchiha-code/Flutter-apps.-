@@ -36,8 +36,7 @@ class EditorPage extends StatefulWidget {
   State<EditorPage> createState() => _EditorPageState();
 }
 
-/// Makes the audio player (tests swap in a silent one).
-@visibleForTesting
+/// Makes the audio player (tests and screenshots swap in a silent one).
 ClipPlayer Function() createPlayer = ClipPlayer.new;
 
 class _EditorPageState extends State<EditorPage> {

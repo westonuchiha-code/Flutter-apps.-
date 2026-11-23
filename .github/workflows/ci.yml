@@ -65,6 +65,8 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
+      - name: Install ALSA headers (flutter test builds audio plugins' native code)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
@@ -80,6 +82,8 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
+      - name: Install ALSA headers (flutter test builds audio plugins' native code)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
       - name: Analyze and test every package in packages/
         run: |
           for dir in packages/*/; do
