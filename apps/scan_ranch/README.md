@@ -1,17 +1,20 @@
-# scan_ranch
+# Scan Ranch (Android)
 
-A new Flutter project.
+Scan real barcodes to find monsters, then raise them on a ranch.
 
-## Getting Started
+- **Scan** (camera or type a code): every barcode always gives the same species;
+  each catch is a unique individual (shade, size, personality, rare shiny).
+  Some barcodes hold food items instead (once per day each).
+- **Ranch:** up to 8 monsters roam, get hungry, seek and eat food you drop,
+  greet each other, and react when you tap (pet) them. Long-press for details.
+- **Box:** all your monsters — nickname, stats, move between Ranch and Box,
+  release.
+- Hunger and happiness change in real time; everything is saved on the phone.
 
-This project is a starting point for a Flutter application.
+**Art status:** placeholder. Only the two owner-approved designs (drake, hound)
+are used, in 12 palettes, with the required CRT look. Read
+[`HANDOFF.md`](HANDOFF.md) before touching the art.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Code: `lib/model` (genome, creatures, items, game state & saving),
+`lib/sim` (ranch behaviour), `lib/render` (monster art + CRT, background),
+`lib/ui` (screens). Tests: `flutter test`.

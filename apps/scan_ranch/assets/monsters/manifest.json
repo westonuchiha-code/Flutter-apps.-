@@ -1,0 +1,34 @@
+{
+ "materials": [
+  "none",
+  "body",
+  "back",
+  "belly",
+  "accent",
+  "claw",
+  "mouth",
+  "outline",
+  "eye",
+  "eyeglow",
+  "pupil",
+  "tooth",
+  "toothshade",
+  "toothtip",
+  "claw_d",
+  "claw_tip"
+ ],
+ "silhouettes": [
+  "drake",
+  "hound"
+ ],
+ "rejected": [
+  "beetle",
+  "gargoyle",
+  "wyrm",
+  "brute",
+  "mantis",
+  "wraith",
+  "harpy",
+  "scorpion"
+ ]
+}

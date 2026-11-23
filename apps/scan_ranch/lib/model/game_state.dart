@@ -79,7 +79,9 @@ class MemorySaveStore implements SaveStore {
 class GameState extends ChangeNotifier {
   GameState(this.store, {DateTime Function()? clock, math.Random? random})
     : _clock = clock ?? DateTime.now,
-      _random = random ?? math.Random();
+      _random = random ?? math.Random() {
+    _lastDecay = _clock();
+  }
 
   final SaveStore store;
   final DateTime Function() _clock;
@@ -90,7 +92,7 @@ class GameState extends ChangeNotifier {
 
   /// Item barcode → day it was last claimed (yyyy-mm-dd).
   final Map<String, String> claimedItems = {};
-  late DateTime _lastDecay = _clock();
+  late DateTime _lastDecay;
   Timer? _saveTimer;
 
   List<Creature> get ranch =>

@@ -76,6 +76,10 @@ String normalizeBarcode(String raw) {
 // Building blocks
 // ---------------------------------------------------------------------------
 
+/// Number of monster sprites and colour palettes (see render/monster_art.dart).
+const silhouetteCount = 2; // only the owner-approved designs (drake, hound)
+const paletteCount = 12;
+
 /// Three tribes. Future battles: Ember beats Grove, Grove beats Tide,
 /// Tide beats Ember.
 enum Tribe {
@@ -296,6 +300,8 @@ class Genome {
     required this.sociability,
     required this.appetite,
     required this.curiosity,
+    required this.silhouette,
+    required this.palette,
   });
 
   /// The normalized barcode this species comes from.
@@ -329,12 +335,21 @@ class Genome {
   /// Species personality tendencies (0–1).
   final double energy, sociability, appetite, curiosity;
 
+  /// Which monster sprite (index into the art manifest).
+  final int silhouette;
+
+  /// Which colour palette (index into the palette list).
+  final int palette;
+
   Tribe get tribe => element.tribe;
 
   factory Genome.fromBarcode(String barcode) {
     final code = normalizeBarcode(barcode);
     final r = SeededRandom(hashString('species:$code'));
 
+    final art = SeededRandom(hashString('art:$code'));
+    final silhouette = art.nextInt(silhouetteCount);
+    final palette = art.nextInt(paletteCount);
     final rarity = r.weighted(Rarity.values, const [70, 20, 8, 2]);
     final element = r.pick(Element.values);
     final plan = r.weighted(BodyPlan.values, const [
@@ -421,7 +436,7 @@ class Genome {
 
     return Genome._(
       code: code,
-      speciesName: _speciesName(r, element, plan),
+      speciesName: _speciesName(r, element, silhouette),
       element: element,
       plan: plan,
       rarity: rarity,
@@ -450,24 +465,31 @@ class Genome {
       sociability: r.nextDouble(),
       appetite: r.nextDouble(),
       curiosity: r.nextDouble(),
+      silhouette: silhouette,
+      palette: palette,
     );
   }
 
   static const _vowels = ['a', 'e', 'i', 'o', 'u', 'y', 'oo', 'ee', 'ai'];
-  static const _endings = {
-    BodyPlan.blob: ['ble', 'mo', 'pop', 'lump', 'goo'],
-    BodyPlan.biped: ['kin', 'ling', 'ster', 'rok', 'mon'],
-    BodyPlan.quadruped: ['pup', 'hound', 'rex', 'paw', 'ox'],
-    BodyPlan.serpent: ['wyrm', 'coil', 'snek', 'eel', 'zith'],
-    BodyPlan.avian: ['wing', 'beak', 'chirp', 'kite', 'tern'],
-    BodyPlan.insect: ['bug', 'mite', 'pede', 'tik', 'buzz'],
-    BodyPlan.floater: ['wisp', 'loon', 'ghast', 'puff', 'orb'],
-  };
 
-  static String _speciesName(SeededRandom r, Element e, BodyPlan p) {
+  /// Name endings per silhouette (drake, hound, beetle, gargoyle, wyrm,
+  /// brute, mantis, wraith, harpy, scorpion).
+  static const _endings = [
+    ['rax', 'drak', 'saur', 'fang'],
+    ['hound', 'lupe', 'jaw', 'mutt'],
+    ['carab', 'horn', 'shell', 'tusk'],
+    ['goyle', 'gaunt', 'vex', 'wing'],
+    ['wyrm', 'coil', 'zith', 'asp'],
+    ['brute', 'gor', 'golth', 'mash'],
+    ['mantis', 'scyth', 'reap', 'kriit'],
+    ['wraith', 'shade', 'spect', 'hollow'],
+    ['harp', 'talon', 'raptor', 'screech'],
+    ['scorp', 'sting', 'pincer', 'claw'],
+  ];
+  static String _speciesName(SeededRandom r, Element e, int silhouette) {
     final start = r.pick(e.syllables);
     final middle = r.chance(0.45) ? r.pick(_vowels) : '';
-    final end = r.pick(_endings[p]!);
+    final end = r.pick(_endings[silhouette % _endings.length]);
     var name = '$start$middle$end';
     // Avoid triple letters from joins.
     name = name.replaceAllMapped(RegExp(r'(.)\1\1+'), (m) => '${m[1]}${m[1]}');

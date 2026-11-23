@@ -29,7 +29,7 @@ Uint8List ranchBackground(int w, int h, {int seed = 7}) {
   }
 
   // Sky: banded gradient with dithered transitions.
-  const skyTop = 0xFF7EC8F2, skyBottom = 0xFFCFEFFF;
+  const skyTop = 0xFF120C24, skyBottom = 0xFF6B2347;
   for (var y = 0; y < ground; y++) {
     final t = y / ground;
     final band = (t * 5).floor() / 5;
@@ -50,7 +50,7 @@ Uint8List ranchBackground(int w, int h, {int seed = 7}) {
       for (var y = -rad; y <= rad; y++) {
         for (var x = -rad * 2; x <= rad * 2; x++) {
           if (x * x / 4 + y * y <= rad * rad && y <= rad ~/ 2) {
-            set(ox + x, cy + y, y > rad ~/ 4 ? 0xFFE4F3FB : 0xFFFFFFFF);
+            set(ox + x, cy + y, y > rad ~/ 4 ? 0xFF2A1A3A : 0xFF3A2348);
           }
         }
       }
@@ -59,20 +59,20 @@ Uint8List ranchBackground(int w, int h, {int seed = 7}) {
 
   // Distant hills (two layers).
   for (final (base, amp, color, freq) in [
-    (ground - 10, 6.0, 0xFF8FC7A0, 0.05),
-    (ground - 4, 4.0, 0xFF6FB67E, 0.09),
+    (ground - 10, 6.0, 0xFF241A33, 0.05),
+    (ground - 4, 4.0, 0xFF1B1527, 0.09),
   ]) {
     final phase = r.range(0, 6);
     for (var x = 0; x < w; x++) {
       final top = base - (math.sin(x * freq + phase) * amp + amp).round();
       for (var y = top; y < ground; y++) {
-        set(x, y, y == top ? mix(color, 0xFFFFFFFF, 0.25) : color);
+        set(x, y, y == top ? mix(color, 0xFFFF6A5A, 0.25) : color);
       }
     }
   }
 
   // Grass with dithered depth shading.
-  const grassFar = 0xFF79C25A, grassNear = 0xFF5BAE45, grassDark = 0xFF4C9A3B;
+  const grassFar = 0xFF2B3A26, grassNear = 0xFF23311F, grassDark = 0xFF172113;
   for (var y = ground; y < h; y++) {
     final t = (y - ground) / (h - ground);
     for (var x = 0; x < w; x++) {
@@ -88,7 +88,7 @@ Uint8List ranchBackground(int w, int h, {int seed = 7}) {
     set(x + 1, y - 1, grassDark);
     set(x + 2, y, grassDark);
   }
-  const flowers = [0xFFFFFFFF, 0xFFFFE066, 0xFFFF8FB1, 0xFFB79CFF];
+  const flowers = [0xFF5A5450, 0xFF4A4440, 0xFF6A3A3A, 0xFF3A4A5A];
   for (var i = 0; i < w * h ~/ 600; i++) {
     final x = r.nextInt(w),
         y = ground + 4 + r.nextInt(math.max(1, h - ground - 4));
@@ -97,11 +97,11 @@ Uint8List ranchBackground(int w, int h, {int seed = 7}) {
     set(x - 1, y, c);
     set(x + 1, y, c);
     set(x, y + 1, c);
-    set(x, y, 0xFFFFD23F);
+    set(x, y, 0xFF2A2522);
   }
 
   // Wooden fence along the horizon.
-  const wood = 0xFFC08A55, woodDark = 0xFF8A5A33;
+  const wood = 0xFF4A3426, woodDark = 0xFF2A1C14;
   for (var x = 0; x < w; x++) {
     for (final ry in [ground - 5, ground - 2]) {
       set(x, ry, wood);
@@ -119,15 +119,15 @@ Uint8List ranchBackground(int w, int h, {int seed = 7}) {
   // A tree at one side.
   final treeX = (w * 0.86).round(), treeY = ground + 1;
   for (var y = treeY - 10; y <= treeY + 2; y++) {
-    set(treeX, y, 0xFF7A4B2A);
-    set(treeX + 1, y, 0xFF5E3820);
+    set(treeX, y, 0xFF2A1C14);
+    set(treeX + 1, y, 0xFF1A120C);
   }
   for (var y = -9; y <= 7; y++) {
     for (var x = -9; x <= 9; x++) {
       if (x * x + y * y * 1.4 <= 80) {
         final shade = x + y > 4
-            ? 0xFF2F7D32
-            : (x + y < -6 ? 0xFF66BB6A : 0xFF43A047);
+            ? 0xFF121A12
+            : (x + y < -6 ? 0xFF2A3A24 : 0xFF1C281A);
         set(treeX + x, treeY - 16 + y, shade);
       }
     }

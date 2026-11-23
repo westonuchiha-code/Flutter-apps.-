@@ -16,6 +16,7 @@ iOS, macOS and Web are out of scope unless explicitly requested.
 Create it with only those platforms; CI builds an app for a platform only if
 the app has that platform's folder (`android/`, `windows/`, `linux/`).
 - `sa_companion` — **Android only** (owner's request).
+- `scan_ranch` — **Android only** (owner's request).
 
 ## Rules for writing apps here
 
@@ -42,11 +43,10 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
 - Audio: `flutter_soloud` works on Android, Windows and Linux (built via Dart
   build hooks; no extra setup). It is pinned to an exact version because the
   theremin uses its experimental real-time stream API.
-- Scan Ranch art (owner-approved): 64×64 hand-designed monster silhouettes,
-  edgy/aggressive Skannerz-style (not cute/cozy), volume-shaded pixel art,
-  sharp tapered fangs, predator (digitigrade) legs. A full CRT effect
-  (scan lines + glow + vignette) is applied to monsters only, always on,
-  never a toggle. Get the owner's approval on new art before building on it.
+- Scan Ranch art: the owner is handing the art to another tool. Only the two
+  approved designs (drake, hound) are in use; the CRT effect is applied to
+  monsters only, always on, never a toggle. Read apps/scan_ranch/HANDOFF.md
+  and get the owner's approval on any new art before building on it.
 - Owner's sound priorities (Optical Theremin, inspired by their Chiptune Pad
   Studio): chips should behave like the real hardware — register-quantized
   pitch (don't "fix" hardware tuning), real volume steps, frame-rate effects,
@@ -90,8 +90,8 @@ apps/        # one folder per Flutter application
              #   starter_app      - CI smoke test
              #   optical_theremin - light-controlled synthesizer (camera/webcam)
              #   sa_companion     - GTA San Andreas PS2 companion (Android only)
-             #   scan_ranch       - barcode monster ranch (Android only, WIP: sprites
-             #                      awaiting owner approval; see tool/sprite_design)
+             #   scan_ranch       - barcode monster ranch (Android only; prototype,
+             #                      art handed off - see apps/scan_ranch/HANDOFF.md)
 packages/    # shared Dart/Flutter packages
              #   light_capture - webcam brightness frames on Windows/Linux
              #                   (the official camera plugin can't stream frames on Windows)
