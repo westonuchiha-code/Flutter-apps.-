@@ -1,44 +1,41 @@
-import 'dart:math' as math;
-
 import 'package:material_ui/material_ui.dart';
 
 import '../app/synth_controller.dart';
+import 'style.dart';
 
-const _noteNames = [
+const _names = [
   'C',
-  'C♯',
+  'C#',
   'D',
-  'D♯',
+  'D#',
   'E',
   'F',
-  'F♯',
+  'F#',
   'G',
-  'G♯',
+  'G#',
   'A',
-  'A♯',
+  'A#',
   'B',
 ];
-const fingerColors = [
-  Color(0xFF39E0FF),
-  Color(0xFFFF3DF2),
-  Color(0xFFB6FF3A),
-  Color(0xFFFFB13B),
-  Color(0xFFFF4F5A),
-  Color(0xFF9A7CFF),
-];
+bool _isBlack(int midi) => const [1, 3, 6, 8, 10].contains(midi % 12);
 
-/// The play surface: left→right = pitch (smooth), bottom→top = filter/volume.
-/// Every finger is its own voice.
+/// Play surface: left→right = pitch (smooth), bottom→top = the Y control.
+/// A key strip along the bottom shows where the notes are.
 class TouchPad extends StatelessWidget {
-  const TouchPad({super.key, required this.controller});
+  const TouchPad({super.key, required this.controller, required this.yLabel});
 
   final SynthController controller;
+  final String yLabel;
+
+  static const keyStrip = 28.0;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, c) {
-        Offset norm(Offset p) => Offset(p.dx / c.maxWidth, p.dy / c.maxHeight);
+        final h = c.maxHeight - keyStrip;
+        Offset norm(Offset p) =>
+            Offset(p.dx / c.maxWidth, (p.dy / h).clamp(0.0, 1.0));
         return Listener(
           behavior: HitTestBehavior.opaque,
           onPointerDown: (e) =>
@@ -55,6 +52,7 @@ class TouchPad extends StatelessWidget {
                 low: controller.lowNote,
                 octaves: controller.octaves,
                 fingers: List.of(controller.fingers),
+                yLabel: yLabel,
               ),
             ),
           ),
@@ -69,128 +67,162 @@ class _PadPainter extends CustomPainter {
     required this.low,
     required this.octaves,
     required this.fingers,
+    required this.yLabel,
   });
 
   final int low;
   final int octaves;
   final List<Offset?> fingers;
+  final String yLabel;
+
+  void _text(
+    Canvas canvas,
+    String s,
+    Offset at, {
+    Color color = Ui.dim,
+    double size = 11,
+    FontWeight weight = FontWeight.w500,
+  }) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: s,
+        style: TextStyle(
+          fontFamily: 'Roboto',
+          color: color,
+          fontSize: size,
+          fontWeight: weight,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, at);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF1A1030), Color(0xFF0A0A12)],
-        ).createShader(rect),
-    );
-    // Note guide lines: C bright, natural notes medium, sharps faint.
+    final padH = size.height - TouchPad.keyStrip;
+    canvas.drawRect(Offset.zero & size, Paint()..color = Ui.bg);
     final semis = octaves * 12;
-    for (var i = 0; i <= semis; i++) {
+    final step = size.width / semis;
+
+    // Lane shading like a piano roll: black-key lanes slightly darker.
+    for (var i = 0; i < semis; i++) {
       final midi = low + i;
-      final x = i / semis * size.width;
-      final pc = midi % 12;
-      final isC = pc == 0;
-      final sharp = const [1, 3, 6, 8, 10].contains(pc);
+      final x = i * step;
+      if (_isBlack(midi)) {
+        canvas.drawRect(
+          Rect.fromLTWH(x, 0, step, padH),
+          Paint()..color = const Color(0xFF0F1114),
+        );
+      }
+      final isC = midi % 12 == 0;
       canvas.drawLine(
         Offset(x, 0),
-        Offset(x, size.height),
+        Offset(x, padH),
         Paint()
-          ..color = isC
-              ? const Color(0x9939E0FF)
-              : sharp
-              ? const Color(0x14FFFFFF)
-              : const Color(0x33FFFFFF)
-          ..strokeWidth = isC ? 2 : 1,
+          ..color = isC ? const Color(0xFF3A4048) : const Color(0xFF1F2328)
+          ..strokeWidth = 1,
       );
-      if (!sharp) {
-        final tp = TextPainter(
-          text: TextSpan(
-            text: isC ? '${_noteNames[pc]}${midi ~/ 12 - 1}' : _noteNames[pc],
-            style: TextStyle(
-              fontSize: isC ? 12 : 10,
-              color: isC ? const Color(0xCC39E0FF) : const Color(0x66FFFFFF),
-              fontWeight: isC ? FontWeight.w800 : FontWeight.w400,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        tp.paint(canvas, Offset(x + 3, size.height - tp.height - 4));
+    }
+    for (var i = 0; i < semis; i++) {
+      final midi = low + i;
+      if (midi % 12 == 0) {
+        _text(canvas, 'C${midi ~/ 12 - 1}', Offset(i * step + 4, 6));
       }
     }
-    // Horizontal hint lines for the Y axis.
-    for (var j = 1; j < 4; j++) {
-      final y = size.height * j / 4;
-      canvas.drawLine(
-        Offset(0, y),
-        Offset(size.width, y),
-        Paint()..color = const Color(0x0FFFFFFF),
-      );
+    // Y-axis caption.
+    canvas
+      ..save()
+      ..translate(8, padH - 10)
+      ..rotate(-1.5708);
+    _text(canvas, '$yLabel  →', Offset.zero, size: 10);
+    canvas.restore();
+
+    // Key strip.
+    final top = padH;
+    canvas.drawRect(
+      Rect.fromLTWH(0, top, size.width, TouchPad.keyStrip),
+      Paint()..color = const Color(0xFFD9DCE0),
+    );
+    for (var i = 0; i < semis; i++) {
+      final midi = low + i;
+      final x = i * step;
+      if (_isBlack(midi)) {
+        canvas.drawRect(
+          Rect.fromLTWH(x, top, step, TouchPad.keyStrip * 0.62),
+          Paint()..color = const Color(0xFF202327),
+        );
+      }
+      if (midi % 12 == 0 || midi % 12 == 5) {
+        canvas.drawLine(
+          Offset(x, top),
+          Offset(x, size.height),
+          Paint()..color = const Color(0xFF9AA0A8),
+        );
+      }
     }
-    // Fingers.
+    canvas.drawLine(
+      Offset(0, top),
+      Offset(size.width, top),
+      Paint()..color = Ui.line,
+    );
+
+    // Fingers: thin pitch line, simple marker, note readout.
     for (var i = 0; i < fingers.length; i++) {
       final f = fingers[i];
       if (f == null) continue;
-      final p = Offset(f.dx * size.width, f.dy * size.height);
-      final color = fingerColors[i % fingerColors.length];
+      final p = Offset(f.dx * size.width, f.dy * padH);
       canvas
         ..drawLine(
           Offset(p.dx, 0),
           Offset(p.dx, size.height),
           Paint()
-            ..color = color.withValues(alpha: 0.35)
-            ..strokeWidth = 2,
+            ..color = Ui.accent.withValues(alpha: 0.45)
+            ..strokeWidth = 1.5,
         )
+        ..drawCircle(p, 13, Paint()..color = Ui.accent)
         ..drawCircle(
           p,
-          46,
+          13,
           Paint()
-            ..shader = RadialGradient(
-              colors: [
-                color.withValues(alpha: 0.55),
-                color.withValues(alpha: 0),
-              ],
-            ).createShader(Rect.fromCircle(center: p, radius: 46)),
-        )
-        ..drawCircle(
-          p,
-          18,
-          Paint()
-            ..color = color.withValues(alpha: 0.9)
+            ..color = Ui.bg
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 3,
+            ..strokeWidth = 2,
         );
-      final midi = low + f.dx * octaves * 12;
+      final midi = low + f.dx * semis;
       final n = midi.round();
       final cents = ((midi - n) * 100).round();
+      final label =
+          '${_names[n % 12]}${n ~/ 12 - 1}${cents == 0
+              ? ''
+              : cents > 0
+              ? ' +$cents'
+              : ' $cents'}';
       final tp = TextPainter(
         text: TextSpan(
-          text:
-              '${_noteNames[n % 12]}${n ~/ 12 - 1}${cents == 0
-                  ? ''
-                  : cents > 0
-                  ? ' +$cents'
-                  : ' $cents'}',
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w800,
-            fontSize: 13,
+          text: label,
+          style: const TextStyle(
+            fontFamily: 'Roboto',
+            color: Ui.text,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(canvas, p.translate(-tp.width / 2, -44));
+      final box = Rect.fromCenter(
+        center: p.translate(0, -32),
+        width: tp.width + 12,
+        height: tp.height + 6,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(box, const Radius.circular(4)),
+        Paint()..color = Ui.raised,
+      );
+      tp.paint(canvas, box.topLeft.translate(6, 3));
     }
   }
 
   @override
   bool shouldRepaint(_PadPainter old) => true;
 }
-
-/// For tests and debugging.
-double padX(int low, int octaves, double midi) => (midi - low) / (octaves * 12);
-
-double centsBetween(double a, double b) => 1200 * math.log(b / a) / math.ln2;

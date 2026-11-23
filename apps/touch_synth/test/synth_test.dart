@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:touch_synth/app/synth_controller.dart';
 import 'package:touch_synth/audio/poly_output.dart';
 import 'package:touch_synth/main.dart';
+import 'package:touch_synth/ui/pad.dart';
 
 class FakeOutput implements PolyOutput {
   PolySpec? spec;
@@ -71,7 +72,7 @@ void main() {
     await c.init();
     await tester.pumpWidget(TouchSynthApp(controller: c));
     expect(find.text('Analog'), findsOneWidget);
-    final pad = tester.getRect(find.byType(CustomPaint).first);
+    final pad = tester.getRect(find.byType(TouchPad));
     final g = await tester.startGesture(pad.center);
     await tester.pump();
     expect(out.touches.first.down, isTrue);
@@ -84,6 +85,6 @@ void main() {
     await tester.pump();
     expect(c.spec.engine, EngineKind.chip);
     await tester.pump(const Duration(seconds: 1)); // let the settings save
-    expect(find.byType(DropdownButton<String>), findsOneWidget); // chip picker
+    expect(find.byType(DropdownButton<String>), findsWidgets); // chip pickers
   });
 }

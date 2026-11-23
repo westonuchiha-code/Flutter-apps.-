@@ -4,8 +4,8 @@ import 'package:path_provider/path_provider.dart';
 
 import 'app/synth_controller.dart';
 import 'audio/poly_output.dart';
-import 'ui/controls.dart';
-import 'ui/pad.dart';
+import 'ui/home.dart';
+import 'ui/style.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,27 +32,8 @@ class TouchSynthApp extends StatelessWidget {
     return MaterialApp(
       title: 'Touch Synth',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF39E0FF),
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: const Color(0xFF0B0B12),
-      ),
-      home: Scaffold(
-        body: SafeArea(
-          child: Row(
-            children: [
-              Expanded(flex: 3, child: TouchPad(controller: controller)),
-              const VerticalDivider(width: 1, color: Color(0xFF2A2A3A)),
-              SizedBox(
-                width: 320,
-                child: ControlsPanel(controller: controller),
-              ),
-            ],
-          ),
-        ),
-      ),
+      theme: buildTheme(),
+      home: SynthHome(controller: controller),
     );
   }
 }

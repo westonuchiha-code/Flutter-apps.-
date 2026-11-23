@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:touch_synth/app/synth_controller.dart';
@@ -16,6 +17,34 @@ void main() {
     tester.view.physicalSize = const Size(2340, 1080);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
+    await tester.runAsync(() async {
+      for (final (fam, files) in [
+        (
+          'Roboto',
+          [
+            '/usr/share/fonts/opentype/inter/Inter-Regular.otf',
+            '/usr/share/fonts/opentype/inter/Inter-Medium.otf',
+            '/usr/share/fonts/opentype/inter/Inter-SemiBold.otf',
+          ],
+        ),
+        (
+          'MaterialIcons',
+          [
+            '/opt/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+          ],
+        ),
+      ]) {
+        final l = FontLoader(fam);
+        for (final f in files) {
+          if (File(f).existsSync()) {
+            l.addFont(
+              Future.value(ByteData.sublistView(File(f).readAsBytesSync())),
+            );
+          }
+        }
+        await l.load();
+      }
+    });
     final c = SynthController(output: FakeOutput());
     await c.init();
     c.fingerDown(1, const Offset(0.2, 0.3));
