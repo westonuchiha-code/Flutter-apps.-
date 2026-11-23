@@ -107,13 +107,16 @@ def shade_grid(spr, light=(-0.55,-0.65,0.55)):
             lit=nx*lx+ny*ly+nz*lz-(y/H)*0.25
             t=max(0,min(4,(lit-0.05)/0.7*4))
             # inner line against a different group drawn in front
-            line=False
-            for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
-                xx,yy=x+dx,y+dy
-                if 0<=xx<W and 0<=yy<H:
-                    j=owner[yy][xx]
-                    if j>i and spr.shapes[j][4]!=g: line=True
-            tone[y][x]=(mat,-1 if line else t)
+            # Soft occlusion where a part in front overlaps this one
+            # (strongest right next to it, fading over 2 px).
+            occ=0.0
+            for rad,amt in ((1,1.4),(2,0.6)):
+                for dx,dy in ((rad,0),(-rad,0),(0,rad),(0,-rad)):
+                    xx,yy=x+dx,y+dy
+                    if 0<=xx<W and 0<=yy<H:
+                        j=owner[yy][xx]
+                        if j>i and spr.shapes[j][4]!=g: occ=max(occ,amt)
+            tone[y][x]=(mat,max(0.0,t-occ))
     return tone
 
 def render(spr, pal, scale=5, bg=(26,26,32), light=(-0.55,-0.65,0.55)):
@@ -133,8 +136,16 @@ def render(spr, pal, scale=5, bg=(26,26,32), light=(-0.55,-0.65,0.55)):
             if tone[y][x] is not None: continue
             nb=[(x+dx,y+dy) for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)) if 0<=x+dx<W and 0<=y+dy<H and tone[y+dy][x+dx] is not None]
             if nb:
-                lit_side=any(xx>x or yy>y for xx,yy in nb)
-                out[y][x]=pal['outline_lit'] if lit_side and y<H*0.75 else pal['outline']
+                # Colour the outline from the skin it touches: darkest tone
+                # blended toward the outline colour; softer on the lit side.
+                xx,yy=nb[0]
+                mat,t=tone[yy][xx]
+                lit_side=any(ax>x or ay>y for ax,ay in nb)
+                ramp_=pal[mat]
+                if lit_side and t>=2:
+                    out[y][x]=lerp(ramp_[1],pal['outline'],0.35)
+                else:
+                    out[y][x]=lerp(ramp_[0],pal['outline'],0.55)
     for x,y,c in spr.details:
         if 0<=x<W and 0<=y<H: out[y][x]=pal[c] if isinstance(c,str) else c
     img=Image.new('RGB',(W*scale,H*scale),bg); P=img.load()
@@ -155,10 +166,21 @@ PAL_CRIMSON={
  'claw':ramp('#e9e4d4','#6b6370','#ffffff'),
  'mouth':ramp('#3a0b16','#12030a','#5a1626'),
  'outline':hexc('#12060c'),'outline_lit':hexc('#4a1222'),
- 'eye':hexc('#ffd23f'),'eyeglow':hexc('#fff6c4'),'pupil':hexc('#12060c'),'tooth':hexc('#f6f1e4'),
+ 'eye':hexc('#ffd23f'),'eyeglow':hexc('#fff6c4'),'pupil':hexc('#12060c'),'tooth':hexc('#f6f1e4'),'toothshade':hexc('#c9c0ae'),'toothtip':hexc('#e3dccb'),
 }
 
 def stamp(spr, x0, y0, rows, key):
     for j,row in enumerate(rows):
         for i,ch in enumerate(row):
             if ch in key: spr.px(x0+i,y0+j,key[ch])
+
+
+def fang(spr, x, y, length, down=True, curve=0):
+    """Sharp tooth: 2 px at the gum, then a 1 px point. [curve] bends the
+    tip backward (negative x) over the last pixels."""
+    d=1 if down else -1
+    spr.px(x, y, 'tooth'); spr.px(x+1, y, 'toothshade')
+    for i in range(1, length):
+        bend = -curve if i >= length-2 and curve else 0
+        c = 'toothtip' if i == length-1 else 'tooth'
+        spr.px(x+bend, y+d*i, c)

@@ -21,9 +21,9 @@ def hound():
     # neck + head
     s.add('body',cap([(42,32,7.5),(48,27,6.5)]),group='core')
     s.add('body',ell(50,25,8,7,-0.15),group='core')
-    s.add('mouth',poly([(52,27),(63,28),(62,34),(53,32)]),flat=True)
+    s.add('mouth',poly([(51,27),(63,28),(61,37),(52,35)]),flat=True)
     s.add('body',cap([(51,24,5.5),(61,27,3.6)]),group='core')
-    s.add('body',cap([(51,31,3.6),(60,33,2.4)]),depth=0.6)
+    s.add('body',cap([(50,33,3.6),(60,37,2.4)]),depth=0.6)
     # ears
     s.add('accent',poly([(44,22),(41,13),(48,19)]),depth=0.5)
     s.add('body',poly([(48,20),(47,12),(52,19)]),depth=0.5)
@@ -35,12 +35,12 @@ def hound():
     s.add('body',cap([(45,48,3.8),(47,55,3.1),(46,60.5,2.8)]),group='fl2')
     s.add('body',cap([(44,61.5,2.3),(52,61.5,2.5)]),depth=0.5)
     for x in (25,53):
-        s.px(x,61,'tooth'); s.px(x+1,62,'tooth'); s.px(x-1,62,'tooth')
+        s.px(x,60,'toothshade'); s.px(x+1,61,'tooth'); s.px(x+2,62,'toothtip')
     # teeth (snarl)
-    for x in (54,57,60):
-        s.px(x,28,'tooth'); s.px(x,29,'tooth')
-    for x in (55,58):
-        s.px(x,32,'tooth'); s.px(x,31,'tooth')
+    for x,l,c in ((53,4,1),(57,3,0),(60,2,0)):
+        fang(s,x,28,l,down=True,curve=c)
+    for x,l,c in ((55,3,1),(59,2,0)):
+        fang(s,x,35,l,down=False,curve=c)
     s.px(62,25,'outline')
     # eye
     stamp(s,50,21,['##  ','#yy#',' #P#'],{'#':'outline','y':'eye','P':'pupil'})

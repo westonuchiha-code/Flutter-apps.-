@@ -19,9 +19,9 @@ def drake():
     s.add('body',cap([(35,31,6.5),(42,22,5.8)]),group='core')
     s.add('belly',inter(union(torso,cap([(35,31,6.5),(42,22,5.8)])),cap([(47,20,3.5),(44,30,4.5),(40,40,5)])),group='core')
     # mouth interior (behind jaws)
-    s.add('mouth',poly([(47,20),(60,20),(58,27),(48,26)]),flat=True)
+    s.add('mouth',poly([(46,20),(60,20),(57,30),(47,28)]),flat=True)
     # lower jaw
-    s.add('body',cap([(45,24,4),(55,27,2.8)]),depth=0.6)
+    s.add('body',cap([(44,26,4),(55,31,2.8)]),depth=0.6)
     # front arm
     s.add('body',cap([(39,33,3.6),(44,40,2.7),(48,38,2.3)]),depth=0.7)
     for (x,y) in [(49,36),(50,39)]:
@@ -40,10 +40,11 @@ def drake():
     # brow ridge
     s.add('accent',cap([(46,12,1.8),(53,13,1.4)]),depth=0.4)
     # teeth
-    for x in (50,53,56,59):
-        s.px(x,22,'tooth'); s.px(x,23,'tooth')
-    for x in (51,54):
-        s.px(x,25,'tooth'); s.px(x,24,'tooth')
+    # upper fangs (one big canine), lower fangs pointing up
+    for x,l,c in ((49,3,0),(53,4,1),(57,3,0)):
+        fang(s,x,21,l,down=True,curve=c)
+    for x,l,c in ((51,3,0),(55,3,1)):
+        fang(s,x,28,l,down=False,curve=c)
     # nostril
     s.px(58,17,'outline')
     # eye: angular, glowing
