@@ -121,7 +121,7 @@ jobs:
           channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
       - name: Use the shared signing key (updates install over old builds)
-        run: mkdir -p ~/.android && cp .github/android/debug.keystore ~/.android/debug.keystore
+        run: mkdir -p ~/.android && cp "$GITHUB_WORKSPACE/.github/android/debug.keystore" ~/.android/debug.keystore
       - run: flutter pub get
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
