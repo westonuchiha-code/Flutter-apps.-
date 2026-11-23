@@ -84,10 +84,10 @@ def shade_grid(spr, light=(-0.55,-0.65,0.55)):
     groups={}
     for i,(mat,f,depth,flat,g) in enumerate(spr.shapes):
         groups.setdefault(g,[]).append(i)
-    gdist={}; gdepth={}
+    gdist={}; gdepth={}; gmask={}
     for g,idx in groups.items():
         um=[[any(masks[i][y][x] for i in idx) for x in range(W)] for y in range(H)]
-        gdist[g]=_dist(um); gdepth[g]=max(spr.shapes[i][2] for i in idx)
+        gdist[g]=_dist(um); gdepth[g]=max(spr.shapes[i][2] for i in idx); gmask[g]=um
     lx,ly,lz=light; ln=math.sqrt(lx*lx+ly*ly+lz*lz); lx,ly,lz=lx/ln,ly/ln,lz/ln
     tone=[[None]*W for _ in range(H)]
     for y in range(H):
@@ -106,7 +106,6 @@ def shade_grid(spr, light=(-0.55,-0.65,0.55)):
             nn=math.sqrt(nx*nx+ny*ny+nz*nz); nx,ny,nz=nx/nn,ny/nn,nz/nn
             lit=nx*lx+ny*ly+nz*lz-(y/H)*0.25
             t=max(0,min(4,(lit-0.05)/0.7*4))
-            # inner line against a different group drawn in front
             # Soft occlusion where a part in front overlaps this one
             # (strongest right next to it, fading over 2 px).
             occ=0.0
@@ -128,8 +127,7 @@ def render(spr, pal, scale=5, bg=(26,26,32), light=(-0.55,-0.65,0.55)):
             mat,t=tone[y][x]; r=pal[mat]
             if t<0: out[y][x]=r[0]; continue
             base=int(t); frac=t-base
-            if base<4 and 0.42<frac<0.58 and (x+y)%2==0: base+=1
-            elif frac>=0.58: base=min(4,base+1)
+            if frac>=0.5: base=min(4,base+1)
             out[y][x]=r[base]
     for y in range(H):
         for x in range(W):
@@ -166,7 +164,7 @@ PAL_CRIMSON={
  'claw':ramp('#e9e4d4','#6b6370','#ffffff'),
  'mouth':ramp('#3a0b16','#12030a','#5a1626'),
  'outline':hexc('#12060c'),'outline_lit':hexc('#4a1222'),
- 'eye':hexc('#ffd23f'),'eyeglow':hexc('#fff6c4'),'pupil':hexc('#12060c'),'tooth':hexc('#f6f1e4'),'toothshade':hexc('#c9c0ae'),'toothtip':hexc('#e3dccb'),
+ 'eye':hexc('#ffd23f'),'eyeglow':hexc('#fff6c4'),'pupil':hexc('#12060c'),'tooth':hexc('#f6f1e4'),'claw_d':hexc('#d9d1bf'),'claw_tip':hexc('#fffaf0'),'toothshade':hexc('#c9c0ae'),'toothtip':hexc('#e3dccb'),
 }
 
 def stamp(spr, x0, y0, rows, key):
