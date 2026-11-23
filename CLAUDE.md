@@ -71,7 +71,8 @@ Runs on every push and pull request, for every app found in `apps/*/pubspec.yaml
 
 (Platform jobs only include apps that have that platform's folder.)
 
-New apps are picked up automatically — no workflow edits needed.
+New apps are picked up automatically — no workflow edits needed. An app with a
+`.ci-skip` file is left out (work in progress, nothing published).
 
 After each push, the `publish` job replaces the `<app>-latest` GitHub
 pre-release with the new APK, Windows zip and Linux tarball (installable
@@ -84,6 +85,8 @@ apps/        # one folder per Flutter application
              #   starter_app      - CI smoke test
              #   optical_theremin - light-controlled synthesizer (camera/webcam)
              #   sa_companion     - GTA San Andreas PS2 companion (Android only)
+             #   scan_ranch       - barcode monster ranch (Android only, WIP: sprites
+             #                      awaiting owner approval; see tool/sprite_design)
 packages/    # shared Dart/Flutter packages
              #   light_capture - webcam brightness frames on Windows/Linux
              #                   (the official camera plugin can't stream frames on Windows)

@@ -34,6 +34,7 @@ jobs:
           list() {
             for d in apps/*/; do
               [ -f "$d/pubspec.yaml" ] || continue
+              [ -f "$d/.ci-skip" ] && continue  # work in progress
               if [ -z "$1" ] || [ -d "$d/$1" ]; then basename "$d"; fi
             done | sort | jq -R . | jq -sc .
           }

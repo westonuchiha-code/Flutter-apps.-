@@ -1,0 +1,110 @@
+from kit import *
+
+def mantis():
+    return art('Mantis',[
+"......................a...a.....",  #3
+".......................a.a......",
+"......................dabba.....",
+".....................dbbbbbb....",
+".....................dbbbbblll..",
+".....................ddbbbbbbw..",
+"......................ddbmwmw...",
+".......................dbb......",
+"..................w...dbbb......",
+"..................aw.dbbbbb.....",
+"...................aadbbbbbb....",
+"....................aabbcbbbb...",
+"................aaaaaabbccbb....",
+"...........aaaaaaaaxxbbccbb.....",
+".......aaaaaaaaaaxxxdbbbbb......",
+".....bbbbbbbbbbbbbbbdbbbb.......",
+"....dbbcbbbcbbbcbbbbbbbb........",
+"...ddbbcbbbcbbbcbbbbbbb.........",
+"....ddbbbbbbbbbbbbbbb...........",
+"......ddddd.d..d..d.............",
+"...........d...d...d............",
+"..........d...d.....d...........",
+".........d....d......d..........",
+"........d....d........d.........",
+"........d....d.........d........",
+],eye=(23,6),top=3)
+
+def wraith():
+    return art('Wraith',[
+"............a.......a...........",  #2
+"............aa.....aa...........",
+".............abbbbba............",
+"...........dbbbbbbbbbl..........",
+"..........dbbbbbbbblllll........",
+"..........dbbbbbbbbbbbll........",
+"..........ddbbbbbbbbbbbb........",
+"..........ddbbmwmwmwmbbb........",
+"...........ddbbmmmmmbbb.........",
+"..........aaddbbbbbbbbaa........",
+".........aaaxddbbbbbbaaaa.......",
+"........aaaaxxddbbbbaaaaaa......",
+".......aaaaaxxxaaaaaaaaaaaa.....",
+"......aaaaaaxxaaaaaaaaaaaaaw....",
+".....waaaaaaxxaaaaaaaaaaaaa.w...",
+"....w.waaaaaxxaaaaaaaaaaaa......",
+"......aaaaaaxxaaaaaaaaaaaa......",
+"......aaaaaaxxaaaaaaaaaaa.......",
+".......aaaaaxxaaaaaaaaaaa.......",
+".......aaaaxxaaaaaaaaaaa........",
+".......aaa.xaaaa.aaaaaa.........",
+".......aa...aaa...aaaa..........",
+"........a....aa....aa...........",
+"..............a.....a...........",
+],eye=(15,6),top=2)
+
+def harpy():
+    return art('Harpy',[
+"..................aa.a..........",  #3
+"................aaaaaa..........",
+"...............aabbbbbb.........",
+"..............aabbbbllll........",
+"..............abbbbbbllww.......",
+".............aadbbbbbbbwww......",
+"............aa.ddbbbbb..ww......",
+"...........aa...dbbbbb..........",
+"..xaaa....aa...ddbbbbbb.........",
+"..xxaaaaaaaa..ddbbcccbbb........",
+"...xxaaaaaaaaddbbcccccbbb.......",
+"....xxaaaaaaaaabbcccccbbb.......",
+".....xxxaaaaaaaaaacccbbbb.......",
+"......xxxaaaaaaaaaabbbbb........",
+"........xxxaaaaaaaabbbb.........",
+"...........xxaaaaxdbbb..........",
+"............ddd..ddbbb..........",
+"..........ddd.....dbb...........",
+".........dd........dbb..........",
+"..................ddbb..........",
+".................ddbbb..........",
+"................wdddddw.........",
+"...............w.w..w.w.........",
+],eye=(19,6),top=3)
+
+def scorpion():
+    return art('Scorpion',[
+"....w...........................",  #4
+"...xaw..........................",
+"...xaa..........................",
+"....xaa.........................",
+".....xbb........................",
+"......bbb.......................",
+"......dbbb......................",
+".......dbb..............ww.ww...",
+".......dbbb............wbbwbbw..",
+"........dbb............bbb.bbb..",
+"........dbbb...........dbbbbb...",
+".........dbbbbbbbbbbbbbbbbb.....",
+".........ddbbbbbbbbbblllbbbb....",
+"........ddbbbbbbbbbbbbbbbbbbb...",
+"........ddbbbbbbbbbbbbbbmwmwmw..",
+".........ddbbbbbbbbbbbbbbmmmm...",
+"..........dddddddddddddddddd....",
+"...........d.d..d..d..d..d......",
+"..........d...d..d..d..d..d.....",
+".........d...d...d...d..d..d....",
+"........d...d....d....d..d..d...",
+],eye=(22,15),top=4)
