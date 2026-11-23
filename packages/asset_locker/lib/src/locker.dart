@@ -38,6 +38,7 @@ class AssetInfo {
     this.tags = const [],
     this.size = 0,
     this.hasThumbnail = false,
+    this.extra = const {},
   });
 
   final String id;
@@ -54,11 +55,20 @@ class AssetInfo {
   final int size;
   final bool hasThumbnail;
 
+  /// App-specific details (e.g. markers of a recording). JSON values only.
+  final Map<String, Object?> extra;
+
   String get dataPath => '${type.folder}/$id.$extension';
   String get metaPath => '${type.folder}/$id.json';
   String get thumbPath => '${type.folder}/$id.thumb.png';
 
-  AssetInfo copyWith({String? name, List<String>? tags}) => AssetInfo(
+  AssetInfo copyWith({
+    String? name,
+    List<String>? tags,
+    int? size,
+    bool? hasThumbnail,
+    Map<String, Object?>? extra,
+  }) => AssetInfo(
     id: id,
     type: type,
     name: name ?? this.name,
@@ -66,8 +76,9 @@ class AssetInfo {
     app: app,
     created: created,
     tags: tags ?? this.tags,
-    size: size,
-    hasThumbnail: hasThumbnail,
+    size: size ?? this.size,
+    hasThumbnail: hasThumbnail ?? this.hasThumbnail,
+    extra: extra ?? this.extra,
   );
 
   Map<String, Object?> toJson() => {
@@ -80,6 +91,7 @@ class AssetInfo {
     'tags': tags,
     'size': size,
     'hasThumbnail': hasThumbnail,
+    if (extra.isNotEmpty) 'extra': extra,
   };
 
   static AssetInfo? fromJson(Object? json) {
@@ -102,6 +114,9 @@ class AssetInfo {
       ],
       size: (json['size'] as num?)?.toInt() ?? 0,
       hasThumbnail: json['hasThumbnail'] == true,
+      extra: json['extra'] is Map
+          ? (json['extra'] as Map).cast<String, Object?>()
+          : const {},
     );
   }
 }
@@ -278,6 +293,7 @@ class AssetLocker extends ChangeNotifier {
     required String extension,
     List<String> tags = const [],
     Uint8List? thumbnail,
+    Map<String, Object?> extra = const {},
   }) async {
     final now = DateTime.now();
     final info = AssetInfo(
@@ -290,6 +306,7 @@ class AssetLocker extends ChangeNotifier {
       tags: tags,
       size: bytes.length,
       hasThumbnail: thumbnail != null,
+      extra: extra,
     );
     await fs.write(info.dataPath, bytes);
     if (thumbnail != null) await fs.write(info.thumbPath, thumbnail);
@@ -305,6 +322,25 @@ class AssetLocker extends ChangeNotifier {
   Future<void> update(AssetInfo info) async {
     await _writeMeta(info);
     notifyListeners();
+  }
+
+  /// Replaces the file of an existing asset (and its thumbnail/details).
+  Future<AssetInfo> replace(
+    AssetInfo info,
+    List<int> bytes, {
+    Uint8List? thumbnail,
+    Map<String, Object?>? extra,
+  }) async {
+    await fs.write(info.dataPath, bytes);
+    if (thumbnail != null) await fs.write(info.thumbPath, thumbnail);
+    final next = info.copyWith(
+      size: bytes.length,
+      hasThumbnail: info.hasThumbnail || thumbnail != null,
+      extra: extra,
+    );
+    await _writeMeta(next);
+    notifyListeners();
+    return next;
   }
 
   Future<Uint8List?> read(AssetInfo info) => fs.read(info.dataPath);

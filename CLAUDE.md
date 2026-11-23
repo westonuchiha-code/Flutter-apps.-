@@ -44,7 +44,9 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   `packages/light_capture` when an app needs live frames on Windows/Linux.
 - Audio: `flutter_soloud` works on Android, Windows and Linux (built via Dart
   build hooks; no extra setup). It is pinned to an exact version because the
-  theremin uses its experimental real-time stream API.
+  theremin uses its experimental real-time stream API. Microphone input:
+  `packages/audio_kit` (`MicRecorder`, built on `flutter_recorder`, also
+  pinned; Linux builds need `libasound2-dev`).
 - Save user creations (samples, presets, sprites, palettes, maps,
   recordings) to the Asset Locker (`Shell.of(context).locker`,
   `saveToLocker` / `pickFromLocker`) so other apps can use them.
@@ -100,11 +102,14 @@ apps/        # one folder per Flutter application
              #   touch_synth      - multi-touch pad synthesizer (Android only)
              #   dev_dashboard    - CI status, install latest builds, error reports,
              #                      Asset Locker browser, shared to-do list
+             #   field_recorder   - mic recorder: markers, trim, tags, saves WAV to the Asset Locker
 packages/    # shared Dart/Flutter packages
              #   app_shell     - shared app foundation (theme, settings, crash-safe
              #                   storage, error log, about page, export/share)
              #   asset_locker  - shared library of creations every app saves to
              #                   (Documents/Asset Locker; Android: folder picked once per app)
+             #   audio_kit     - mic recording to WAV, WAV read/write, waveform view,
+             #                   level meter, clip playback (flutter_recorder + flutter_soloud)
              #   light_capture - webcam brightness frames on Windows/Linux
              #                   (the official camera plugin can't stream frames on Windows)
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog

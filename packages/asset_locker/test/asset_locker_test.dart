@@ -50,6 +50,26 @@ void main() {
     expect(Directory('${dir.path}/Samples').listSync(), isEmpty);
   });
 
+  test('extra details and replace', () async {
+    final a = await locker.save(
+      type: AssetType.recording,
+      name: 'Birds',
+      bytes: [1, 2],
+      extension: 'wav',
+      extra: {
+        'markers': [1.5, 3.0],
+      },
+    );
+    var got = (await locker.list()).single;
+    expect(got.extra['markers'], [1.5, 3.0]);
+    final b = await locker.replace(got, [7, 7, 7], extra: {'markers': []});
+    got = (await locker.list()).single;
+    expect(got.size, 3);
+    expect(got.extra['markers'], isEmpty);
+    expect(await locker.read(b), [7, 7, 7]);
+    expect(got.id, a.id);
+  });
+
   test('broken metadata is skipped', () async {
     await locker.save(
       type: AssetType.map,

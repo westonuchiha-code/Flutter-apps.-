@@ -9,7 +9,7 @@ FLUTTER_DIR="${FLUTTER_DIR:-/opt/flutter}"
 
 apt-get update -qq
 apt-get install -y -qq git curl unzip xz-utils clang cmake ninja-build pkg-config \
-  libgtk-3-dev liblzma-dev libstdc++-12-dev
+  libgtk-3-dev liblzma-dev libstdc++-12-dev libasound2-dev
 
 if [ ! -x "$FLUTTER_DIR/bin/flutter" ]; then
   git clone --depth 1 -b "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$FLUTTER_DIR"

@@ -29,9 +29,11 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
 
 ## Phase 1 · Audio
 
-3. ⬜ **Field Recorder.** A polished mic recorder (levels, markers, trimming,
+3. ✅ **Field Recorder.** A polished mic recorder (levels, markers, trimming,
    tags) that saves to the Asset Locker. Builds the shared mic recording,
-   waveform view and sample library.
+   waveform view and sample library. `apps/field_recorder` +
+   `packages/audio_kit`. Gap: on Android the screen must stay on while
+   recording (the app keeps it on); no background recording yet.
 4. ⬜ **Sample Pad + Loop Station.** Pads loaded with recorded samples (trim,
    pitch, reverse) and layered loops in sync. Builds the shared tempo/clock
    and step sequencer.
