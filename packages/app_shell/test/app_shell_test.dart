@@ -94,6 +94,22 @@ void main() {
     });
   });
 
+  test('errors are published to the Asset Locker', () async {
+    final services = await ShellServices.create(
+      const AppShellConfig(id: 'test_app', name: 'Test App'),
+      root: dir,
+    );
+    await services.crashLog.record(StateError('kaboom'), null);
+    final reports = await services.locker.readErrorReports();
+    expect(reports['test_app']?['name'], 'Test App');
+    expect(
+      (reports['test_app']?['entries'] as List).single['error'],
+      contains('kaboom'),
+    );
+    await services.crashLog.clear();
+    expect(await services.locker.readErrorReports(), isEmpty);
+  });
+
   group('pages', () {
     testWidgets('settings page is generated and changes values', (
       tester,

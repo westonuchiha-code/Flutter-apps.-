@@ -48,6 +48,9 @@ class CrashLog {
   final int maxEntries;
   final String fileName;
 
+  /// Called after the log changes (used to publish it to the Asset Locker).
+  Future<void> Function(List<CrashEntry> entries)? onChanged;
+
   Future<List<CrashEntry>> entries() async {
     final json = await storage.readJson(fileName);
     if (json is! List) return [];
@@ -77,9 +80,21 @@ class CrashLog {
         ? list.sublist(list.length - maxEntries)
         : list;
     await storage.writeJson(fileName, [for (final e in trimmed) e.toJson()]);
+    await _notify(trimmed);
   }
 
-  Future<void> clear() => storage.delete(fileName);
+  Future<void> clear() async {
+    await storage.delete(fileName);
+    await _notify(const []);
+  }
+
+  Future<void> _notify(List<CrashEntry> list) async {
+    try {
+      await onChanged?.call(list);
+    } catch (_) {
+      // Publishing is best-effort; never fail while logging an error.
+    }
+  }
 
   /// Plain-text report for sharing.
   Future<String> report(String appName, String version) async {

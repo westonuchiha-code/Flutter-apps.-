@@ -45,6 +45,9 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
 - Audio: `flutter_soloud` works on Android, Windows and Linux (built via Dart
   build hooks; no extra setup). It is pinned to an exact version because the
   theremin uses its experimental real-time stream API.
+- Save user creations (samples, presets, sprites, palettes, maps,
+  recordings) to the Asset Locker (`Shell.of(context).locker`,
+  `saveToLocker` / `pickFromLocker`) so other apps can use them.
 - Scan Ranch art: the owner is handing the art to another tool. Only the two
   approved designs (drake, hound) are in use; the CRT effect is applied to
   monsters only, always on, never a toggle. Read apps/scan_ranch/HANDOFF.md
@@ -95,9 +98,13 @@ apps/        # one folder per Flutter application
              #   scan_ranch       - barcode monster ranch (Android only; prototype,
              #                      art handed off - see apps/scan_ranch/HANDOFF.md)
              #   touch_synth      - multi-touch pad synthesizer (Android only)
+             #   dev_dashboard    - CI status, install latest builds, error reports,
+             #                      Asset Locker browser, shared to-do list
 packages/    # shared Dart/Flutter packages
              #   app_shell     - shared app foundation (theme, settings, crash-safe
              #                   storage, error log, about page, export/share)
+             #   asset_locker  - shared library of creations every app saves to
+             #                   (Documents/Asset Locker; Android: folder picked once per app)
              #   light_capture - webcam brightness frames on Windows/Linux
              #                   (the official camera plugin can't stream frames on Windows)
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog

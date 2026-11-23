@@ -158,6 +158,20 @@ class AboutShellPage extends StatelessWidget {
               MaterialPageRoute<void>(builder: (_) => const CrashLogPage()),
             ),
           ),
+          ListenableBuilder(
+            listenable: shell.locker,
+            builder: (context, _) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.folder_shared_outlined),
+              title: const Text('Asset Locker'),
+              subtitle: Text(
+                shell.locker.ready
+                    ? 'Connected'
+                    : 'Not connected. Tap to pick the shared folder.',
+              ),
+              onTap: shell.locker.ready ? null : shell.locker.connect,
+            ),
+          ),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.description_outlined),

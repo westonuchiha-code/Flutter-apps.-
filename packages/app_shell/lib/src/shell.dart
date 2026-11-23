@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:asset_locker/asset_locker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
@@ -47,6 +48,7 @@ class ShellServices {
     required this.storage,
     required this.settings,
     required this.crashLog,
+    required this.locker,
     this.exporter = const Exporter(),
   });
 
@@ -56,12 +58,17 @@ class ShellServices {
   final CrashLog crashLog;
   final Exporter exporter;
 
+  /// Shared library for every app's creations (see packages/asset_locker).
+  final AssetLocker locker;
+
   /// Light haptic tick, if the user has vibration feedback on.
   void tick() {
     if (settings.get(hapticsSetting)) HapticFeedback.selectionClick();
   }
 
   /// Creates the services, using the app's support folder on the device.
+  /// [root] replaces the device folders (tests); the locker then lives in
+  /// `root/Asset Locker`.
   static Future<ShellServices> create(
     AppShellConfig config, {
     Directory? root,
@@ -74,12 +81,50 @@ class ShellServices {
       ...config.settings,
     ]);
     await settings.load();
-    return ShellServices(
+    final locker = root != null
+        ? AssetLocker.atDirectory(
+            config.id,
+            Directory(p.join(root.path, AssetLocker.folderName)),
+          )
+        : await AssetLocker.open(config.id, settingsDir: storage.directory);
+    final services = ShellServices(
       config: config,
       storage: storage,
       settings: settings,
       crashLog: CrashLog(storage),
+      locker: locker,
     );
+    services.crashLog.onChanged = services.publishErrors;
+    // Publish once now too (e.g. errors logged before the locker connected).
+    var wasReady = locker.ready;
+    locker.addListener(() {
+      if (locker.ready && !wasReady) unawaited(services._publishCurrent());
+      wasReady = locker.ready;
+    });
+    unawaited(services._publishCurrent());
+    return services;
+  }
+
+  Future<void> _publishCurrent() async {
+    try {
+      await publishErrors(await crashLog.entries());
+    } catch (_) {}
+  }
+
+  /// Copies this app's error log into the Asset Locker for the Dev Dashboard.
+  Future<void> publishErrors(List<CrashEntry> entries) async {
+    if (!locker.ready) return;
+    if (entries.isEmpty) {
+      await locker.clearErrorReport(config.id);
+      return;
+    }
+    await locker.writeErrorReport({
+      'app': config.id,
+      'name': config.name,
+      'version': config.version,
+      'platform': Platform.operatingSystem,
+      'entries': [for (final e in entries) e.toJson()],
+    });
   }
 }
 

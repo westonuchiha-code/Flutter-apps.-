@@ -20,10 +20,12 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
 1. ✅ **App Shell Kit.** Shared starter for every new app: settings screen,
    save/load, theme, about page, crash-safe storage, export/share, error
    reporting. `packages/app_shell` plus `tool/new_app.sh`.
-2. ⬜ **Asset Locker + Dev Dashboard.** One on-phone library where every app
+2. ✅ **Asset Locker + Dev Dashboard.** One on-phone library where every app
    saves and finds its creations (samples, presets, sprites, palettes, maps,
    recordings). Plus build status, one-tap install of the latest APKs, crash
-   reports and a shared to-do list.
+   reports and a shared to-do list. `packages/asset_locker` +
+   `apps/dev_dashboard`. Gaps: on Android each app asks once for the shared
+   folder; the to-do list is per device (not synced between phone and PC).
 
 ## Phase 1 · Audio
 

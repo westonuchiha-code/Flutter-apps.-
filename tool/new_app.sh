@@ -76,5 +76,10 @@ void main() {
 }
 DART
 
+manifest=android/app/src/main/AndroidManifest.xml
+if [[ -f "$manifest" ]]; then
+  sed -i "s/android:label=\"$name\"/android:label=\"$title\"/" "$manifest"
+fi
+
 dart format lib test >/dev/null
 echo "Created apps/$name ($platforms). CI picks it up on the next push."
