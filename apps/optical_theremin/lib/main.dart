@@ -1,11 +1,18 @@
-import 'dart:io' show Platform;
+import 'dart:io' show Directory, Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'src/app/theremin_controller.dart';
-import 'src/audio/tone_output.dart';
+
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
+import 'src/app/exporter.dart';
+import 'src/app/settings_store.dart';
+import 'src/audio/synth_output.dart';
+import 'src/recording/take_store.dart';
 import 'src/input/camera_backend.dart';
 import 'src/ui/theremin_page.dart';
 
@@ -15,11 +22,15 @@ Future<void> main() async {
     // Camera frames are rotated for portrait; keep the phone upright.
     await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }
+  final dataDir = await getApplicationSupportDirectory();
   runApp(
     OpticalThereminApp(
       controller: ThereminController(
         cameraBackend: CameraBackend.forCurrentPlatform(),
-        tone: SoLoudToneOutput(),
+        synth: SoLoudSynthOutput(),
+        takeStore: FileTakeStore(Directory(p.join(dataDir.path, 'recordings'))),
+        settingsStore: FileSettingsStore(dataDir),
+        exporter: PlatformExporter(),
       ),
     ),
   );

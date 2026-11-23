@@ -4,7 +4,10 @@ import 'package:material_ui/material_ui.dart';
 
 import '../app/theremin_controller.dart';
 import 'play_area.dart';
+import 'recordings_page.dart';
+import 'scope_view.dart';
 import 'settings_panel.dart';
+import 'sound_picker.dart';
 
 class ThereminPage extends StatefulWidget {
   const ThereminPage({super.key, required this.controller});
@@ -23,12 +26,31 @@ class _ThereminPageState extends State<ThereminPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    controller.toast.addListener(_showToast);
   }
 
   @override
   void dispose() {
+    controller.toast.removeListener(_showToast);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _showToast() {
+    final message = controller.toast.value;
+    if (message == null || !mounted) return;
+    controller.toast.value = null;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _openRecordings() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RecordingsPage(controller: controller),
+      ),
+    );
   }
 
   @override
@@ -67,6 +89,11 @@ class _ThereminPageState extends State<ThereminPage>
           appBar: AppBar(
             title: const Text('Optical Theremin'),
             actions: [
+              IconButton(
+                tooltip: 'Recordings',
+                icon: const Icon(Icons.library_music_outlined),
+                onPressed: _openRecordings,
+              ),
               if (!wide)
                 IconButton(
                   tooltip: 'Settings',
@@ -125,37 +152,81 @@ class _PlayColumn extends StatelessWidget {
             ),
         ];
         return Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Column(
             children: [
               for (final (text, isError) in messages)
                 _Banner(text: text, isError: isError),
+              SoundPicker(
+                spec: c.settings.sound,
+                onChanged: c.updateSound,
+                dense: true,
+              ),
+              const SizedBox(height: 12),
               Expanded(child: PlaySurface(controller: c)),
-              const SizedBox(height: 16),
-              NoteReadout(controller: c),
-              const SizedBox(height: 16),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 12,
-                runSpacing: 12,
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 72,
+                child: Row(
+                  children: [
+                    Expanded(child: NoteReadout(controller: c)),
+                    const SizedBox(width: 12),
+                    Expanded(child: ScopeView(data: c.scope)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
                 children: [
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(160, 56),
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 56),
+                      ),
+                      onPressed: c.audioError != null ? null : c.togglePlaying,
+                      icon: Icon(c.playing ? Icons.stop : Icons.play_arrow),
+                      label: Text(c.playing ? 'Stop' : 'Play'),
                     ),
-                    onPressed: c.audioError != null ? null : c.togglePlaying,
-                    icon: Icon(c.playing ? Icons.stop : Icons.play_arrow),
-                    label: Text(c.playing ? 'Stop' : 'Play'),
                   ),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(160, 56),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 56),
+                        backgroundColor: c.recording
+                            ? Colors.red
+                            : Colors.red.shade900,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: c.audioError != null
+                          ? null
+                          : c.toggleRecording,
+                      icon: Icon(
+                        c.recording
+                            ? Icons.stop_circle_outlined
+                            : Icons.fiber_manual_record,
+                      ),
+                      label: Text(
+                        c.recording
+                            ? formatDuration(c.recordingTime)
+                            : 'Record',
+                      ),
                     ),
-                    onPressed: c.usingTouch || c.calibrating || c.frame == null
-                        ? null
-                        : c.calibrate,
-                    icon: const Icon(Icons.wb_sunny_outlined),
-                    label: const Text('Calibrate'),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 56),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      onPressed:
+                          c.usingTouch || c.calibrating || c.frame == null
+                          ? null
+                          : c.calibrate,
+                      icon: const Icon(Icons.wb_sunny_outlined),
+                      label: const Text('Calibrate'),
+                    ),
                   ),
                 ],
               ),

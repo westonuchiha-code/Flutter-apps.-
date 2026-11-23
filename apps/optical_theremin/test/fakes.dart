@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:optical_theremin/src/audio/tone_output.dart';
+import 'package:optical_theremin/src/app/exporter.dart';
+import 'package:optical_theremin/src/audio/synth_output.dart';
 import 'package:optical_theremin/src/core/luma_image.dart';
-import 'package:optical_theremin/src/core/settings.dart';
+import 'package:optical_theremin/src/synth/engine.dart';
 import 'package:optical_theremin/src/input/camera_backend.dart';
 
 /// Image whose left half has brightness [left] and right half [right].
@@ -51,28 +53,61 @@ class FakeCameraBackend extends CameraBackend {
   }
 }
 
-class FakeTone implements ToneOutput {
-  bool started = false;
-  Wave wave = Wave.sine;
-  double frequency = 0;
-  double volume = 0;
+class FakeSynth implements SynthOutput {
+  SoundSpec sound = const SoundSpec();
+  double hz = 0;
+  double level = 0;
+  double timbre = 0;
   int updates = 0;
+  Uint8List? clip;
+  Completer<void>? _clipDone;
+  final _scope = StreamController<Float32List>.broadcast();
 
   @override
   Future<void> init() async {}
   @override
-  Future<void> start() async => started = true;
+  void setSound(SoundSpec spec) => sound = spec;
   @override
-  Future<void> stop() async => started = false;
-  @override
-  void setWave(Wave wave) => this.wave = wave;
-  @override
-  void update({required double frequency, required double volume}) {
-    this.frequency = frequency;
-    this.volume = volume;
+  void update({
+    required double hz,
+    required double level,
+    required double timbre,
+  }) {
+    this.hz = hz;
+    this.level = level;
+    this.timbre = timbre;
     updates++;
   }
 
   @override
+  Stream<Float32List> get scope => _scope.stream;
+
+  void emitScope(Float32List data) => _scope.add(data);
+
+  @override
+  Future<void> playClip(Uint8List wav) {
+    clip = wav;
+    return (_clipDone = Completer<void>()).future;
+  }
+
+  @override
+  Future<void> stopClip() async {
+    clip = null;
+    final done = _clipDone;
+    _clipDone = null;
+    if (done != null && !done.isCompleted) done.complete();
+  }
+
+  @override
   Future<void> dispose() async {}
+}
+
+class FakeExporter implements Exporter {
+  final exported = <String, Uint8List>{};
+
+  @override
+  Future<String?> exportWav(String fileName, Uint8List wav) async {
+    exported[fileName] = wav;
+    return 'Exported';
+  }
 }

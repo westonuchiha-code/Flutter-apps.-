@@ -35,7 +35,12 @@ iOS, macOS and Web are out of scope unless explicitly requested.
 - Camera on Windows: `camera_windows` has no frame streaming. Use
   `packages/light_capture` when an app needs live frames on Windows/Linux.
 - Audio: `flutter_soloud` works on Android, Windows and Linux (built via Dart
-  build hooks; no extra setup).
+  build hooks; no extra setup). It is pinned to an exact version because the
+  theremin uses its experimental real-time stream API.
+- Owner's sound priorities (Optical Theremin, inspired by their Chiptune Pad
+  Studio): chips should behave like the real hardware — register-quantized
+  pitch (don't "fix" hardware tuning), real volume steps, frame-rate effects,
+  machine output filters; no clicks or clipping the hardware never had.
 
 ## Toolchain
 

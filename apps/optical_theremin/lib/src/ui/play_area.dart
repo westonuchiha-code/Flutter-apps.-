@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../app/theremin_controller.dart';
+import '../core/settings.dart';
 import '../core/music.dart';
 import 'camera_view.dart';
 
@@ -39,8 +40,8 @@ class PlaySurface extends StatelessWidget {
                     Container(width: 2, color: Colors.white70),
                     Expanded(
                       child: _Zone(
-                        label: 'VOLUME',
-                        level: c.volumeControl,
+                        label: c.settings.secondControl.label.toUpperCase(),
+                        level: c.secondControl,
                         color: Colors.amberAccent,
                       ),
                     ),
@@ -192,11 +193,16 @@ class _TouchPad extends StatelessWidget {
                     alignment: Alignment.bottomCenter,
                     child: Text('← lower pitch      higher pitch →'),
                   ),
-                  const Align(
+                  Align(
                     alignment: Alignment.centerRight,
                     child: RotatedBox(
                       quarterTurns: 3,
-                      child: Text('quieter      louder →'),
+                      child: Text(
+                        controller.settings.secondControl ==
+                                SecondControl.volume
+                            ? 'quieter      louder →'
+                            : 'less shape      more shape →',
+                      ),
                     ),
                   ),
                 ],
@@ -221,43 +227,32 @@ class NoteReadout extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final midi = engine.targetMidi.round().clamp(0, 127);
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SizedBox(
-          width: 110,
-          child: Text(
-            noteName(midi),
-            textAlign: TextAlign.center,
-            style: text.displayMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
+        Text(
+          noteName(midi),
+          style: text.headlineLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${engine.frequency.toStringAsFixed(1)} Hz',
-              style: text.titleLarge?.copyWith(
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.volume_up, size: 18),
-                const SizedBox(width: 6),
-                SizedBox(
-                  width: 120,
-                  child: LinearProgressIndicator(
-                    value: controller.playing ? engine.volume : 0,
-                    minHeight: 6,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${engine.frequency.toStringAsFixed(1)} Hz',
+                style: text.titleMedium?.copyWith(
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
-              ],
-            ),
-          ],
+                maxLines: 1,
+              ),
+              const SizedBox(height: 6),
+              LinearProgressIndicator(
+                value: controller.playing ? engine.volume : 0,
+                minHeight: 6,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ],
+          ),
         ),
       ],
     );

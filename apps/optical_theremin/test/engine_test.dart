@@ -41,7 +41,6 @@ void main() {
       highNote: 72,
       invertPitch: false,
       glideMs: 0,
-      masterVolume: 1,
     );
 
     test('maps control to the note range', () {
@@ -85,33 +84,48 @@ void main() {
     });
 
     test('volume control, curve and silence gate', () {
-      final engine = ThereminEngine(base.copyWith(masterVolume: 0.5));
+      final engine = ThereminEngine(base);
+      void settle() {
+        for (var i = 0; i < 50; i++) {
+          engine.step(0.01);
+        }
+      }
+
       engine.setControls(pitchControl: 0.5, volumeControl: 1);
-      for (var i = 0; i < 50; i++) {
-        engine.step(0.01);
-      }
-      expect(engine.volume, closeTo(0.5, 1e-3));
-
+      settle();
+      expect(engine.volume, closeTo(1, 1e-3));
       engine.setControls(pitchControl: 0.5, volumeControl: 0.5);
-      for (var i = 0; i < 50; i++) {
-        engine.step(0.01);
-      }
-      expect(engine.volume, closeTo(0.125, 1e-3)); // 0.5² × 0.5
-
+      settle();
+      expect(engine.volume, closeTo(0.25, 1e-3)); // squared curve
       engine.setControls(pitchControl: 0.5, volumeControl: 0.02);
-      for (var i = 0; i < 50; i++) {
-        engine.step(0.01);
-      }
+      settle();
       expect(engine.volume, closeTo(0, 1e-3));
     });
 
-    test('without a volume control the master volume is used', () {
-      final engine = ThereminEngine(base.copyWith(masterVolume: 0.7));
+    test('without a volume control the volume is full', () {
+      final engine = ThereminEngine(base);
       engine.setControls(pitchControl: 0.5);
       for (var i = 0; i < 50; i++) {
         engine.step(0.01);
       }
-      expect(engine.volume, closeTo(0.7, 1e-3));
+      expect(engine.volume, closeTo(1, 1e-3));
+    });
+
+    test('shape follows the shape control or the fixed setting', () {
+      final engine = ThereminEngine(base.copyWith(shape: 0.3));
+      engine.setControls(pitchControl: 0.5);
+      expect(engine.shape, closeTo(0.3, 1e-9));
+      engine.setControls(pitchControl: 0.5, shapeControl: 0.9);
+      for (var i = 0; i < 100; i++) {
+        engine.step(0.01);
+      }
+      expect(engine.shape, closeTo(0.9, 1e-3));
+      engine.settings = base.copyWith(invertSecond: true);
+      engine.setControls(pitchControl: 0.5, shapeControl: 0.9);
+      for (var i = 0; i < 100; i++) {
+        engine.step(0.01);
+      }
+      expect(engine.shape, closeTo(0.1, 1e-3));
     });
   });
 }
