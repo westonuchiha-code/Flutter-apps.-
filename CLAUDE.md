@@ -42,6 +42,11 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
 - Audio: `flutter_soloud` works on Android, Windows and Linux (built via Dart
   build hooks; no extra setup). It is pinned to an exact version because the
   theremin uses its experimental real-time stream API.
+- Scan Ranch art (owner-approved): 64×64 hand-designed monster silhouettes,
+  edgy/aggressive Skannerz-style (not cute/cozy), volume-shaded pixel art,
+  sharp tapered fangs, predator (digitigrade) legs. A full CRT effect
+  (scan lines + glow + vignette) is applied to monsters only, always on,
+  never a toggle. Get the owner's approval on new art before building on it.
 - Owner's sound priorities (Optical Theremin, inspired by their Chiptune Pad
   Studio): chips should behave like the real hardware — register-quantized
   pitch (don't "fix" hardware tuning), real volume steps, frame-rate effects,

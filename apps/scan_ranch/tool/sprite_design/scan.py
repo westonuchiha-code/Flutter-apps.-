@@ -25,13 +25,14 @@ def crt(img, period):
             r,g,b=P[x,y]; P[x,y]=(int(r*f),int(g*f),int(b*f))
     return base
 
-scale=6
-rows=[]
-for spr,pal in [(drake(),PALS[0]),(hound(),PALS[2])]:
-    img=render(spr,pal,scale=scale,bg=(14,14,18))
-    rows.append([img, scanlines(img,3,0.55), scanlines(img,scale,0.35,thick=2), crt(img,3)])
-w,h=rows[0][0].size
-out=Image.new('RGB',(w*4+30,h*2+10),(8,8,10))
-for r,row in enumerate(rows):
-    for c,im in enumerate(row): out.paste(im,(c*(w+10),r*(h+10)))
-out.save('scan.png')
+if __name__=="__main__":
+  scale=6
+  rows=[]
+  for spr,pal in [(drake(),PALS[0]),(hound(),PALS[2])]:
+      img=render(spr,pal,scale=scale,bg=(14,14,18))
+      rows.append([img, scanlines(img,3,0.55), scanlines(img,scale,0.35,thick=2), crt(img,3)])
+  w,h=rows[0][0].size
+  out=Image.new('RGB',(w*4+30,h*2+10),(8,8,10))
+  for r,row in enumerate(rows):
+      for c,im in enumerate(row): out.paste(im,(c*(w+10),r*(h+10)))
+  out.save('scan.png')
