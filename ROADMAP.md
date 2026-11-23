@@ -60,17 +60,35 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     Warns when a photo won't make a good texture.
 12. ⬜ **Lo-Fi Video Maker.** Short videos combining Chip Cam footage, Sample
     Pad music and Pixel Forge graphics. Best after Chip Cam proves itself.
-13. ⬜ **Internet City.** A web browser navigated like a little town (in the
-    spirit of eWorld / Sega's online city): saved sites become buildings on
-    themed streets. Uses Pixel Forge art for the town.
-14. ⬜ **Sprite Pet.** Pixel pet in a home-screen widget that reacts to the
+13. ⬜ **Sprite Pet.** Pixel pet in a home-screen widget that reacts to the
     day. Uses Pixel Forge sprites.
-15. ⬜ **Photo Tile Quilt.** Photos → tiled mosaic with a palette. Bottom of
+14. ⬜ **Photo Tile Quilt.** Photos → tiled mosaic with a palette. Bottom of
     the list, bare-minimum prototype.
 
-## On hold · needs AI voices
+## Phase 3 · 3D
 
-The owner won't pay a per-minute voice service. These wait until voices can
+15. ⬜ **3D Engine.** Shared lightweight 3D foundation: rendering, camera,
+    models, textures, simple lighting, walking around. Everything below runs
+    on it.
+16. ⬜ **Desktop Aquarium.** PS1-style low-poly fish wearing real fish photo
+    textures (made with Texture Capture), swimming in a tank on the home
+    screen or desktop. The smallest 3D app, so it tests the engine first.
+17. ⬜ **3D Internet City.** A web browser you walk through Doom-style, in the
+    spirit of Labyrinth, eWorld and Sega's online city. Websites are buildings
+    on themed streets, with trees and NPCs, and you can build the world out
+    over time. Replaces the earlier 2D Internet City idea.
+18. ⬜ **Bryce for 2026.** Generate fractal landscapes (mountains, water,
+    skies, fog, suns and moons) with simple controls, explore them in real
+    time, and render stills or flyover videos.
+19. ⬜ **3D Choreographer, modern.** Make little movies without skill: a
+    stage, generic characters (man, woman, boy, girl, old man, old woman), tens
+    to hundreds of preset animations applied with a tap, camera shots, and a
+    stop-motion mode for posing by hand. The biggest app on the list; free,
+    openly licensed animation libraries can help.
+
+## On hold · needs AI (voices or a language model)
+
+The owner won't pay a per-minute voice or AI service. These wait until voices can
 run locally: free open-source text-to-speech models, run on the owner's PC
 (RTX 5090) or on the phone, with audio generated ahead of time and bundled so
 the apps work offline.
@@ -82,6 +100,10 @@ the apps work offline.
   public-domain or openly licensed material (history books, public news,
   open encyclopedias) into real-information conversations: deep dives,
   history comedy, and so on. No copyrighted sources, no made-up facts.
+
+- ⏸ **Story Coach.** A writing app that reads your story and asks questions to
+  keep you writing. Needs a language model, so it waits until one can run
+  locally (owner's PC or the phone).
 
 ## Dropped
 
