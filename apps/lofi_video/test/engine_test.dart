@@ -129,6 +129,8 @@ void main() {
       width: 320,
       height: 240,
       fps: 15,
+      // Tests have no native plugins: use the pure-Dart AVI writer.
+      preferMp4: false,
     );
     final seen = <double>[];
     job.progress.stream.listen(seen.add);
