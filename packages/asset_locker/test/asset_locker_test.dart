@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -68,6 +69,40 @@ void main() {
     expect(got.extra['markers'], isEmpty);
     expect(await locker.read(b), [7, 7, 7]);
     expect(got.id, a.id);
+  });
+
+  test('JSON assets keep their data (details are stored separately)', () async {
+    final a = await locker.save(
+      type: AssetType.preset,
+      name: 'Kit',
+      bytes: utf8.encode('{"kind":"sample_pad_kit","bpm":120}'),
+      extension: 'json',
+    );
+    final listed = (await locker.list(type: AssetType.preset)).single;
+    expect(listed.name, 'Kit');
+    expect(
+      utf8.decode((await locker.read(a))!),
+      '{"kind":"sample_pad_kit","bpm":120}',
+    );
+    await locker.update(listed.copyWith(name: 'Kit 2'));
+    expect(utf8.decode((await locker.read(a))!), contains('sample_pad_kit'));
+    await locker.delete(listed);
+    expect(Directory('${dir.path}/Presets').listSync(), isEmpty);
+  });
+
+  test('details saved by version 0.1 (<id>.json) still list', () async {
+    Directory('${dir.path}/Samples').createSync(recursive: true);
+    File('${dir.path}/Samples/old-1.wav').writeAsBytesSync([1, 2]);
+    File('${dir.path}/Samples/old-1.json').writeAsStringSync(
+      '{"id":"old-1","type":"sample","name":"Old","extension":"wav","app":"x","created":"2026-11-20T10:00:00Z"}',
+    );
+    final old = (await locker.list(type: AssetType.sample)).single;
+    expect(old.name, 'Old');
+    expect(await locker.read(old), [1, 2]);
+    // Editing moves the details to the new file and removes the old one.
+    await locker.update(old.copyWith(name: 'Old 2'));
+    expect(File('${dir.path}/Samples/old-1.json').existsSync(), isFalse);
+    expect((await locker.list(type: AssetType.sample)).single.name, 'Old 2');
   });
 
   test('broken metadata is skipped', () async {

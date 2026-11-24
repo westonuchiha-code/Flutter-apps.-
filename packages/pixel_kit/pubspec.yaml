@@ -1,0 +1,14 @@
+name: pixel_kit
+description: "Pure-Dart pixel art core: sprites with layers and frames, palettes, drawing tools, selections, PNG and file formats."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.14.0
+
+dependencies:
+  image: ^4.13.1
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0

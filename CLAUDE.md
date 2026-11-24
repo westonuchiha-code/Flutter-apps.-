@@ -52,6 +52,10 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
 - Audio that must keep playing with the screen off (Android): copy
   `apps/ambience_machine`'s `PlaybackService` (mediaPlayback foreground
   service + notification) and `lib/src/keeper.dart`.
+- Pixel art: use `packages/pixel_kit` (`Sprite`, `Palette`, `Canvas`) and its
+  file formats (kinds `pixel_sprite`, `palette`) so every visual app shares them.
+- Asset Locker details live in `<id>.info.json` (0.1 used `<id>.json`, which
+  overwrote JSON assets' data; old details files are still read).
 - Save user creations (samples, presets, sprites, palettes, maps,
   recordings) to the Asset Locker (`Shell.of(context).locker`,
   `saveToLocker` / `pickFromLocker`) so other apps can use them.
@@ -118,6 +122,7 @@ apps/        # one folder per Flutter application
              #   ambience_machine - drifting layered atmospheres, scene crossfades, sleep timer;
              #                      Android background playback via a media foreground service
              #   speech_chip_lab  - text to speech on TMS5220/SP0256/Votrax recreations; sing mode
+             #   pixel_forge      - pixel art editor (layers, palettes, selections); sprites to the Locker
 packages/    # shared Dart/Flutter packages
              #   app_shell     - shared app foundation (theme, settings, crash-safe
              #                   storage, error log, about page, export/share)
@@ -129,6 +134,8 @@ packages/    # shared Dart/Flutter packages
              #   beat_kit      - pure-Dart beat engine: tempo clock + swing, step sequencer,
              #                   sample voices, synced loop layers, kit format
              #   fx_kit        - pure-Dart stereo effects (11), FxChain, SoundPreset format
+             #   pixel_kit     - pure-Dart pixel art core: sprites (layers x frames), palettes,
+             #                   drawing tools, selections, PNG/picture codecs (package:image)
              #   light_capture - webcam brightness frames on Windows/Linux
              #                   (the official camera plugin can't stream frames on Windows)
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,

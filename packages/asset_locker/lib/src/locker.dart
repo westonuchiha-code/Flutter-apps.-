@@ -59,7 +59,16 @@ class AssetInfo {
   final Map<String, Object?> extra;
 
   String get dataPath => '${type.folder}/$id.$extension';
-  String get metaPath => '${type.folder}/$id.json';
+
+  /// Details file. (Version 0.1 used `<id>.json`, which collided with the
+  /// data of JSON assets; those old files are still read, see
+  /// [legacyMetaPath].)
+  String get metaPath => '${type.folder}/$id.info.json';
+
+  /// Where version 0.1 kept the details (only valid when the data itself is
+  /// not JSON).
+  String? get legacyMetaPath =>
+      extension == 'json' ? null : '${type.folder}/$id.json';
   String get thumbPath => '${type.folder}/$id.thumb.png';
 
   AssetInfo copyWith({
@@ -257,10 +266,23 @@ class AssetLocker extends ChangeNotifier {
     final types = type == null ? AssetType.values : [type];
     final out = <AssetInfo>[];
     for (final t in types) {
-      for (final e in await fs.list(t.folder)) {
+      final entries = await fs.list(t.folder);
+      final names = {for (final e in entries) e.name};
+      for (final e in entries) {
         if (e.isDir || !e.name.endsWith('.json')) continue;
+        if (e.name.endsWith('.info.json')) {
+          final info = await _readMeta('${t.folder}/${e.name}');
+          if (info != null) out.add(info);
+          continue;
+        }
+        // An old-style details file (`<id>.json` next to non-JSON data),
+        // unless a new one exists. JSON data files never parse as details.
+        final id = e.name.substring(0, e.name.length - 5);
+        if (names.contains('$id.info.json')) continue;
         final info = await _readMeta('${t.folder}/${e.name}');
-        if (info != null) out.add(info);
+        if (info != null && info.extension != 'json' && info.id == id) {
+          out.add(info);
+        }
       }
     }
     out.sort((a, b) => b.created.compareTo(a.created));
@@ -315,8 +337,11 @@ class AssetLocker extends ChangeNotifier {
     return info;
   }
 
-  Future<void> _writeMeta(AssetInfo info) =>
-      fs.write(info.metaPath, utf8.encode(jsonEncode(info.toJson())));
+  Future<void> _writeMeta(AssetInfo info) async {
+    await fs.write(info.metaPath, utf8.encode(jsonEncode(info.toJson())));
+    final legacy = info.legacyMetaPath;
+    if (legacy != null) await fs.delete(legacy);
+  }
 
   /// Saves a changed name or tags.
   Future<void> update(AssetInfo info) async {
@@ -352,6 +377,8 @@ class AssetLocker extends ChangeNotifier {
     await fs.delete(info.dataPath);
     await fs.delete(info.thumbPath);
     await fs.delete(info.metaPath);
+    final legacy = info.legacyMetaPath;
+    if (legacy != null) await fs.delete(legacy);
     notifyListeners();
   }
 

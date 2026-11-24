@@ -64,10 +64,16 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
 
 ## Phase 2 · Visual
 
-9. ⬜ **Pixel Forge.** Aseprite-style pixel editor for touch: layers,
+9. 🔨 **Pixel Forge.** Aseprite-style pixel editor for touch: layers,
    animation frames, onion-skinning, sprite animation previews; palettes and
    tile sets made from photos (camera or upload); a tile-map painting mode;
    sprite-sheet export. Builds the shared palette, image and art pipeline.
+   Pass 1 done (`apps/pixel_forge` + `packages/pixel_kit`): canvas with
+   touch zoom/pan, pencil/eraser/line/rect/ellipse/fill/picker/select,
+   mirror drawing, move/flip/rotate/copy/paste, layers, palettes (classic
+   machines, from the sprite, snap to palette, save/load), PNG export,
+   sprites in the Asset Locker. Pass 2: animation, onion skin, tile maps,
+   palettes from photos, sprite sheets and GIF.
 10. ⬜ **Chip Cam.** The camera image runs through emulations of odd old video
     hardware (ZX Spectrum colour clash, Atari 2600 scan-line limits, Game Boy
     Camera, composite video bleed, Rutt-Etra scan processing, Teletext…).
