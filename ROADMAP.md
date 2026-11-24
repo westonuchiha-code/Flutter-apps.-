@@ -54,9 +54,13 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
    sounds or drawn waves, wind/rain/waves/rumble), shared effects, scene
    crossfades, sleep timer, WAV render, Android background playback (media
    foreground service with a Stop button).
-8. ⬜ **Speech Chip Lab.** Upgrade of the speech-chip voice in
+8. ✅ **Speech Chip Lab.** Upgrade of the speech-chip voice in
    `packages/chip_synth`: type text, hear it on emulated speech chips, tweak
    and export. Reuses the existing code rather than a rebuild.
+   `apps/speech_chip_lab` + `packages/chip_synth/lib/src/speech/`: text →
+   sounds (dictionary + spelling rules, [sounds] input), TMS5220 / SP0256 /
+   Votrax SC-01 recreations, sing mode, samples to the Asset Locker. The
+   theremin's vowel voice is unchanged.
 
 ## Phase 2 · Visual
 

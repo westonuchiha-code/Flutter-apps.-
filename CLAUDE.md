@@ -59,6 +59,9 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   approved designs (drake, hound) are in use; the CRT effect is applied to
   monsters only, always on, never a toggle. Read apps/scan_ranch/HANDOFF.md
   and get the owner's approval on any new art before building on it.
+- Speech: `chip_synth`'s `SpeechSynth` must never clip (a test checks every
+  chip at low, middle and high voices); keep its chip quirks (pitch tables,
+  frame rates, number precision) rather than smoothing them away.
 - Owner's sound priorities (Optical Theremin, inspired by their Chiptune Pad
   Studio): chips should behave like the real hardware — register-quantized
   pitch (don't "fix" hardware tuning), real volume steps, frame-rate effects,
@@ -114,6 +117,7 @@ apps/        # one folder per Flutter application
              #                      shared sound presets
              #   ambience_machine - drifting layered atmospheres, scene crossfades, sleep timer;
              #                      Android background playback via a media foreground service
+             #   speech_chip_lab  - text to speech on TMS5220/SP0256/Votrax recreations; sing mode
 packages/    # shared Dart/Flutter packages
              #   app_shell     - shared app foundation (theme, settings, crash-safe
              #                   storage, error log, about page, export/share)
@@ -129,7 +133,8 @@ packages/    # shared Dart/Flutter packages
              #                   (the official camera plugin can't stream frames on Windows)
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,
              #                   band-limited morphing wavetables (Wavetable; set
-             #                   PolySynth.wavetable to play drawn waves)
+             #                   PolySynth.wavetable to play drawn waves), speech chips
+             #                   (SpeechSynth, textToSpeech)
              #                   (used by optical_theremin, touch_synth, waveform_painter)
 tool/        # developer scripts (setup_linux_dev.sh, new_app.sh)
 ROADMAP.md   # agreed app ideas and build order - keep it updated
