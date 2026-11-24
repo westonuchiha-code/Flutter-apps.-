@@ -178,7 +178,7 @@ void main() {
       expect(c.layerRec, LayerRec.recording);
       out.emit(const StepEvent(0, 16, 96000));
       expect(c.layerRec, LayerRec.processing);
-      for (var i = 0; i < 100 && c.layers.isEmpty; i++) {
+      for (var i = 0; i < 100 && c.layerRec != LayerRec.idle; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 20));
       }
       expect(c.layers, hasLength(1));

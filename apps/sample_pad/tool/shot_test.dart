@@ -108,9 +108,8 @@ void main() {
     }
 
     await shot('pad_pads');
-    await tester.tap(find.text('Steps'));
     c.currentStep = 4;
-    c.notifyListeners();
+    await tester.tap(find.text('Steps'));
     await tester.pump();
     await shot('pad_steps');
     await tester.tap(find.text('Pads'));

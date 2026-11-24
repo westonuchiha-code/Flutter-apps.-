@@ -346,9 +346,11 @@ class PadController extends ChangeNotifier {
     } catch (e) {
       message = 'Could not record the loop: $e';
     } finally {
-      layerRec = LayerRec.idle;
       mic.dispose();
-      if (await file.exists()) await file.delete();
+      try {
+        if (await file.exists()) await file.delete();
+      } catch (_) {}
+      layerRec = LayerRec.idle;
       notifyListeners();
     }
   }
