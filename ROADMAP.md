@@ -89,8 +89,14 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     master, console versions (PS1, N64, PS2, GameCube, Dreamcast) in their
     real formats (CLUT, RGBA16/565, S3TC/CMPR, VQ) and memory limits. Warns
     when a photo won't make a good texture.
-12. ⬜ **Lo-Fi Video Maker.** Short videos combining Chip Cam footage, Sample
-    Pad music and Pixel Forge graphics. Best after Chip Cam proves itself.
+12. 🟨 **Lo-Fi Video Maker.** Short 4:3 videos (up to 60 s) from Chip Cam
+    clips (Chip Cam now records video with sound), pictures, Pixel Forge
+    sprites and title cards, each through a Chip Cam effect, with music from
+    the Asset Locker. Exports MP4 (H.264 + AAC) via the system encoders
+    (`packages/video_encoder`; AVI fallback). Done: steps 1–2 (encoder,
+    recording, storyboard, export). Next: step 3 - retro transitions (VHS
+    roll, lost sync, Teletext page, datamosh), text/sprite overlays, cuts
+    snapped to the beat. MP4 export not yet confirmed on a real phone/PC.
 13. ⬜ **Sprite Pet.** Pixel pet in a home-screen widget that reacts to the
     day. Uses Pixel Forge sprites.
 14. ⬜ **Photo Tile Quilt.** Photos → tiled mosaic with a palette. Bottom of

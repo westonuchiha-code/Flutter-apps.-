@@ -46,7 +46,13 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   them off the UI thread (see `apps/chip_cam/lib/src/processor.dart`). Effects
   emulate real hardware limits (resolution, colours, signal) - keep them
   faithful rather than prettier. Still pictures go to the Locker as
-  `AssetType.picture`.
+  `AssetType.picture`; videos and Chip Cam clips as `AssetType.video`.
+- Video files: `packages/video_encoder` (`openVideoWriter`). Its MP4 path is
+  native and only compiled by CI; check new uses with the app's "Test export".
+- Background work: use `runInBackground(topLevelFunction, arg)` from
+  `app_shell`, never `Isolate.run(() => ...)` inside a widget or controller
+  (the closure can drag the State and its ports along: "object is
+  unsendable"). Entry points for `Isolate.spawn` must be top-level/static.
 - Audio: `flutter_soloud` works on Android, Windows and Linux (built via Dart
   build hooks; no extra setup). It is pinned to an exact version because the
   theremin uses its experimental real-time stream API. Microphone input:
@@ -131,13 +137,16 @@ apps/        # one folder per Flutter application
              #   pixel_forge      - pixel art editor: layers, frames/onion skin, palettes (also from
              #                      photos), selections, tile maps, PNG/sheet/GIF; all to the Locker
              #   chip_cam         - camera through 19 old video hardware/signal emulations, CRT
-             #                      view, snapshots and GIF clips to the Locker (Pictures)
+             #                      view, snapshots/GIFs (Pictures), video+sound clips (Videos)
+             #   lofi_video       - Lo-Fi Video Maker: storyboard of clips/pictures/sprites/titles
+             #                      through video_kit effects + music -> MP4 (60 s max, 4:3)
              #   texture_capture  - photo -> game texture: perspective corners, even lighting,
              #                      seamless tiling, photo checks, PS1/N64/PS2/GameCube/Dreamcast
              #                      formats (CLUT, S3TC, VQ) with their memory limits
 packages/    # shared Dart/Flutter packages
              #   app_shell     - shared app foundation (theme, settings, crash-safe
-             #                   storage, error log, about page, export/share)
+             #                   storage, error log, about page, export/share,
+             #                   runInBackground)
              #   asset_locker  - shared library of creations every app saves to
              #                   (Documents/Asset Locker; Android: folder picked once per app)
              #   audio_kit     - mic recording to WAV, WAV read/write, waveform view,
@@ -153,7 +162,11 @@ packages/    # shared Dart/Flutter packages
              #                   `color: true, width: N`); the official camera plugin can't
              #                   stream frames on Windows
              #   video_kit     - pure-Dart live video: VideoFrame (ARGB), YUV420 conversion,
-             #                   VideoEffect + knobs, 19 hardware/signal effects (allEffects)
+             #                   VideoEffect + knobs, 19 hardware/signal effects (allEffects),
+             #                   Chip Cam clip format (ClipWriter / VideoClip, .lfclip)
+             #   video_encoder - video files with sound: MP4 (H.264+AAC) via Android
+             #                   MediaCodec / Windows Media Foundation (Mp4Writer); pure-Dart
+             #                   MJPEG AVI everywhere (AviWriter); openVideoWriter picks
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,
              #                   band-limited morphing wavetables (Wavetable; set
              #                   PolySynth.wavetable to play drawn waves), speech chips

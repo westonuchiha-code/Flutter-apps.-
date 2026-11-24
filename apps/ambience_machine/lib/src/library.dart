@@ -54,10 +54,7 @@ class AmbLibrary {
     }
     final bytes = await locker.read(info);
     if (bytes == null) throw StateError('The file is missing.');
-    return Isolate.run(
-      () =>
-          decodeWavMono(bytes, targetRate: ambRate, maxSeconds: maxLoopSeconds),
-    );
+    return runInBackground(_decodeLoop, bytes);
   }
 
   Future<Map<String, Object?>?> readSound(AssetInfo info) async {
@@ -132,3 +129,6 @@ class AmbLibrary {
     });
   }
 }
+
+Float32List _decodeLoop(Uint8List bytes) =>
+    decodeWavMono(bytes, targetRate: ambRate, maxSeconds: maxLoopSeconds);

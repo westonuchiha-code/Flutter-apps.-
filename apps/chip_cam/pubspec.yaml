@@ -45,6 +45,9 @@ dependencies:
     path: ../../packages/video_kit
   pixel_kit:
     path: ../../packages/pixel_kit
+  audio_kit:
+    path: ../../packages/audio_kit
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

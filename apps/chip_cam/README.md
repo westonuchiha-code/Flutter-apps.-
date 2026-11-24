@@ -18,6 +18,9 @@ with sharp pixels (or on a pretend CRT).
 - Knobs per effect; CRT view (aperture grille, scan lines, glow).
 - Snapshot (PNG) and GIF clips up to 6 s at 10 fps, saved to the Asset
   Locker (Pictures) or shared. With the CRT on, snapshots include it.
+- Video clips with microphone sound, up to 60 s at 15 fps, exactly as shown
+  (each machine's own resolution), saved to the Asset Locker (Videos) as
+  Chip Cam clips (`.lfclip`, see `video_kit`) for Lo-Fi Video Maker.
 - No camera? The test card works everywhere.
 
 Effects run in a worker isolate; frames arriving while it is busy are

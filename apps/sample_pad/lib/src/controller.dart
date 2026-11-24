@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:math' as math;
 
+import 'package:app_shell/app_shell.dart' show runInBackground;
 import 'package:audio_kit/audio_kit.dart';
 import 'package:beat_kit/beat_kit.dart';
 import 'package:flutter/foundation.dart';
@@ -334,14 +334,12 @@ class PadController extends ChangeNotifier {
       final bars = layerBars;
       final startBar = _recStartBar;
       final frames = transport.barFrames * bars;
-      final data = await Isolate.run(
-        () => cutLayer(
-          bytes,
-          markSeconds: mark,
-          latencyMs: latency,
-          frames: frames,
-        ),
-      );
+      final data = await runInBackground(_cutLayer, (
+        bytes,
+        mark,
+        latency,
+        frames,
+      ));
       addLayer(data, bars, startBar);
     } catch (e) {
       message = 'Could not record the loop: $e';
@@ -541,3 +539,6 @@ Uint8List renderMix(MixSnapshot s, int bars) {
   }
   return encodeWavStereo16(out, engineRate);
 }
+
+Float32List _cutLayer((Uint8List, double, double, int) a) =>
+    cutLayer(a.$1, markSeconds: a.$2, latencyMs: a.$3, frames: a.$4);

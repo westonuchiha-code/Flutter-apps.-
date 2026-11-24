@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:app_shell/app_shell.dart';
 import 'package:audio_kit/audio_kit.dart';
@@ -101,13 +100,7 @@ class _PadEditorPageState extends State<PadEditorPage> {
     try {
       await mic.stop();
       final bytes = await file.readAsBytes();
-      final data = await Isolate.run(
-        () => decodeWavMono(
-          bytes,
-          targetRate: engineRate,
-          maxSeconds: maxSampleSeconds,
-        ),
-      );
+      final data = await runInBackground(decodePadSample, bytes);
       c.setSample(pad, data, name: 'Mic ${pad + 1}');
       c.setPad(pad, const PadSettings());
       c.trimSilence(pad);

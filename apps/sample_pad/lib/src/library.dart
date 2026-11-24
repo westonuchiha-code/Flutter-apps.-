@@ -24,13 +24,7 @@ class PadLibrary {
     }
     final bytes = await locker.read(info);
     if (bytes == null) throw StateError('The file is missing.');
-    return Isolate.run(
-      () => decodeWavMono(
-        bytes,
-        targetRate: engineRate,
-        maxSeconds: maxSampleSeconds,
-      ),
-    );
+    return runInBackground(decodePadSample, bytes);
   }
 
   Future<AssetInfo?> find(String? type, String? id) async {
@@ -123,3 +117,7 @@ class PadLibrary {
     );
   }
 }
+
+/// A WAV as a pad sample (mono, engine rate, at most the longest sample).
+Float32List decodePadSample(Uint8List bytes) =>
+    decodeWavMono(bytes, targetRate: engineRate, maxSeconds: maxSampleSeconds);

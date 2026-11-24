@@ -6,6 +6,7 @@ import 'package:chip_cam/src/controller.dart';
 import 'package:chip_cam/src/processor.dart';
 import 'package:chip_cam/src/source.dart';
 import 'package:chip_cam/src/ui/home.dart';
+import 'package:chip_cam/src/video_recorder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:material_ui/material_ui.dart';
@@ -39,6 +40,7 @@ class FakeSource extends FrameSource {
 }
 
 void main() {
+  recorderTests();
   test('every effect goes through the controller to a picture', () async {
     final src = FakeSource();
     final c = ChipCamController(processor: DirectProcessor(), source: src);
@@ -112,5 +114,31 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
     c.dispose();
+  });
+}
+
+void recorderTests() {
+  test('video recording makes a clip at up to 15 fps', () async {
+    final dir = Directory.systemTemp.createTempSync('chip_rec');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final r = VideoRecorder(withSound: false);
+    await r.start(dir);
+    final zx = runEffect(ZxSpectrum(), testCard(0), 0);
+    for (var i = 0; i < 20; i++) {
+      r.addFrame(i.isEven ? zx : testCard(i * 0.05));
+      await Future<void>.delayed(const Duration(milliseconds: 35));
+    }
+    final file = await r.stop(extra: {'effect': 'zx'});
+    expect(file, isNotNull);
+    final clip = VideoClip.fromBytes(await file!.readAsBytes());
+    expect(clip.frames.length, inInclusiveRange(5, 16));
+    for (var i = 1; i < clip.frames.length; i++) {
+      expect(
+        clip.frames[i].time - clip.frames[i - 1].time,
+        greaterThanOrEqualTo(1 / videoFps - 0.005),
+      );
+    }
+    expect(clip.extra['effect'], 'zx');
+    expect(clip.hasSound, isFalse);
   });
 }

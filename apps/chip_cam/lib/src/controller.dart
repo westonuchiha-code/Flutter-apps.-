@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -8,6 +9,7 @@ import 'package:video_kit/video_kit.dart';
 
 import 'processor.dart';
 import 'source.dart';
+import 'video_recorder.dart';
 
 /// Longest GIF clip.
 const maxClipSeconds = 6.0;
@@ -40,7 +42,40 @@ class ChipCamController extends ChangeNotifier {
   bool recording = false;
   double _lastClipTime = -1;
 
+  // Video recording (with sound).
+  VideoRecorder? video;
+  bool get recordingVideo => video?.recording ?? false;
+
+  /// Called when a video recording reaches [maxVideoSeconds].
+  VoidCallback? onVideoLimit;
+
   VideoEffect get effect => effects[effectIndex];
+
+  Future<void> startVideo(Directory temp, {bool sound = true}) async {
+    if (recordingVideo) return;
+    final v = VideoRecorder(withSound: sound);
+    video = v;
+    notifyListeners();
+    try {
+      await v.start(temp);
+    } catch (e) {
+      video = null;
+      error = 'Could not record: $e';
+    }
+    notifyListeners();
+  }
+
+  /// Stops the video recording; returns the clip file.
+  Future<File?> stopVideo() async {
+    final v = video;
+    if (v == null) return null;
+    final f = await v.stop(
+      extra: {'effect': effect.id, 'effectName': effect.name},
+    );
+    video = null;
+    notifyListeners();
+    return f;
+  }
 
   Future<void> init() async {
     await processor.start();
@@ -53,6 +88,7 @@ class ChipCamController extends ChangeNotifier {
 
   @override
   void dispose() {
+    unawaited(video?.cancel());
     unawaited(source.stop());
     processor.dispose();
     image?.dispose();
@@ -119,6 +155,11 @@ class ChipCamController extends ChangeNotifier {
       fps = _frames * 1000 / _fpsWatch.elapsedMilliseconds;
       _frames = 0;
       _fpsWatch.reset();
+    }
+    final v = video;
+    if (v != null && v.recording) {
+      v.addFrame(out);
+      if (v.seconds >= maxVideoSeconds) onVideoLimit?.call();
     }
     if (recording) {
       final t = time;

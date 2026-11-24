@@ -16,6 +16,7 @@ enum AssetType {
   palette('Palettes', 'Palette'),
   map('Maps', 'Map'),
   picture('Pictures', 'Picture'),
+  video('Videos', 'Video'),
   other('Other', 'Other');
 
   const AssetType(this.folder, this.label);

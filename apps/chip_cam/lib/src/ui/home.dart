@@ -1,15 +1,17 @@
 import 'dart:async';
-import 'dart:isolate';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:app_shell/app_shell.dart';
 import 'package:flutter/rendering.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:video_kit/video_kit.dart';
 
 import '../controller.dart';
 import '../processor.dart';
+import '../video_recorder.dart';
 import 'crt.dart';
 
 class HomePage extends StatefulWidget {
@@ -129,9 +131,10 @@ class _HomePageState extends State<HomePage> {
     );
     if (where == null) return;
     await _guard(() async {
-      final gif = await Isolate.run(
-        () => clipToGif(frames, scale: frames.first.width < 200 ? 2 : 1),
-      );
+      final gif = await runInBackground(_gif, (
+        frames,
+        frames.first.width < 200 ? 2 : 1,
+      ));
       if (!mounted) return;
       if (where == 'locker') {
         if (!await _locker()) return;
@@ -150,6 +153,81 @@ class _HomePageState extends State<HomePage> {
             .exportFile('chip_cam.gif', gif, mimeType: 'image/gif');
       }
     });
+  }
+
+  bool _stoppingVideo = false;
+
+  Future<void> _video() async {
+    if (!c.recordingVideo) {
+      if (c.recording) c.stopClip();
+      c.onVideoLimit = () => unawaited(_video());
+      await c.startVideo(await getTemporaryDirectory());
+      final err = c.video?.soundError;
+      if (err != null && mounted) _snack('Recording without sound: $err');
+      return;
+    }
+    if (_stoppingVideo) return;
+    _stoppingVideo = true;
+    try {
+      final file = await c.stopVideo();
+      if (file == null || !mounted) return;
+      await _saveVideo(file);
+    } finally {
+      _stoppingVideo = false;
+    }
+  }
+
+  Future<void> _saveVideo(File file) async {
+    final bytes = await file.readAsBytes();
+    final clip = VideoClip.fromBytes(bytes);
+    if (!mounted) return;
+    final keep = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Video clip (${clip.length.toStringAsFixed(1)} s)'),
+        content: Text(
+          '${clip.frames.length} frames${clip.hasSound ? ', with sound' : ', no sound'}. '
+          'Save it to the Asset Locker (Videos) to use it in Lo-Fi Video Maker.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Discard'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    try {
+      if (keep == true && mounted && await _locker() && mounted) {
+        final first = clip.frame(0);
+        final thumb = await runInBackground(_thumb, first);
+        if (!mounted) return;
+        await Shell.of(context).locker.save(
+          type: AssetType.video,
+          name: '${c.effect.name} video',
+          bytes: bytes,
+          extension: clipExtension,
+          thumbnail: thumb,
+          tags: ['chip cam', 'clip', c.effect.id],
+          extra: {
+            'kind': clipKind,
+            'seconds': clip.length,
+            'sound': clip.hasSound,
+          },
+        );
+        _snack('Saved to Videos');
+      }
+    } catch (e) {
+      if (mounted) _snack('Could not save: $e');
+    } finally {
+      try {
+        await file.delete();
+      } catch (_) {}
+    }
   }
 
   @override
@@ -220,6 +298,18 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                       ),
+                    if (c.recordingVideo)
+                      Positioned(
+                        right: 12,
+                        top: 8,
+                        child: Text(
+                          '● VIDEO ${c.video!.seconds.toStringAsFixed(1)} / ${maxVideoSeconds.round()} s',
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     if (c.error != null)
                       Positioned(
                         left: 8,
@@ -243,6 +333,7 @@ class _HomePageState extends State<HomePage> {
                   c: c,
                   onSnapshot: _snapshot,
                   onClip: _clip,
+                  onVideo: _video,
                   list: wide,
                 );
                 if (wide) {
@@ -282,11 +373,12 @@ class _Controls extends StatelessWidget {
     required this.c,
     required this.onSnapshot,
     required this.onClip,
+    required this.onVideo,
     required this.list,
   });
 
   final ChipCamController c;
-  final VoidCallback onSnapshot, onClip;
+  final VoidCallback onSnapshot, onClip, onVideo;
 
   /// Side panel (desktop): effects as a list instead of a strip.
   final bool list;
@@ -382,10 +474,10 @@ class _Controls extends StatelessWidget {
                 ? 'Stop the clip'
                 : 'Record a GIF clip (up to ${maxClipSeconds.round()} s)',
             icon: Icon(
-              c.recording ? Icons.stop : Icons.videocam_outlined,
+              c.recording ? Icons.stop : Icons.gif_box_outlined,
               color: c.recording ? Colors.redAccent : null,
             ),
-            onPressed: onClip,
+            onPressed: c.recordingVideo ? null : onClip,
           ),
           IconButton.filled(
             iconSize: 36,
@@ -393,7 +485,17 @@ class _Controls extends StatelessWidget {
             icon: const Icon(Icons.camera),
             onPressed: onSnapshot,
           ),
-          const SizedBox(width: 48),
+          IconButton.filledTonal(
+            iconSize: 28,
+            tooltip: c.recordingVideo
+                ? 'Stop the video'
+                : 'Record video with sound (up to ${maxVideoSeconds.round()} s)',
+            icon: Icon(
+              c.recordingVideo ? Icons.stop : Icons.fiber_manual_record,
+              color: Colors.redAccent,
+            ),
+            onPressed: c.recording ? null : onVideo,
+          ),
         ],
       ),
     );
@@ -418,3 +520,9 @@ class _Controls extends StatelessWidget {
     );
   }
 }
+
+Uint8List _gif((List<VideoFrame>, int) a) => clipToGif(a.$1, scale: a.$2);
+
+Uint8List _thumb(VideoFrame f) =>
+    encodeClipFrame(f.width < 160 ? f.resized(f.width * 2, f.height * 2) : f)
+        .$2;

@@ -2,6 +2,7 @@
 /// emulations of old video hardware and signals.
 library;
 
+export 'src/clip.dart';
 export 'src/effect.dart';
 export 'src/effects/digital.dart';
 export 'src/effects/machines.dart';

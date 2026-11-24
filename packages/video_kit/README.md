@@ -13,3 +13,7 @@ Pure-Dart live video processing (used by Chip Cam).
 Effects copy real hardware limits (resolution, colours per cell, palettes,
 signal bandwidth); keep them faithful rather than prettier. Each one is
 tested to stay within its machine's limits and under ~25 ms per frame.
+
+Chip Cam clips (`clip.dart`): `ClipWriter` records frames (PNG when ≤256
+colours, otherwise JPEG) with times and optional mono sound into one
+`.lfclip` file; `VideoClip` reads it (`frameAt(t)`, `sound`).

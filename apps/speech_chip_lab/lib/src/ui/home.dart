@@ -1,5 +1,5 @@
+import 'dart:typed_data';
 import 'dart:async';
-import 'dart:isolate';
 
 import 'package:app_shell/app_shell.dart';
 import 'package:audio_kit/audio_kit.dart';
@@ -162,10 +162,7 @@ class _HomePageState extends State<HomePage> {
     setState(() => _busy = true);
     try {
       final settings = c.settings;
-      final wav = await Isolate.run(() {
-        final samples = renderSpeech(words, settings);
-        return encodeWavMono16(samples, speechRate);
-      });
+      final wav = await runInBackground(_speechWav, (words, settings));
       final name = c.text.trim().split(RegExp(r'\s+')).take(5).join(' ');
       if (action == 'share') {
         await shell.exporter.exportFile(
@@ -479,3 +476,6 @@ class _Knob extends StatelessWidget {
     ),
   );
 }
+
+Uint8List _speechWav((List<SpokenWord>, SpeechSettings) a) =>
+    encodeWavMono16(renderSpeech(a.$1, a.$2), speechRate);

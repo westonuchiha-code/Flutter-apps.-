@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:isolate';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:chip_synth/chip_synth.dart' show PolySpec, Wavetable;
 import 'package:app_shell/app_shell.dart';
 import 'package:audio_kit/audio_kit.dart';
 import 'package:flutter/services.dart';
@@ -178,10 +178,7 @@ class _HomePageState extends State<HomePage> {
           final table = c.buildTable();
           final spec = c.spec;
           final morph = c.morph;
-          final wav = await Isolate.run(
-            () =>
-                renderNote(table, spec, morph, PainterController.noteHz(60), 2),
-          );
+          final wav = await runInBackground(_noteWav, (table, spec, morph));
           await locker.save(
             type: AssetType.sample,
             name: n,
@@ -468,3 +465,6 @@ Future<Uint8List> waveLinePng(
   img.dispose();
   return data!.buffer.asUint8List();
 }
+
+Uint8List _noteWav((Wavetable, PolySpec, double) a) =>
+    renderNote(a.$1, a.$2, a.$3, PainterController.noteHz(60), 2);

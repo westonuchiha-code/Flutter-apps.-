@@ -45,13 +45,7 @@ class LabLibrary {
     }
     final bytes = await locker.read(info);
     if (bytes == null) throw StateError('The file is missing.');
-    return Isolate.run(
-      () => decodeWavMono(
-        bytes,
-        targetRate: labRate,
-        maxSeconds: maxSampleSeconds,
-      ),
-    );
+    return runInBackground(_decodeSample, bytes);
   }
 
   Future<AssetInfo?> find(String? type, String? id) async {
@@ -136,3 +130,6 @@ class LabLibrary {
     );
   }
 }
+
+Float32List _decodeSample(Uint8List bytes) =>
+    decodeWavMono(bytes, targetRate: labRate, maxSeconds: maxSampleSeconds);

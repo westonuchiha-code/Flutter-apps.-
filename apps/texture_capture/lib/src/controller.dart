@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:isolate';
 import 'dart:ui' as ui;
 
+import 'package:app_shell/app_shell.dart' show runInBackground;
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
@@ -87,8 +87,8 @@ class TextureController extends ChangeNotifier {
   int _masterGen = 0, _consoleGen = 0;
   bool _disposed = false;
 
-  Future<T> _run<T>(T Function() work) =>
-      useIsolates ? Isolate.run(work) : Future.value(work());
+  Future<R> _run<A, R>(R Function(A) work, A arg) =>
+      useIsolates ? runInBackground(work, arg) : Future.value(work(arg));
 
   List<Pt> fullCorners(Pic p) => [
     (x: 0, y: 0),
@@ -99,7 +99,7 @@ class TextureController extends ChangeNotifier {
 
   /// Opens a photo (encoded bytes). Returns false if it can't be read.
   Future<bool> openBytes(Uint8List bytes, {String name = 'Texture'}) async {
-    final p = await _run(() => decodePhoto(bytes));
+    final p = await _run(_decode, bytes);
     if (p == null) return false;
     await setPhoto(p, name: name);
     return true;
@@ -168,7 +168,7 @@ class TextureController extends ChangeNotifier {
     final gen = ++_masterGen;
     workingMaster = true;
     notifyListeners();
-    final r = await _run(() => buildMaster(p, s));
+    final r = await _run(_master, (p, s));
     if (gen != _masterGen || _disposed) return;
     final image = await picToImage(r.master);
     if (gen != _masterGen || _disposed) {
@@ -224,7 +224,7 @@ class TextureController extends ChangeNotifier {
     workingConsole = true;
     notifyListeners();
     final f = format.format, s = size, d = dither && f.canDither;
-    final out = await _run(() => buildConsole(m, f, s, dither: d));
+    final out = await _run(_console, (m, f, s, d));
     if (gen != _consoleGen || _disposed) return;
     final image = await picToImage(out);
     if (gen != _consoleGen || _disposed) {
@@ -242,12 +242,12 @@ class TextureController extends ChangeNotifier {
 
   Future<Uint8List> masterPng() {
     final m = master!;
-    return _run(() => picToPng(m));
+    return _run(picToPng, m);
   }
 
   Future<Uint8List> consolePng() {
     final c = consolePic!;
-    return _run(() => picToPng(c));
+    return _run(picToPng, c);
   }
 
   @override
@@ -259,3 +259,8 @@ class TextureController extends ChangeNotifier {
     super.dispose();
   }
 }
+
+Pic? _decode(Uint8List bytes) => decodePhoto(bytes);
+MasterResult _master((Pic, MasterSettings) a) => buildMaster(a.$1, a.$2);
+Pic _console((Pic, TexFormat, int, bool) a) =>
+    buildConsole(a.$1, a.$2, a.$3, dither: a.$4);
