@@ -56,6 +56,43 @@ int main() {
     CHECK_EQ(dst[0], 255);  // top row is white
     CHECK_EQ(dst[1], 0);
   }
+  // Colour: BGRA passes through (averaged); YUYV converts to RGB.
+  CHECK_EQ(light_capture::ThumbnailHeight(640, 480, 320), 240);
+  {
+    // 2x1 BGRA: blue and red -> 1x1 average.
+    const uint8_t src[] = {255, 0, 0, 255, 0, 0, 255, 255};
+    std::vector<uint8_t> dst;
+    light_capture::DownscaleBgra(src, 2, 1, 8, PixelLayout::kBgra32, 1, 1, &dst);
+    CHECK_EQ(dst.size(), 4);
+    CHECK_EQ(dst[0], 127);
+    CHECK_EQ(dst[2], 127);
+    CHECK_EQ(dst[3], 255);
+  }
+  {
+    // YUYV pure red is about Y=76 U=85 V=255.
+    const uint8_t src[] = {76, 85, 76, 255};
+    std::vector<uint8_t> dst;
+    light_capture::DownscaleBgra(src, 2, 1, 4, PixelLayout::kYuyv, 2, 1, &dst);
+    CHECK_EQ(dst[2] > 240, 1);  // R high
+    CHECK_EQ(dst[1] < 20, 1);   // G low
+    CHECK_EQ(dst[0] < 20, 1);   // B low
+    // Same colour as UYVY.
+    const uint8_t uyvy[] = {85, 76, 255, 76};
+    std::vector<uint8_t> dst2;
+    light_capture::DownscaleBgra(uyvy, 2, 1, 4, PixelLayout::kUyvy, 2, 1, &dst2);
+    CHECK_EQ(dst2[2], dst[2]);
+    CHECK_EQ(dst2[0], dst[0]);
+  }
+  {
+    // Grey-only sources come out grey.
+    const uint8_t src[] = {100};
+    std::vector<uint8_t> dst;
+    light_capture::DownscaleBgra(src, 1, 1, 1, PixelLayout::kLuma8, 1, 1, &dst);
+    CHECK_EQ(dst[0], 100);
+    CHECK_EQ(dst[1], 100);
+    CHECK_EQ(dst[2], 100);
+  }
+
   if (failures == 0) std::printf("All luma_downscale tests passed.\n");
   return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }

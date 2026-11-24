@@ -198,7 +198,7 @@ class _HomePageState extends State<HomePage> {
         final info = await pickFromLocker(
           context,
           shell.locker,
-          types: const [AssetType.sprite, AssetType.other],
+          types: const [AssetType.sprite, AssetType.picture, AssetType.other],
         );
         if (info == null) return;
         await _guard(() async {

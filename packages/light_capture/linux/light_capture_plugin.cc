@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cerrno>
 #include <cstring>
@@ -25,6 +26,7 @@
 
 namespace {
 
+using light_capture::DownscaleBgra;
 using light_capture::DownscaleLuma;
 using light_capture::kThumbnailWidth;
 using light_capture::PixelLayout;
@@ -75,7 +77,12 @@ class CaptureSession {
   ~CaptureSession() { Stop(); }
 
   // Returns an empty string on success.
-  std::string Start(const std::string& path) {
+  // With [color], frames are BGRA [width] pixels wide; otherwise 8-bit luma.
+  std::string Start(const std::string& path, bool color = false,
+                    int width = kThumbnailWidth) {
+    color_ = color;
+    thumb_width_ = color ? std::clamp(width, 16, light_capture::kMaxThumbnailWidth)
+                         : kThumbnailWidth;
     fd_ = open(path.c_str(), O_RDWR | O_NONBLOCK);
     if (fd_ < 0) return ErrnoMessage("Could not open " + path);
 
@@ -117,7 +124,7 @@ class CaptureSession {
         return Fail("The camera's video format is not supported "
                     "(needs YUYV, UYVY, NV12, YUV420 or GREY)");
     }
-    thumb_height_ = ThumbnailHeight(width_, height_);
+    thumb_height_ = ThumbnailHeight(width_, height_, thumb_width_);
 
     v4l2_requestbuffers req = {};
     req.count = 4;
@@ -190,6 +197,8 @@ class CaptureSession {
   }
 
   int thumbnail_height() const { return thumb_height_; }
+  int thumbnail_width() const { return thumb_width_; }
+  int channels() const { return color_ ? 4 : 1; }
 
   bool TakeFrame(std::vector<uint8_t>* pixels) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -253,9 +262,15 @@ class CaptureSession {
       const Buffer& b = buffers_[buf.index];
       const size_t needed = static_cast<size_t>(stride_) * height_;
       if (buf.bytesused >= needed || buf.bytesused == 0) {
-        DownscaleLuma(static_cast<const uint8_t*>(b.start), width_, height_,
-                      stride_, layout_, kThumbnailWidth, thumb_height_,
-                      &thumbnail);
+        if (color_) {
+          DownscaleBgra(static_cast<const uint8_t*>(b.start), width_, height_,
+                        stride_, layout_, thumb_width_, thumb_height_,
+                        &thumbnail);
+        } else {
+          DownscaleLuma(static_cast<const uint8_t*>(b.start), width_, height_,
+                        stride_, layout_, thumb_width_, thumb_height_,
+                        &thumbnail);
+        }
         {
           std::lock_guard<std::mutex> lock(mutex_);
           frame_.swap(thumbnail);
@@ -276,6 +291,8 @@ class CaptureSession {
   int height_ = 0;
   int stride_ = 0;
   int thumb_height_ = 0;
+  int thumb_width_ = kThumbnailWidth;
+  bool color_ = false;
   PixelLayout layout_ = PixelLayout::kYuyv;
   std::vector<Buffer> buffers_;
   bool streaming_ = false;
@@ -316,9 +333,12 @@ static void deliver_pending(LightCapturePlugin* self) {
   std::vector<uint8_t> pixels;
   if (self->session->TakeFrame(&pixels) && self->listening) {
     g_autoptr(FlValue) event = fl_value_new_map();
-    fl_value_set_string_take(event, "width", fl_value_new_int(kThumbnailWidth));
+    fl_value_set_string_take(event, "width",
+                             fl_value_new_int(self->session->thumbnail_width()));
     fl_value_set_string_take(event, "height",
                              fl_value_new_int(self->session->thumbnail_height()));
+    fl_value_set_string_take(event, "channels",
+                             fl_value_new_int(self->session->channels()));
     fl_value_set_string_take(
         event, "pixels", fl_value_new_uint8_list(pixels.data(), pixels.size()));
     fl_event_channel_send(self->event_channel, event, nullptr, nullptr);
@@ -354,7 +374,17 @@ static FlMethodResponse* handle_start(LightCapturePlugin* self, FlValue* args) {
   }
   stop_session(self);
   auto* session = new CaptureSession([self] { notify_main_thread(self); });
-  const std::string error = session->Start(fl_value_get_string(id));
+  FlValue* color = fl_value_lookup_string(args, "color");
+  FlValue* width = fl_value_lookup_string(args, "width");
+  const bool want_color = color != nullptr &&
+                          fl_value_get_type(color) == FL_VALUE_TYPE_BOOL &&
+                          fl_value_get_bool(color);
+  const int want_width = width != nullptr &&
+                                 fl_value_get_type(width) == FL_VALUE_TYPE_INT
+                             ? static_cast<int>(fl_value_get_int(width))
+                             : kThumbnailWidth;
+  const std::string error =
+      session->Start(fl_value_get_string(id), want_color, want_width);
   if (!error.empty()) {
     delete session;
     return FL_METHOD_RESPONSE(
@@ -362,9 +392,12 @@ static FlMethodResponse* handle_start(LightCapturePlugin* self, FlValue* args) {
   }
   self->session = session;
   g_autoptr(FlValue) result = fl_value_new_map();
-  fl_value_set_string_take(result, "width", fl_value_new_int(kThumbnailWidth));
+  fl_value_set_string_take(result, "width",
+                           fl_value_new_int(session->thumbnail_width()));
   fl_value_set_string_take(result, "height",
                            fl_value_new_int(session->thumbnail_height()));
+  fl_value_set_string_take(result, "channels",
+                           fl_value_new_int(session->channels()));
   return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
 }
 

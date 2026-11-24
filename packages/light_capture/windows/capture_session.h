@@ -35,13 +35,17 @@ class CaptureSession {
 
   // Opens the camera and starts the capture thread. Blocks until the camera is
   // open. Returns an empty string on success, otherwise an error message.
-  std::string Start(const std::string& camera_id);
+  // With [color], frames are BGRA (4 bytes per pixel) [width] pixels wide;
+  // otherwise 8-bit luma, 160 wide.
+  std::string Start(const std::string& camera_id, bool color = false,
+                    int width = 160);
   void Stop();
 
   // Turns automatic exposure on or off. Returns false if unsupported.
   bool SetAutoExposure(bool enabled);
 
   int thumbnail_width() const { return thumb_width_; }
+  int channels() const { return color_ ? 4 : 1; }
   int thumbnail_height() const { return thumb_height_; }
 
   // Takes the newest frame / error, if any (thread-safe).
@@ -69,6 +73,8 @@ class CaptureSession {
 
   int thumb_width_ = 0;
   int thumb_height_ = 0;
+  bool color_ = false;
+  int requested_width_ = 160;
 };
 
 }  // namespace light_capture

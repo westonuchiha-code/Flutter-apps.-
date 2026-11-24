@@ -33,18 +33,23 @@ class LightCaptureCamera {
   String toString() => 'LightCaptureCamera($name)';
 }
 
-/// An 8-bit luminance image: one byte per pixel, row-major, 0 = black.
+/// A camera image, row-major. With [channels] 1 it is 8-bit luminance (one
+/// byte per pixel, 0 = black); with 4 it is colour, B, G, R, A per pixel.
 @immutable
 class LightCaptureFrame {
   const LightCaptureFrame({
     required this.width,
     required this.height,
     required this.pixels,
+    this.channels = 1,
   });
 
   final int width;
   final int height;
   final Uint8List pixels;
+  final int channels;
+
+  bool get isColor => channels == 4;
 }
 
 /// Error reported by the platform while capturing.
@@ -87,6 +92,7 @@ class LightCapture {
       width: map['width']! as int,
       height: map['height']! as int,
       pixels: map['pixels']! as Uint8List,
+      channels: (map['channels'] as int?) ?? 1,
     );
   }
 
@@ -102,11 +108,21 @@ class LightCapture {
     ];
   }
 
-  /// Opens [camera] and starts streaming [frames].
+  /// Opens [camera] and starts streaming [frames]: brightness thumbnails
+  /// 160 pixels wide, or with [color], BGRA frames [width] pixels wide
+  /// (16–640).
   /// Throws [LightCaptureException] if the camera cannot be opened.
-  static Future<void> start(LightCaptureCamera camera) async {
+  static Future<void> start(
+    LightCaptureCamera camera, {
+    bool color = false,
+    int width = 160,
+  }) async {
     try {
-      await _methods.invokeMethod<void>('start', {'id': camera.id});
+      await _methods.invokeMethod<void>('start', {
+        'id': camera.id,
+        'color': color,
+        'width': width,
+      });
     } on PlatformException catch (e) {
       throw LightCaptureException(e.message ?? e.code);
     }

@@ -50,7 +50,7 @@ Future<Picture?> pickPicture(BuildContext context) async {
     final info = await pickFromLocker(
       context,
       locker,
-      types: const [AssetType.sprite, AssetType.other],
+      types: const [AssetType.sprite, AssetType.picture, AssetType.other],
     );
     if (info == null) return null;
     if (!pictureExtensions.contains(info.extension)) {

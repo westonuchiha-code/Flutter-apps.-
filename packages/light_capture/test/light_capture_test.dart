@@ -37,7 +37,13 @@ void main() {
 
   test('start passes the id and maps errors', () async {
     await LightCapture.start(const LightCaptureCamera(id: 'cam0', name: 'x'));
-    expect(calls.last.arguments, {'id': 'cam0'});
+    expect(calls.last.arguments, {'id': 'cam0', 'color': false, 'width': 160});
+    await LightCapture.start(
+      const LightCaptureCamera(id: 'cam0', name: 'x'),
+      color: true,
+      width: 320,
+    );
+    expect(calls.last.arguments, {'id': 'cam0', 'color': true, 'width': 320});
     await expectLater(
       LightCapture.start(const LightCaptureCamera(id: 'bad', name: 'x')),
       throwsA(

@@ -77,10 +77,13 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
    maps in the Asset Locker); palettes from photos (median cut); pictures
    as layers (fit, palette snap, ordered dither); sprite sheets and
    exact-colour animated GIFs.
-10. ⬜ **Chip Cam.** The camera image runs through emulations of odd old video
-    hardware (ZX Spectrum colour clash, Atari 2600 scan-line limits, Game Boy
-    Camera, composite video bleed, Rutt-Etra scan processing, Teletext…).
-    The owner has more ideas to add. Builds the shared live video processing.
+10. ✅ **Chip Cam.** The camera image runs through 19 emulations of old video
+    hardware and signals: ZX Spectrum, C64, Atari 2600, Game Boy Camera, slow
+    handheld LCD, Teletext, PXL-2000, CGA/Apple II artifact colour, NTSC
+    composite, VHS, bad antenna, lost sync, interlace, Rutt/Etra, video
+    feedback, slit-scan, slow-scan TV, JPEG blocks, datamosh. CRT view,
+    snapshots and GIF clips. Shared code: `packages/video_kit`, colour frames
+    in `light_capture`. The owner has more ideas to add.
 11. ⬜ **Texture Capture.** Photo → game-ready texture: perspective
     flattening, even lighting, seamless tiling, highest-quality master, plus
     console presets (PS1, PS2…) at the sizes and colour depths they used.

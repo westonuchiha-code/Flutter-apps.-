@@ -42,6 +42,11 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
 - Use an application ID / org of `com.westonuchiha` for new apps.
 - Camera on Windows: `camera_windows` has no frame streaming. Use
   `packages/light_capture` when an app needs live frames on Windows/Linux.
+- Video effects: use `packages/video_kit` (`VideoEffect`, `runEffect`); run
+  them off the UI thread (see `apps/chip_cam/lib/src/processor.dart`). Effects
+  emulate real hardware limits (resolution, colours, signal) - keep them
+  faithful rather than prettier. Still pictures go to the Locker as
+  `AssetType.picture`.
 - Audio: `flutter_soloud` works on Android, Windows and Linux (built via Dart
   build hooks; no extra setup). It is pinned to an exact version because the
   theremin uses its experimental real-time stream API. Microphone input:
@@ -125,6 +130,8 @@ apps/        # one folder per Flutter application
              #   speech_chip_lab  - text to speech on TMS5220/SP0256/Votrax recreations; sing mode
              #   pixel_forge      - pixel art editor: layers, frames/onion skin, palettes (also from
              #                      photos), selections, tile maps, PNG/sheet/GIF; all to the Locker
+             #   chip_cam         - camera through 19 old video hardware/signal emulations, CRT
+             #                      view, snapshots and GIF clips to the Locker (Pictures)
 packages/    # shared Dart/Flutter packages
              #   app_shell     - shared app foundation (theme, settings, crash-safe
              #                   storage, error log, about page, export/share)
@@ -139,8 +146,11 @@ packages/    # shared Dart/Flutter packages
              #   pixel_kit     - pure-Dart pixel art core: sprites (layers x frames), palettes,
              #                   median-cut + dithering, drawing tools, selections, tile sets/maps,
              #                   PNG, sprite sheets, exact-colour GIF (package:image)
-             #   light_capture - webcam brightness frames on Windows/Linux
-             #                   (the official camera plugin can't stream frames on Windows)
+             #   light_capture - webcam frames on Windows/Linux, brightness or colour (BGRA,
+             #                   `color: true, width: N`); the official camera plugin can't
+             #                   stream frames on Windows
+             #   video_kit     - pure-Dart live video: VideoFrame (ARGB), YUV420 conversion,
+             #                   VideoEffect + knobs, 19 hardware/signal effects (allEffects)
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,
              #                   band-limited morphing wavetables (Wavetable; set
              #                   PolySynth.wavetable to play drawn waves), speech chips

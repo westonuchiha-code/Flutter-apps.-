@@ -242,9 +242,14 @@ CaptureSession::CaptureSession(std::function<void()> on_update)
 
 CaptureSession::~CaptureSession() { Stop(); }
 
-std::string CaptureSession::Start(const std::string& camera_id) {
+std::string CaptureSession::Start(const std::string& camera_id, bool color,
+                                  int width) {
   Stop();
   stop_requested_ = false;
+  color_ = color;
+  requested_width_ = width < 16 ? 16
+                     : (width > kMaxThumbnailWidth ? kMaxThumbnailWidth
+                                                   : width);
   std::promise<std::string> opened;
   std::future<std::string> result = opened.get_future();
   thread_ = std::thread(&CaptureSession::Run, this, camera_id, &opened);
@@ -322,9 +327,16 @@ void CaptureSession::Run(std::string camera_id,
     }
     if (open_error.empty()) {
       SelectSmallNativeType(reader.Get());
-      hr = SetOutputSubtype(reader.Get(), MFVideoFormat_NV12);
-      if (FAILED(hr)) hr = SetOutputSubtype(reader.Get(), MFVideoFormat_YUY2);
-      if (FAILED(hr)) hr = SetOutputSubtype(reader.Get(), MFVideoFormat_RGB32);
+      if (color_) {
+        // Colour: let Media Foundation convert to RGB32 when it can.
+        hr = SetOutputSubtype(reader.Get(), MFVideoFormat_RGB32);
+        if (FAILED(hr)) hr = SetOutputSubtype(reader.Get(), MFVideoFormat_YUY2);
+        if (FAILED(hr)) hr = SetOutputSubtype(reader.Get(), MFVideoFormat_NV12);
+      } else {
+        hr = SetOutputSubtype(reader.Get(), MFVideoFormat_NV12);
+        if (FAILED(hr)) hr = SetOutputSubtype(reader.Get(), MFVideoFormat_YUY2);
+        if (FAILED(hr)) hr = SetOutputSubtype(reader.Get(), MFVideoFormat_RGB32);
+      }
       if (SUCCEEDED(hr)) hr = ReadFrameFormat(reader.Get(), &format);
       if (FAILED(hr)) {
         open_error = HrMessage("The camera's video format is not supported", hr);
@@ -336,8 +348,8 @@ void CaptureSession::Run(std::string camera_id,
     } else {
       {
         std::lock_guard<std::mutex> lock(mutex_);
-        thumb_width_ = kThumbnailWidth;
-        thumb_height_ = ThumbnailHeight(format.width, format.height);
+        thumb_width_ = color_ ? requested_width_ : kThumbnailWidth;
+        thumb_height_ = ThumbnailHeight(format.width, format.height, thumb_width_);
         running_ = true;
       }
       opened->set_value(std::string());
@@ -383,7 +395,8 @@ void CaptureSession::Run(std::string camera_id,
         if ((flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED) != 0) {
           if (SUCCEEDED(ReadFrameFormat(reader.Get(), &format))) {
             std::lock_guard<std::mutex> lock(mutex_);
-            thumb_height_ = ThumbnailHeight(format.width, format.height);
+            thumb_height_ =
+                ThumbnailHeight(format.width, format.height, thumb_width_);
           }
         }
         if (!sample) continue;
@@ -392,7 +405,17 @@ void CaptureSession::Run(std::string camera_id,
         if (FAILED(sample->ConvertToContiguousBuffer(&buffer))) continue;
         const int width = static_cast<int>(format.width);
         const int height = static_cast<int>(format.height);
-        const int thumb_height = ThumbnailHeight(width, height);
+        const int thumb_width = thumb_width_;
+        const int thumb_height = ThumbnailHeight(width, height, thumb_width);
+        auto downscale = [&](const BYTE* first_row, std::ptrdiff_t stride) {
+          if (color_) {
+            DownscaleBgra(first_row, width, height, stride, format.layout,
+                          thumb_width, thumb_height, &thumbnail);
+          } else {
+            DownscaleLuma(first_row, width, height, stride, format.layout,
+                          thumb_width, thumb_height, &thumbnail);
+          }
+        };
         bool converted = false;
 
         ComPtr<IMF2DBuffer> buffer_2d;
@@ -400,8 +423,7 @@ void CaptureSession::Run(std::string camera_id,
         LONG pitch = 0;
         if (SUCCEEDED(buffer.As(&buffer_2d)) &&
             SUCCEEDED(buffer_2d->Lock2D(&scanline0, &pitch))) {
-          DownscaleLuma(scanline0, width, height, pitch, format.layout,
-                        kThumbnailWidth, thumb_height, &thumbnail);
+          downscale(scanline0, pitch);
           buffer_2d->Unlock2D();
           converted = true;
         } else {
@@ -416,8 +438,7 @@ void CaptureSession::Run(std::string camera_id,
                   stride < 0 ? data + static_cast<size_t>(-stride) *
                                           (format.height - 1)
                              : data;
-              DownscaleLuma(first_row, width, height, stride, format.layout,
-                            kThumbnailWidth, thumb_height, &thumbnail);
+              downscale(first_row, stride);
               converted = true;
             }
             buffer->Unlock();

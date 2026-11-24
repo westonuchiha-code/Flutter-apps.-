@@ -214,6 +214,7 @@ IconData assetIcon(AssetType t) => switch (t) {
   AssetType.sprite => Icons.grid_on,
   AssetType.palette => Icons.palette_outlined,
   AssetType.map => Icons.map_outlined,
+  AssetType.picture => Icons.photo_outlined,
   AssetType.other => Icons.insert_drive_file_outlined,
 };
 

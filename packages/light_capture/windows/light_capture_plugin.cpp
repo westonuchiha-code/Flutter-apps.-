@@ -110,17 +110,25 @@ void LightCapturePlugin::HandleMethodCall(
     session_.reset();
     auto session =
         std::make_unique<CaptureSession>([this] { NotifyPlatformThread(); });
-    const std::string error = session->Start(*id);
+    const EncodableValue* color_value = GetArgument(call, "color");
+    const auto* color = color_value ? std::get_if<bool>(color_value) : nullptr;
+    const EncodableValue* width_value = GetArgument(call, "width");
+    const auto* req_width =
+        width_value ? std::get_if<int32_t>(width_value) : nullptr;
+    const std::string error = session->Start(
+        *id, color != nullptr && *color, req_width ? *req_width : 160);
     if (!error.empty()) {
       result->Error("camera_error", error);
       return;
     }
     const int width = session->thumbnail_width();
     const int height = session->thumbnail_height();
+    const int channels = session->channels();
     session_ = std::move(session);
     result->Success(EncodableValue(EncodableMap{
         {EncodableValue("width"), EncodableValue(width)},
         {EncodableValue("height"), EncodableValue(height)},
+        {EncodableValue("channels"), EncodableValue(channels)},
     }));
     return;
   }
@@ -176,6 +184,7 @@ void LightCapturePlugin::DeliverPending() {
     event_sink_->Success(EncodableValue(EncodableMap{
         {EncodableValue("width"), EncodableValue(width)},
         {EncodableValue("height"), EncodableValue(height)},
+        {EncodableValue("channels"), EncodableValue(session_->channels())},
         {EncodableValue("pixels"), EncodableValue(std::move(pixels))},
     }));
   }
