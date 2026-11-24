@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'catalog.dart';
 import 'chips.dart';
 import 'dsp.dart';
+import 'wavetable.dart';
 
 const maxVoices = 6;
 
@@ -301,9 +302,10 @@ double _osc(Osc o, double phase, double inc) {
 }
 
 class _AnalogVoice extends _Voice {
-  _AnalogVoice(this.sr, this.specRef);
+  _AnalogVoice(this.sr, this.specRef, this.synth);
   final double sr;
   final PolySpec Function() specRef;
+  final PolySynth synth;
   final _rnd = math.Random();
 
   double _hz = 220, _targetHz = 220, _y = 0.5;
@@ -345,8 +347,12 @@ class _AnalogVoice extends _Voice {
     _p1 = (_p1 + inc1) % 1;
     _p2 = (_p2 + inc2) % 1;
     _ps = (_ps + incS) % 1;
+    final table = synth.wavetable;
+    final o1 = table == null
+        ? _osc(s.osc1, _p1, inc1)
+        : table.sample(_p1, synth.morph, inc1);
     var x =
-        _osc(s.osc1, _p1, inc1) * (1 - s.osc2Mix * 0.5) +
+        o1 * (1 - s.osc2Mix * 0.5) +
         _osc(s.osc2, _p2, inc2) * s.osc2Mix +
         _osc(Osc.square, _ps, incS) * s.sub * 0.7 +
         (_rnd.nextDouble() * 2 - 1) * s.noise * 0.5;
@@ -520,6 +526,12 @@ class PolySynth {
 
   PolySpec get spec => _spec;
 
+  /// When set, oscillator 1 of the analog engine plays this table.
+  Wavetable? wavetable;
+
+  /// Morph position across [wavetable]'s cycles (0..1).
+  double morph = 0;
+
   void configure(PolySpec s) {
     final engineChanged =
         s.engine != _spec.engine ||
@@ -539,7 +551,7 @@ class PolySynth {
     var v = _voices[i];
     if (v == null && t.down) {
       v = _voices[i] = _spec.engine == EngineKind.analog
-          ? _AnalogVoice(sampleRate, () => _spec)
+          ? _AnalogVoice(sampleRate, () => _spec, this)
           : _ChipPolyVoice(sampleRate, _spec.chipId, _spec.patchId);
     }
     v?.setTouch(t);

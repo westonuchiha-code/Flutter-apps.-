@@ -104,6 +104,7 @@ apps/        # one folder per Flutter application
              #                      Asset Locker browser, shared to-do list
              #   field_recorder   - mic recorder: markers, trim, tags, saves WAV to the Asset Locker
              #   sample_pad       - 16 sample pads, step sequencer, loop station, kits, mix export
+             #   waveform_painter - draw waves (or from pictures), morph, play; saves wavetables
 packages/    # shared Dart/Flutter packages
              #   app_shell     - shared app foundation (theme, settings, crash-safe
              #                   storage, error log, about page, export/share)
@@ -115,8 +116,10 @@ packages/    # shared Dart/Flutter packages
              #                   sample voices, synced loop layers, kit format
              #   light_capture - webcam brightness frames on Windows/Linux
              #                   (the official camera plugin can't stream frames on Windows)
-             #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog
-             #                   (used by optical_theremin and touch_synth)
+             #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,
+             #                   band-limited morphing wavetables (Wavetable; set
+             #                   PolySynth.wavetable to play drawn waves)
+             #                   (used by optical_theremin, touch_synth, waveform_painter)
 tool/        # developer scripts (setup_linux_dev.sh, new_app.sh)
 ROADMAP.md   # agreed app ideas and build order - keep it updated
 ```

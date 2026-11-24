@@ -7,3 +7,4 @@ export 'src/dsp.dart';
 export 'src/engine.dart';
 export 'src/poly.dart';
 export 'src/wav.dart';
+export 'src/wavetable.dart';

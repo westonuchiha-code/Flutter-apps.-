@@ -39,8 +39,10 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
    and step sequencer. `apps/sample_pad` + `packages/beat_kit`. Gaps: loop
    layers are not saved in kits (export the mix instead); loop timing
    depends on the device's latency (adjustable in Settings).
-5. ⬜ **Waveform Painter.** Draw a wave shape or picture and play it as an
+5. ✅ **Waveform Painter.** Draw a wave shape or picture and play it as an
    instrument. Builds shared custom wavetables for every synth.
+   `apps/waveform_painter` + `Wavetable` in `packages/chip_synth`
+   (band-limited, morphable; `PolySynth.wavetable`).
 6. ⬜ **Sound Lab.** Playground for the synth engines: chain effects, live
    waveform/spectrum, save presets every music app can load. Builds the shared
    effects library and preset format.
