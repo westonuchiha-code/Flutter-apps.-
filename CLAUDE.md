@@ -140,6 +140,8 @@ apps/        # one folder per Flutter application
              #                      view, snapshots/GIFs (Pictures), video+sound clips (Videos)
              #   lofi_video       - Lo-Fi Video Maker: storyboard of clips/pictures/sprites/titles
              #                      through video_kit effects + music -> MP4 (60 s max, 4:3)
+             #   photo_quilt      - photo -> patchwork quilt (classic blocks, palette, seams,
+             #                      stitches); prototype
              #   sprite_pet       - pixel pet (8 built-in species drawn in code, or a Pixel Forge
              #                      sprite): needs, sleep, weather, Locker treats; Android
              #                      home-screen widget (home_widget), desktop mini window

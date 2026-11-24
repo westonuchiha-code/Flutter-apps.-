@@ -103,8 +103,10 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     schedule, weather (Open-Meteo), battery, Asset Locker creations as
     treats. Android home-screen widget with Feed/Pet/Play; mini window on
     PC. Owner may swap in found art later.
-14. ⬜ **Photo Tile Quilt.** Photos → tiled mosaic with a palette. Bottom of
-    the list, bare-minimum prototype.
+14. ✅ **Photo Tile Quilt.** Photo → patchwork quilt: classic blocks (plain,
+    half-square triangles, four-patch, stripes) picked per patch, palette from
+    the photo or Pixel Forge, seams and stitches. Bare-minimum prototype
+    (photomosaic mode left out).
 
 ## Phase 3 · 3D
 
