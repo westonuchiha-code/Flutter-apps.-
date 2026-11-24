@@ -84,10 +84,11 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     feedback, slit-scan, slow-scan TV, JPEG blocks, datamosh. CRT view,
     snapshots and GIF clips. Shared code: `packages/video_kit`, colour frames
     in `light_capture`. The owner has more ideas to add.
-11. ⬜ **Texture Capture.** Photo → game-ready texture: perspective
-    flattening, even lighting, seamless tiling, highest-quality master, plus
-    console presets (PS1, PS2…) at the sizes and colour depths they used.
-    Warns when a photo won't make a good texture.
+11. ✅ **Texture Capture.** Photo → game-ready texture: perspective
+    corners (with magnifier), even lighting, seamless tiling, 256–2048
+    master, console versions (PS1, N64, PS2, GameCube, Dreamcast) in their
+    real formats (CLUT, RGBA16/565, S3TC/CMPR, VQ) and memory limits. Warns
+    when a photo won't make a good texture.
 12. ⬜ **Lo-Fi Video Maker.** Short videos combining Chip Cam footage, Sample
     Pad music and Pixel Forge graphics. Best after Chip Cam proves itself.
 13. ⬜ **Sprite Pet.** Pixel pet in a home-screen widget that reacts to the

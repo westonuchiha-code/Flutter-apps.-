@@ -132,6 +132,9 @@ apps/        # one folder per Flutter application
              #                      photos), selections, tile maps, PNG/sheet/GIF; all to the Locker
              #   chip_cam         - camera through 19 old video hardware/signal emulations, CRT
              #                      view, snapshots and GIF clips to the Locker (Pictures)
+             #   texture_capture  - photo -> game texture: perspective corners, even lighting,
+             #                      seamless tiling, photo checks, PS1/N64/PS2/GameCube/Dreamcast
+             #                      formats (CLUT, S3TC, VQ) with their memory limits
 packages/    # shared Dart/Flutter packages
              #   app_shell     - shared app foundation (theme, settings, crash-safe
              #                   storage, error log, about page, export/share)
