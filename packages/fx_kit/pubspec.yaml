@@ -1,0 +1,11 @@
+name: fx_kit
+description: "Pure-Dart stereo effects library (filter, EQ, drive, bitcrush, compressor, chorus, phaser, tremolo, ring mod, echo, reverb), an effect chain, and the shared sound preset format."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.14.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0

@@ -47,6 +47,8 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   theremin uses its experimental real-time stream API. Microphone input:
   `packages/audio_kit` (`MicRecorder`, built on `flutter_recorder`, also
   pinned; Linux builds need `libasound2-dev`).
+- Effects: use `packages/fx_kit` (`FxChain`) rather than writing new ones;
+  sounds are shared as `SoundPreset` JSON (kind `sound`) in the Asset Locker.
 - Save user creations (samples, presets, sprites, palettes, maps,
   recordings) to the Asset Locker (`Shell.of(context).locker`,
   `saveToLocker` / `pickFromLocker`) so other apps can use them.
@@ -105,15 +107,19 @@ apps/        # one folder per Flutter application
              #   field_recorder   - mic recorder: markers, trim, tags, saves WAV to the Asset Locker
              #   sample_pad       - 16 sample pads, step sequencer, loop station, kits, mix export
              #   waveform_painter - draw waves (or from pictures), morph, play; saves wavetables
+             #   sound_lab        - synths/waves/samples through an 8-slot effect chain, scope,
+             #                      shared sound presets
 packages/    # shared Dart/Flutter packages
              #   app_shell     - shared app foundation (theme, settings, crash-safe
              #                   storage, error log, about page, export/share)
              #   asset_locker  - shared library of creations every app saves to
              #                   (Documents/Asset Locker; Android: folder picked once per app)
              #   audio_kit     - mic recording to WAV, WAV read/write, waveform view,
-             #                   level meter, clip playback (flutter_recorder + flutter_soloud)
+             #                   level meter, piano keyboard, clip playback
+             #                   (flutter_recorder + flutter_soloud)
              #   beat_kit      - pure-Dart beat engine: tempo clock + swing, step sequencer,
              #                   sample voices, synced loop layers, kit format
+             #   fx_kit        - pure-Dart stereo effects (11), FxChain, SoundPreset format
              #   light_capture - webcam brightness frames on Windows/Linux
              #                   (the official camera plugin can't stream frames on Windows)
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,

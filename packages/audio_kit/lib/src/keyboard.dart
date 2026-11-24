@@ -1,16 +1,28 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../controller.dart';
-
 /// Computer keys for one octave and a bit (like a piano: A=C, W=C#…).
 const pianoKeys = 'AWSEDFTGYHUJK';
 
-/// Multi-touch piano: [octaves] octaves from C of the controller's octave.
-/// Sliding a finger across keys plays the keys it crosses.
+/// Multi-touch piano: [octaves] octaves starting at MIDI note [baseNote]
+/// (a C). Sliding a finger across keys plays the keys it crosses.
 class PianoKeyboard extends StatefulWidget {
-  const PianoKeyboard({super.key, required this.c, this.octaves = 2});
+  const PianoKeyboard({
+    super.key,
+    required this.baseNote,
+    required this.isDown,
+    required this.onNoteOn,
+    required this.onNoteOff,
+    this.repaint,
+    this.octaves = 2,
+  });
 
-  final PainterController c;
+  final int baseNote;
+  final bool Function(int note) isDown;
+  final void Function(int note) onNoteOn;
+  final void Function(int note) onNoteOff;
+
+  /// Repaints the keys when this changes (e.g. the synth controller).
+  final Listenable? repaint;
   final int octaves;
 
   @override
@@ -22,7 +34,7 @@ class _PianoKeyboardState extends State<PianoKeyboard> {
 
   static const _blackAfter = {0, 1, 3, 4, 5}; // white index -> has black key
 
-  int get _base => (widget.c.octave + 1) * 12; // MIDI C of the octave
+  int get _base => widget.baseNote;
 
   /// Note under [p], black keys first.
   int? _noteAt(Offset p, Size s) {
@@ -46,16 +58,16 @@ class _PianoKeyboardState extends State<PianoKeyboard> {
     final n = _noteAt(p, s);
     final old = _pointerNote[pointer];
     if (n == old) return;
-    if (old != null) widget.c.noteOff(old);
+    if (old != null) widget.onNoteOff(old);
     if (n != null) {
       _pointerNote[pointer] = n;
-      widget.c.noteOn(n);
+      widget.onNoteOn(n);
     }
   }
 
   void _release(int pointer) {
     final old = _pointerNote.remove(pointer);
-    if (old != null) widget.c.noteOff(old);
+    if (old != null) widget.onNoteOff(old);
   }
 
   @override
@@ -70,13 +82,13 @@ class _PianoKeyboardState extends State<PianoKeyboard> {
           onPointerUp: (e) => _release(e.pointer),
           onPointerCancel: (e) => _release(e.pointer),
           child: ListenableBuilder(
-            listenable: widget.c,
+            listenable: widget.repaint ?? const AlwaysStoppedAnimation(0),
             builder: (context, _) => CustomPaint(
               size: size,
               painter: _KeysPainter(
                 octaves: widget.octaves,
                 base: _base,
-                isDown: widget.c.isDown,
+                isDown: widget.isDown,
                 // Real piano colours in both themes.
                 white: Theme.of(context).brightness == Brightness.dark
                     ? const Color(0xFFD5DADF)

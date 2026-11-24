@@ -14,7 +14,6 @@ import '../output.dart';
 import '../patch.dart';
 import '../shape.dart';
 import 'image_import.dart';
-import 'keyboard.dart';
 import 'sound_sheet.dart';
 import 'wave_canvas.dart';
 
@@ -421,7 +420,14 @@ class _HomePageState extends State<HomePage> {
               playRow,
               SizedBox(
                 height: keysHeight,
-                child: PianoKeyboard(c: c, octaves: box.maxWidth > 700 ? 3 : 2),
+                child: PianoKeyboard(
+                  baseNote: (c.octave + 1) * 12,
+                  isDown: c.isDown,
+                  onNoteOn: c.noteOn,
+                  onNoteOff: c.noteOff,
+                  repaint: c,
+                  octaves: box.maxWidth > 700 ? 3 : 2,
+                ),
               ),
             ],
           ),

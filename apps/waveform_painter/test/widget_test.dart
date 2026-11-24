@@ -13,7 +13,6 @@ import 'package:waveform_painter/src/output.dart';
 import 'package:waveform_painter/src/patch.dart';
 import 'package:waveform_painter/src/shape.dart';
 import 'package:waveform_painter/src/ui/home.dart';
-import 'package:waveform_painter/src/ui/keyboard.dart';
 import 'package:waveform_painter/src/ui/wave_canvas.dart';
 
 class FakeOutput implements WaveOutput {

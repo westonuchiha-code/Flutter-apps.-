@@ -43,9 +43,11 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
    instrument. Builds shared custom wavetables for every synth.
    `apps/waveform_painter` + `Wavetable` in `packages/chip_synth`
    (band-limited, morphable; `PolySynth.wavetable`).
-6. ⬜ **Sound Lab.** Playground for the synth engines: chain effects, live
+6. ✅ **Sound Lab.** Playground for the synth engines: chain effects, live
    waveform/spectrum, save presets every music app can load. Builds the shared
-   effects library and preset format.
+   effects library and preset format. `apps/sound_lab` + `packages/fx_kit`
+   (11 effects, chain, `SoundPreset`); the piano keyboard moved to
+   `audio_kit` for every app.
 7. ⬜ **Ambience Machine.** Layered, slowly drifting looping atmospheres.
    Uses the recorder, samples, effects and presets above.
 8. ⬜ **Speech Chip Lab.** Upgrade of the speech-chip voice in
