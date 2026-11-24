@@ -123,7 +123,7 @@ VideoFrame _toFrame(img.Image image) {
   var i = 0;
   for (final p in rgba) {
     out.pixels[i++] = p.a < 128
-        ? 0xFF000000
+        ? 0
         : 0xFF000000 | (p.r.toInt() << 16) | (p.g.toInt() << 8) | p.b.toInt();
   }
   return out;

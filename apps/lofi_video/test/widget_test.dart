@@ -37,6 +37,7 @@ Future<VideoController> sampleController(Directory dir) async {
       asset: {'id': 'clip', 'name': 'ZX Spectrum video'},
       label: 'ZX Spectrum video',
       duration: 2,
+      transition: Transition.vhs,
     ),
   );
   await c.addScene(
@@ -54,6 +55,16 @@ Future<VideoController> sampleController(Directory dir) async {
       duration: 2,
       effectId: 'vhs',
       label: 'Test bars',
+      transition: Transition.teletext,
+      overlays: [
+        SceneOverlay(
+          kind: OverlayKind.text,
+          text: 'PRESS PLAY',
+          color: 0xFFFFEC27,
+          y: 0.8,
+          scale: 3,
+        ),
+      ],
     ),
   );
   return c;
@@ -109,7 +120,8 @@ void main() {
     await tester.pump();
     expect(find.text('NIGHT SHIFT'), findsOneWidget);
     expect(find.text('Add scene'), findsOneWidget);
-    expect(find.textContaining('VHS'), findsOneWidget);
+    expect(find.textContaining('→ VHS tracking roll'), findsOneWidget);
+    expect(find.textContaining('+1 on top'), findsOneWidget);
     expect(tester.takeException(), isNull);
     c.dispose();
   });

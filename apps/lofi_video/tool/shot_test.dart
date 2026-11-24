@@ -51,7 +51,7 @@ void main() {
         final s = await ShellServices.create(appConfig, root: dir);
         s.settings.set(themeModeSetting, 'dark');
         final c = await sampleController(dir);
-        await c.seek(name == 'lofi_phone' ? 2.4 : 0.7);
+        await c.seek(name == 'lofi_phone' ? 1.75 : 5.5);
         return (s, c);
       }))!;
       await tester.pumpWidget(

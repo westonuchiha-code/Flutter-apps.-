@@ -161,7 +161,12 @@ class _HomePageState extends State<HomePage> {
         heightFactor: 0.75,
         child: ListenableBuilder(
           listenable: c,
-          builder: (context, _) => SceneSheet(c: c, scene: s),
+          builder: (context, _) => SceneSheet(
+            c: c,
+            scene: s,
+            pickSprite: () async =>
+                (await _pick([AssetType.sprite, AssetType.picture]))?.toJson(),
+          ),
         ),
       ),
     );
@@ -236,6 +241,41 @@ class _HomePageState extends State<HomePage> {
                       onChanged: (v) =>
                           c.edit((p) => p.musicStart = (v * 10).round() / 10),
                     ),
+                  Row(
+                    children: [
+                      const SizedBox(width: 110, child: Text('Tempo')),
+                      IconButton(
+                        tooltip: 'Slower',
+                        icon: const Icon(Icons.remove),
+                        onPressed: () => c.edit(
+                          (p) => p.bpm = (p.bpm - 1)
+                              .clamp(30, 300)
+                              .roundToDouble(),
+                        ),
+                      ),
+                      Text(
+                        '${p.bpm.toStringAsFixed(p.bpm % 1 == 0 ? 0 : 1)} BPM',
+                      ),
+                      IconButton(
+                        tooltip: 'Faster',
+                        icon: const Icon(Icons.add),
+                        onPressed: () => c.edit(
+                          (p) => p.bpm = (p.bpm + 1)
+                              .clamp(30, 300)
+                              .roundToDouble(),
+                        ),
+                      ),
+                      const Spacer(),
+                      OutlinedButton(onPressed: _tap, child: const Text('Tap')),
+                    ],
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Cuts on the beat'),
+                    subtitle: const Text('Scene lengths are whole beats'),
+                    value: p.snap,
+                    onChanged: (v) => c.setSnap(v),
+                  ),
                   _LabeledSlider(
                     label: 'Music volume',
                     text: '${(p.musicVolume * 100).round()}%',
@@ -255,6 +295,22 @@ class _HomePageState extends State<HomePage> {
         },
       ),
     );
+  }
+
+  final _taps = <int>[];
+
+  /// Tap tempo: the average of the last few taps.
+  void _tap() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (_taps.isNotEmpty && now - _taps.last > 2000) _taps.clear();
+    _taps.add(now);
+    if (_taps.length > 6) _taps.removeAt(0);
+    if (_taps.length >= 3) {
+      final avg = (_taps.last - _taps.first) / (_taps.length - 1);
+      unawaited(
+        c.edit((p) => p.bpm = (60000 / avg).clamp(30, 300).roundToDouble()),
+      );
+    }
   }
 
   Future<void> _rename() async {
@@ -311,8 +367,11 @@ class _HomePageState extends State<HomePage> {
     } else {
       project = Project.fromJson(c.project.toJson());
       titles = {
-        for (final s in project.scenes)
+        for (final s in project.scenes) ...{
           if (c.titles[s.id] != null) s.id: c.titles[s.id]!,
+          for (final o in s.overlays)
+            if (c.titles[o.id] != null) o.id: c.titles[o.id]!,
+        },
       };
     }
     if (!mounted) {
@@ -603,7 +662,10 @@ class _Storyboard extends StatelessWidget {
           subtitle: Text(
             [
               '${s.duration.toStringAsFixed(1)} s',
+              if (i > 0 && s.transition != Transition.cut)
+                '→ ${s.transition.label}',
               if (s.effectId != null) effectName(s.effectId),
+              if (s.overlays.isNotEmpty) '+${s.overlays.length} on top',
               if (missing) 'missing!',
               if (loading) 'loading…',
             ].join(' · '),

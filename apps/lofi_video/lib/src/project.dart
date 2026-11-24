@@ -19,6 +19,98 @@ enum SceneKind {
 
 enum Fit { contain, cover }
 
+/// How a scene arrives (over its first moments, from the previous scene).
+enum Transition {
+  cut('Cut'),
+  dither('Dither dissolve'),
+  vhs('VHS tracking roll'),
+  sync('Lost sync'),
+  teletext('Teletext page'),
+  mosh('Datamosh smear');
+
+  const Transition(this.label);
+  final String label;
+}
+
+enum OverlayKind { text, sprite }
+
+/// Text or a sprite drawn on top of a scene.
+class SceneOverlay {
+  SceneOverlay({
+    String? id,
+    required this.kind,
+    this.asset,
+    this.text = 'TEXT',
+    this.color = 0xFFFFFFFF,
+    this.outline = true,
+    this.x = 0.5,
+    this.y = 0.85,
+    this.scale = 2,
+    this.from = 0,
+    this.to = 0,
+    this.aboveEffect = false,
+  }) : id = id ?? Scene._newId();
+
+  final String id;
+  final OverlayKind kind;
+  final Map<String, Object?>? asset;
+  String text;
+  int color;
+  bool outline;
+
+  /// Centre, as a fraction of the picture (0..1).
+  double x, y;
+
+  /// Size in canvas pixels per sprite pixel (sprites) or text size step.
+  int scale;
+
+  /// Shown from..to seconds into the scene (to 0 = until the end).
+  double from, to;
+
+  /// Drawn after the scene's effect (clean) instead of going through it.
+  bool aboveEffect;
+
+  String? get assetId => asset?['id'] as String?;
+
+  bool visibleAt(double lt) => lt >= from && (to <= 0 || lt < to);
+
+  /// Key that changes whenever the text picture must be redrawn.
+  String get textKey => '$id:$text:$color:$outline:$scale';
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'kind': kind.name,
+    'asset': ?asset,
+    'text': text,
+    'color': color,
+    'outline': outline,
+    'x': x,
+    'y': y,
+    'scale': scale,
+    'from': from,
+    'to': to,
+    'above': aboveEffect,
+  };
+
+  factory SceneOverlay.fromJson(Map j, {bool newId = false}) => SceneOverlay(
+    id: newId ? null : j['id'] as String?,
+    kind: OverlayKind.values.firstWhere(
+      (k) => k.name == j['kind'],
+      orElse: () => OverlayKind.text,
+    ),
+    asset: (j['asset'] as Map?)?.cast<String, Object?>(),
+    text: (j['text'] as String?) ?? '',
+    color: ((j['color'] as num?) ?? 0xFFFFFFFF).toInt(),
+    outline: j['outline'] != false,
+    x: ((j['x'] as num?) ?? 0.5).toDouble(),
+    y: ((j['y'] as num?) ?? 0.85).toDouble(),
+    scale: ((j['scale'] as num?) ?? 2).toInt().clamp(1, 8),
+    from: ((j['from'] as num?) ?? 0).toDouble(),
+    to: ((j['to'] as num?) ?? 0).toDouble(),
+    aboveEffect: j['above'] == true,
+  );
+}
+
 /// One shot of the storyboard.
 class Scene {
   Scene({
@@ -35,8 +127,12 @@ class Scene {
     this.text = '',
     this.textColor = 0xFFFFFFFF,
     this.background = 0xFF000000,
+    this.transition = Transition.cut,
+    this.transitionLength = 0.6,
+    List<SceneOverlay>? overlays,
   }) : id = id ?? _newId(),
-       knobs = knobs ?? {};
+       knobs = knobs ?? {},
+       overlays = overlays ?? [];
 
   static int _counter = 0;
   static String _newId() =>
@@ -56,11 +152,23 @@ class Scene {
   Fit fit;
   String text;
   int textColor, background;
+  Transition transition;
+  double transitionLength;
+  final List<SceneOverlay> overlays;
 
   String? get assetId => asset?['id'] as String?;
 
-  Scene copy({bool newId = false}) =>
-      Scene.fromJson(toJson(), id: newId ? _newId() : null);
+  /// A copy; with [newId], it and its overlays get new ids.
+  Scene copy({bool newId = false}) {
+    final j = toJson();
+    if (newId) {
+      j['overlays'] = [
+        for (final o in overlays)
+          SceneOverlay.fromJson(o.toJson(), newId: true).toJson(),
+      ];
+    }
+    return Scene.fromJson(j, id: newId ? _newId() : null);
+  }
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -76,6 +184,9 @@ class Scene {
     'text': text,
     'textColor': textColor,
     'background': background,
+    if (transition != Transition.cut) 'transition': transition.name,
+    'transitionLength': transitionLength,
+    if (overlays.isNotEmpty) 'overlays': [for (final o in overlays) o.toJson()],
   };
 
   factory Scene.fromJson(Map j, {String? id}) => Scene(
@@ -101,6 +212,18 @@ class Scene {
     text: (j['text'] as String?) ?? '',
     textColor: ((j['textColor'] as num?) ?? 0xFFFFFFFF).toInt(),
     background: ((j['background'] as num?) ?? 0xFF000000).toInt(),
+    transition: Transition.values.firstWhere(
+      (t) => t.name == j['transition'],
+      orElse: () => Transition.cut,
+    ),
+    transitionLength: ((j['transitionLength'] as num?) ?? 0.6).toDouble().clamp(
+      0.1,
+      2.0,
+    ),
+    overlays: [
+      for (final o in (j['overlays'] as List?) ?? const [])
+        SceneOverlay.fromJson(o as Map),
+    ],
   );
 }
 
@@ -113,6 +236,8 @@ class Project {
     this.musicStart = 0,
     this.musicVolume = 0.8,
     this.clipVolume = 1,
+    this.bpm = 120,
+    this.snap = false,
   }) : scenes = scenes ?? [];
 
   static const kind = 'lofi_video';
@@ -126,6 +251,22 @@ class Project {
   /// Seconds into the music where the video starts.
   double musicStart;
   double musicVolume, clipVolume;
+
+  /// Tempo for snapping cuts to the beat (from a Sample Pad mix, typed in
+  /// or tapped).
+  double bpm;
+
+  /// Scene lengths are whole beats.
+  bool snap;
+
+  double get beat => 60 / bpm;
+
+  /// [seconds] rounded to whole beats (at least one) when snapping.
+  double snapped(double seconds) {
+    if (!snap) return seconds;
+    final beats = math.max(1, (seconds / beat).round());
+    return beats * beat;
+  }
 
   double get duration => scenes.fold(0.0, (a, s) => a + s.duration);
 
@@ -162,6 +303,8 @@ class Project {
     'musicStart': musicStart,
     'musicVolume': musicVolume,
     'clipVolume': clipVolume,
+    'bpm': bpm,
+    'snap': snap,
   };
 
   factory Project.fromJson(Object? j) {
@@ -178,6 +321,8 @@ class Project {
       musicStart: ((j['musicStart'] as num?) ?? 0).toDouble(),
       musicVolume: ((j['musicVolume'] as num?) ?? 0.8).toDouble(),
       clipVolume: ((j['clipVolume'] as num?) ?? 1).toDouble(),
+      bpm: ((j['bpm'] as num?) ?? 120).toDouble().clamp(30, 300),
+      snap: j['snap'] == true,
     );
   }
 }

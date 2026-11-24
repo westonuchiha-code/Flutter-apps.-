@@ -34,6 +34,7 @@ class VideoController extends ChangeNotifier {
   final media = <String, Media>{};
   final titles = <String, VideoFrame>{};
   final failed = <String, String>{};
+  final _drawn = <String>{};
   final _loading = <String>{};
 
   double position = 0;
@@ -131,14 +132,23 @@ class VideoController extends ChangeNotifier {
 
   Future<void> _projectChanged({bool save = true}) async {
     for (final s in project.scenes) {
-      if (s.kind == SceneKind.title &&
-          !titles.containsKey(
-            '${s.id}:${s.text}:${s.textColor}:${s.background}',
-          )) {
-        final f = await renderTitle(s);
-        titles['${s.id}:${s.text}:${s.textColor}:${s.background}'] = f;
-        titles[s.id] = f;
-        preview.setTitle(s.id, f);
+      if (s.kind == SceneKind.title) {
+        final key = '${s.id}:${s.text}:${s.textColor}:${s.background}';
+        if (!_drawn.contains(key)) {
+          final f = await renderTitle(s);
+          _drawn.add(key);
+          titles[s.id] = f;
+          preview.setTitle(s.id, f);
+        }
+      }
+      for (final o in s.overlays) {
+        if (o.kind == OverlayKind.text && !_drawn.contains(o.textKey)) {
+          final f = await renderTextOverlay(o);
+          _drawn.add(o.textKey);
+          titles[o.id] = f;
+          preview.setTitle(o.id, f);
+        }
+        if (o.asset != null) unawaited(loadAsset(o.asset!));
       }
     }
     preview.setProject(project);
@@ -176,20 +186,35 @@ class VideoController extends ChangeNotifier {
   }
 
   Future<void> addScene(Scene s) async {
-    await edit((p) => p.scenes.add(s));
+    await edit((p) {
+      s.duration = p.snapped(s.duration);
+      p.scenes.add(s);
+    });
     if (s.asset != null) {
       final m = await loadAsset(s.asset!);
       // Clips start out as long as they are.
       if (m is ClipMedia && s.kind == SceneKind.clip) {
-        await edit((_) => s.duration = m.clip.length.clamp(0.5, maxSeconds));
+        await edit(
+          (p) =>
+              s.duration = _fitBeats(p, m.clip.length.clamp(0.5, maxSeconds)),
+        );
       } else if (m is AnimMedia && m.frames.length > 1) {
         await edit(
-          (_) =>
-              s.duration = (m.total * (m.total < 1.5 ? 2 : 1)).clamp(1.0, 10.0),
+          (p) => s.duration = p.snapped(
+            (m.total * (m.total < 1.5 ? 2 : 1)).clamp(1.0, 10.0),
+          ),
         );
       }
     }
   }
+
+  /// Turns beat snapping on (rounding every scene to whole beats) or off.
+  Future<void> setSnap(bool on) => edit((p) {
+    p.snap = on;
+    for (final s in p.scenes) {
+      s.duration = p.snapped(s.duration);
+    }
+  });
 
   Future<void> updateScene(Scene s, void Function(Scene s) change) =>
       edit((_) => change(s));
@@ -210,6 +235,10 @@ class VideoController extends ChangeNotifier {
     await edit((p) {
       p.music = asset;
       p.musicStart = 0;
+      // Sample Pad mixes know their tempo.
+      final extra = asset?['extra'];
+      final bpm = extra is Map ? extra['bpm'] : null;
+      if (bpm is num && bpm >= 30 && bpm <= 300) p.bpm = bpm.toDouble();
     });
     if (asset != null) {
       await loadAsset(asset);
@@ -342,3 +371,11 @@ class VideoController extends ChangeNotifier {
 
 Media _decode((String, Uint8List) a) => decodeMedia(a.$1, a.$2);
 Int16List _mix((Project, Map<String, Media>) a) => mixAudio(a.$1, a.$2);
+
+/// [seconds] in whole beats when snapping, never longer than [seconds]
+/// (a clip can't play past its end).
+double _fitBeats(Project p, double seconds) {
+  if (!p.snap) return seconds;
+  final beats = (seconds / p.beat).floor();
+  return beats >= 1 ? beats * p.beat : seconds;
+}

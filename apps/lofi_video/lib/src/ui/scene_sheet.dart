@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:video_kit/video_kit.dart';
 
@@ -32,9 +34,17 @@ String effectName(String? id) =>
 
 /// Edits one scene.
 class SceneSheet extends StatefulWidget {
-  const SceneSheet({super.key, required this.c, required this.scene});
+  const SceneSheet({
+    super.key,
+    required this.c,
+    required this.scene,
+    this.pickSprite,
+  });
   final VideoController c;
   final Scene scene;
+
+  /// Picks a sprite or picture from the Asset Locker (its details JSON).
+  final Future<Map<String, Object?>?> Function()? pickSprite;
 
   @override
   State<SceneSheet> createState() => _SceneSheetState();
@@ -58,6 +68,21 @@ class _SceneSheetState extends State<SceneSheet> {
     _text.dispose();
     super.dispose();
   }
+
+  double _maxBeats(double maxSeconds) => math
+      .max(1, (maxSeconds / c.project.beat).floorToDouble())
+      .clamp(1, 64)
+      .toDouble();
+
+  Future<void> _editOverlay(SceneOverlay o) => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => ListenableBuilder(
+      listenable: c,
+      builder: (context, _) => _OverlaySheet(c: c, scene: s, overlay: o),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -136,19 +161,38 @@ class _SceneSheetState extends State<SceneSheet> {
               ),
             ],
             const SizedBox(height: 8),
-            _Row(
-              label: 'Length',
-              value: '${_duration.toStringAsFixed(1)} s',
-              child: Slider(
-                value: _duration.clamp(0.5, maxDur),
-                min: 0.5,
-                max: maxDur,
-                onChanged: (v) =>
-                    setState(() => _duration = (v * 10).round() / 10),
-                onChangeEnd: (v) =>
-                    _set((s) => s.duration = (v * 10).round() / 10),
+            if (c.project.snap)
+              _Row(
+                label: 'Length',
+                value: '${(_duration / c.project.beat).round()} beats',
+                child: Slider(
+                  value: (_duration / c.project.beat).roundToDouble().clamp(
+                    1,
+                    _maxBeats(maxDur),
+                  ),
+                  min: 1,
+                  max: _maxBeats(maxDur),
+                  divisions: math.max(1, _maxBeats(maxDur).round() - 1),
+                  onChanged: (v) =>
+                      setState(() => _duration = v.round() * c.project.beat),
+                  onChangeEnd: (v) =>
+                      _set((s) => s.duration = v.round() * c.project.beat),
+                ),
+              )
+            else
+              _Row(
+                label: 'Length',
+                value: '${_duration.toStringAsFixed(1)} s',
+                child: Slider(
+                  value: _duration.clamp(0.5, maxDur),
+                  min: 0.5,
+                  max: maxDur,
+                  onChanged: (v) =>
+                      setState(() => _duration = (v * 10).round() / 10),
+                  onChangeEnd: (v) =>
+                      _set((s) => s.duration = (v * 10).round() / 10),
+                ),
               ),
-            ),
             if (s.kind == SceneKind.clip && clipLength > 0.6) ...[
               _Row(
                 label: 'Start at',
@@ -195,6 +239,93 @@ class _SceneSheetState extends State<SceneSheet> {
                   onSelectionChanged: (v) => _set((s) => s.fit = v.first),
                 ),
               ),
+            const SizedBox(height: 8),
+            Text('Arrives with', style: t.labelLarge),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButton<Transition>(
+                    isExpanded: true,
+                    value: s.transition,
+                    items: [
+                      for (final tr in Transition.values)
+                        DropdownMenuItem(value: tr, child: Text(tr.label)),
+                    ],
+                    onChanged: (v) =>
+                        _set((s) => s.transition = v ?? Transition.cut),
+                  ),
+                ),
+              ],
+            ),
+            if (s.transition != Transition.cut)
+              _Row(
+                label: 'Over',
+                value: '${s.transitionLength.toStringAsFixed(1)} s',
+                child: Slider(
+                  value: s.transitionLength.clamp(0.2, 1.5),
+                  min: 0.2,
+                  max: 1.5,
+                  divisions: 13,
+                  onChanged: (v) => _set((s) => s.transitionLength = v),
+                ),
+              ),
+            if (s.transition != Transition.cut &&
+                c.project.scenes.indexOf(s) == 0)
+              Text(
+                '(The first scene has nothing to come from.)',
+                style: t.bodySmall,
+              ),
+            const SizedBox(height: 8),
+            Text('On top', style: t.labelLarge),
+            for (final o in s.overlays)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  o.kind == OverlayKind.text
+                      ? Icons.text_fields
+                      : Icons.grid_on,
+                ),
+                title: Text(
+                  o.kind == OverlayKind.text
+                      ? o.text.replaceAll('\n', ' ')
+                      : ((o.asset?['name'] as String?) ?? 'Sprite'),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  o.aboveEffect ? 'Above the effect' : 'Through the effect',
+                ),
+                onTap: () => _editOverlay(o),
+              ),
+            Wrap(
+              spacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final o = SceneOverlay(kind: OverlayKind.text);
+                    await _set((s) => s.overlays.add(o));
+                    await _editOverlay(o);
+                  },
+                  icon: const Icon(Icons.text_fields),
+                  label: const Text('Add text'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final info = await widget.pickSprite?.call();
+                    if (info == null) return;
+                    final o = SceneOverlay(
+                      kind: OverlayKind.sprite,
+                      asset: info,
+                      y: 0.5,
+                    );
+                    await _set((s) => s.overlays.add(o));
+                    await _editOverlay(o);
+                  },
+                  icon: const Icon(Icons.grid_on),
+                  label: const Text('Add sprite'),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             Text('Effect', style: t.labelLarge),
             const SizedBox(height: 4),
@@ -297,4 +428,158 @@ class _Colors extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Edits one overlay (text or sprite) on a scene.
+class _OverlaySheet extends StatefulWidget {
+  const _OverlaySheet({
+    required this.c,
+    required this.scene,
+    required this.overlay,
+  });
+  final VideoController c;
+  final Scene scene;
+  final SceneOverlay overlay;
+
+  @override
+  State<_OverlaySheet> createState() => _OverlaySheetState();
+}
+
+class _OverlaySheetState extends State<_OverlaySheet> {
+  late final _text = TextEditingController(text: widget.overlay.text);
+  SceneOverlay get o => widget.overlay;
+
+  Future<void> _set(void Function(SceneOverlay o) f) async {
+    await widget.c.updateScene(widget.scene, (_) => f(o));
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final d = widget.scene.duration;
+    final to = o.to <= 0 ? d : o.to.clamp(0.0, d);
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          0,
+          16,
+          16 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    o.kind == OverlayKind.text
+                        ? 'Text on top'
+                        : 'Sprite on top',
+                    style: t.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Remove',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () async {
+                    await widget.c.updateScene(
+                      widget.scene,
+                      (s) => s.overlays.remove(o),
+                    );
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+            if (o.kind == OverlayKind.text) ...[
+              TextField(
+                controller: _text,
+                minLines: 1,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Text',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (v) => _set((o) => o.text = v),
+              ),
+              const SizedBox(height: 6),
+              _Colors(
+                selected: o.color,
+                onPick: (v) => _set((o) => o.color = v),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Black outline'),
+                value: o.outline,
+                onChanged: (v) => _set((o) => o.outline = v),
+              ),
+            ],
+            _Row(
+              label: 'Size',
+              value: '${o.scale}',
+              child: Slider(
+                value: o.scale.toDouble(),
+                min: 1,
+                max: 8,
+                divisions: 7,
+                onChanged: (v) => _set((o) => o.scale = v.round()),
+              ),
+            ),
+            _Row(
+              label: 'Across',
+              value: '${(o.x * 100).round()}%',
+              child: Slider(value: o.x, onChanged: (v) => _set((o) => o.x = v)),
+            ),
+            _Row(
+              label: 'Down',
+              value: '${(o.y * 100).round()}%',
+              child: Slider(value: o.y, onChanged: (v) => _set((o) => o.y = v)),
+            ),
+            _Row(
+              label: 'Appears',
+              value: '${o.from.toStringAsFixed(1)} s',
+              child: Slider(
+                value: o.from.clamp(0, d),
+                max: d,
+                onChanged: (v) => _set(
+                  (o) => o.from = math
+                      .min((v * 10).round() / 10, to - 0.1)
+                      .clamp(0, d),
+                ),
+              ),
+            ),
+            _Row(
+              label: 'Goes',
+              value: o.to <= 0 ? 'end' : '${o.to.toStringAsFixed(1)} s',
+              child: Slider(
+                value: to,
+                max: d,
+                onChanged: (v) => _set((o) {
+                  final x = (v * 10).round() / 10;
+                  o.to = x >= d - 0.05 ? 0 : math.max(x, o.from + 0.1);
+                }),
+              ),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Above the effect'),
+              subtitle: const Text(
+                'Clean on top, instead of going through the scene\'s effect',
+              ),
+              value: o.aboveEffect,
+              onChanged: (v) => _set((o) => o.aboveEffect = v),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
