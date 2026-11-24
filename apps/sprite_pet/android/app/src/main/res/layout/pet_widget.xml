@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pet_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/pet_widget_bg"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <!-- The four frames of the current mood, flipping by themselves. -->
+    <ViewFlipper
+        android:id="@+id/pet_flipper"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:autoStart="true"
+        android:flipInterval="400">
+
+        <ImageView android:id="@+id/pet_frame0" android:layout_width="match_parent"
+            android:layout_height="match_parent" android:scaleType="fitCenter"
+            android:contentDescription="Pet" />
+        <ImageView android:id="@+id/pet_frame1" android:layout_width="match_parent"
+            android:layout_height="match_parent" android:scaleType="fitCenter"
+            android:contentDescription="Pet" />
+        <ImageView android:id="@+id/pet_frame2" android:layout_width="match_parent"
+            android:layout_height="match_parent" android:scaleType="fitCenter"
+            android:contentDescription="Pet" />
+        <ImageView android:id="@+id/pet_frame3" android:layout_width="match_parent"
+            android:layout_height="match_parent" android:scaleType="fitCenter"
+            android:contentDescription="Pet" />
+    </ViewFlipper>
+
+    <TextView
+        android:id="@+id/pet_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="1"
+        android:text="Open Sprite Pet once"
+        android:textColor="#FFFFFFFF"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal">
+
+        <TextView android:id="@+id/pet_feed" android:layout_width="0dp"
+            android:layout_height="32dp" android:layout_weight="1"
+            android:layout_marginEnd="3dp" android:background="@drawable/pet_widget_button"
+            android:gravity="center" android:text="Feed" android:textColor="#FFFFFFFF"
+            android:textSize="12sp" />
+        <TextView android:id="@+id/pet_pet" android:layout_width="0dp"
+            android:layout_height="32dp" android:layout_weight="1"
+            android:layout_marginEnd="3dp" android:background="@drawable/pet_widget_button"
+            android:gravity="center" android:text="Pet" android:textColor="#FFFFFFFF"
+            android:textSize="12sp" />
+        <TextView android:id="@+id/pet_play" android:layout_width="0dp"
+            android:layout_height="32dp" android:layout_weight="1"
+            android:background="@drawable/pet_widget_button"
+            android:gravity="center" android:text="Play" android:textColor="#FFFFFFFF"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>

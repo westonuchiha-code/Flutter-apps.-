@@ -97,8 +97,12 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     Exports MP4 (H.264 + AAC) via the system encoders
     (`packages/video_encoder`; AVI fallback). MP4 export still to be
     confirmed on a real phone/PC (in-app Test export).
-13. ⬜ **Sprite Pet.** Pixel pet in a home-screen widget that reacts to the
-    day. Uses Pixel Forge sprites.
+13. ✅ **Sprite Pet.** Pixel pet that lives through the day: eight pets drawn
+    in code (slime, cube ooze, cat, cat girl, robot, transforming robot, car,
+    dinosaur) or a Pixel Forge sprite; eight animated moods; needs, sleep
+    schedule, weather (Open-Meteo), battery, Asset Locker creations as
+    treats. Android home-screen widget with Feed/Pet/Play; mini window on
+    PC. Owner may swap in found art later.
 14. ⬜ **Photo Tile Quilt.** Photos → tiled mosaic with a palette. Bottom of
     the list, bare-minimum prototype.
 
