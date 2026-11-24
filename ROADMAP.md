@@ -48,8 +48,12 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
    effects library and preset format. `apps/sound_lab` + `packages/fx_kit`
    (11 effects, chain, `SoundPreset`); the piano keyboard moved to
    `audio_kit` for every app.
-7. ⬜ **Ambience Machine.** Layered, slowly drifting looping atmospheres.
-   Uses the recorder, samples, effects and presets above.
+7. ✅ **Ambience Machine.** Layered, slowly drifting looping atmospheres.
+   Uses the recorder, samples, effects and presets above. `apps/ambience_machine`:
+   up to 8 drifting layers (seamless sample loops, slow notes from Sound Lab
+   sounds or drawn waves, wind/rain/waves/rumble), shared effects, scene
+   crossfades, sleep timer, WAV render, Android background playback (media
+   foreground service with a Stop button).
 8. ⬜ **Speech Chip Lab.** Upgrade of the speech-chip voice in
    `packages/chip_synth`: type text, hear it on emulated speech chips, tweak
    and export. Reuses the existing code rather than a rebuild.

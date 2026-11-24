@@ -49,6 +49,9 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   pinned; Linux builds need `libasound2-dev`).
 - Effects: use `packages/fx_kit` (`FxChain`) rather than writing new ones;
   sounds are shared as `SoundPreset` JSON (kind `sound`) in the Asset Locker.
+- Audio that must keep playing with the screen off (Android): copy
+  `apps/ambience_machine`'s `PlaybackService` (mediaPlayback foreground
+  service + notification) and `lib/src/keeper.dart`.
 - Save user creations (samples, presets, sprites, palettes, maps,
   recordings) to the Asset Locker (`Shell.of(context).locker`,
   `saveToLocker` / `pickFromLocker`) so other apps can use them.
@@ -109,13 +112,15 @@ apps/        # one folder per Flutter application
              #   waveform_painter - draw waves (or from pictures), morph, play; saves wavetables
              #   sound_lab        - synths/waves/samples through an 8-slot effect chain, scope,
              #                      shared sound presets
+             #   ambience_machine - drifting layered atmospheres, scene crossfades, sleep timer;
+             #                      Android background playback via a media foreground service
 packages/    # shared Dart/Flutter packages
              #   app_shell     - shared app foundation (theme, settings, crash-safe
              #                   storage, error log, about page, export/share)
              #   asset_locker  - shared library of creations every app saves to
              #                   (Documents/Asset Locker; Android: folder picked once per app)
              #   audio_kit     - mic recording to WAV, WAV read/write, waveform view,
-             #                   level meter, piano keyboard, clip playback
+             #                   level meter, piano keyboard, effect-chain editor, clip playback
              #                   (flutter_recorder + flutter_soloud)
              #   beat_kit      - pure-Dart beat engine: tempo clock + swing, step sequencer,
              #                   sample voices, synced loop layers, kit format
