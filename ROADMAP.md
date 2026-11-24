@@ -34,9 +34,11 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
    waveform view and sample library. `apps/field_recorder` +
    `packages/audio_kit`. Gap: on Android the screen must stay on while
    recording (the app keeps it on); no background recording yet.
-4. ⬜ **Sample Pad + Loop Station.** Pads loaded with recorded samples (trim,
+4. ✅ **Sample Pad + Loop Station.** Pads loaded with recorded samples (trim,
    pitch, reverse) and layered loops in sync. Builds the shared tempo/clock
-   and step sequencer.
+   and step sequencer. `apps/sample_pad` + `packages/beat_kit`. Gaps: loop
+   layers are not saved in kits (export the mix instead); loop timing
+   depends on the device's latency (adjustable in Settings).
 5. ⬜ **Waveform Painter.** Draw a wave shape or picture and play it as an
    instrument. Builds shared custom wavetables for every synth.
 6. ⬜ **Sound Lab.** Playground for the synth engines: chain effects, live

@@ -103,6 +103,7 @@ apps/        # one folder per Flutter application
              #   dev_dashboard    - CI status, install latest builds, error reports,
              #                      Asset Locker browser, shared to-do list
              #   field_recorder   - mic recorder: markers, trim, tags, saves WAV to the Asset Locker
+             #   sample_pad       - 16 sample pads, step sequencer, loop station, kits, mix export
 packages/    # shared Dart/Flutter packages
              #   app_shell     - shared app foundation (theme, settings, crash-safe
              #                   storage, error log, about page, export/share)
@@ -110,6 +111,8 @@ packages/    # shared Dart/Flutter packages
              #                   (Documents/Asset Locker; Android: folder picked once per app)
              #   audio_kit     - mic recording to WAV, WAV read/write, waveform view,
              #                   level meter, clip playback (flutter_recorder + flutter_soloud)
+             #   beat_kit      - pure-Dart beat engine: tempo clock + swing, step sequencer,
+             #                   sample voices, synced loop layers, kit format
              #   light_capture - webcam brightness frames on Windows/Linux
              #                   (the official camera plugin can't stream frames on Windows)
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog

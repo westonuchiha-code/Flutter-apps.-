@@ -285,3 +285,62 @@ class WavFileWriter {
     return WavInfo(format, 44, _dataLength);
   }
 }
+
+/// Decodes a WAV to mono floats at [targetRate] (channels averaged,
+/// linear resampling). [maxSeconds] caps the length.
+Float32List decodeWavMono(
+  Uint8List wav, {
+  int targetRate = 48000,
+  double maxSeconds = double.infinity,
+}) {
+  final info = parseWav(wav, totalLength: wav.length);
+  final f = info.format;
+  final bd = ByteData.sublistView(wav);
+  final srcFrames = math.min(
+    info.frames,
+    maxSeconds.isFinite ? (maxSeconds * f.sampleRate).floor() : info.frames,
+  );
+  final mono = Float32List(srcFrames);
+  for (var i = 0; i < srcFrames; i++) {
+    final base = info.dataOffset + i * f.frameBytes;
+    var sum = 0.0;
+    for (var c = 0; c < f.channels; c++) {
+      sum += sampleAt(bd, base + c * f.bytesPerSample, f);
+    }
+    mono[i] = sum / f.channels;
+  }
+  if (f.sampleRate == targetRate || srcFrames == 0) return mono;
+  final ratio = f.sampleRate / targetRate;
+  final outLen = (srcFrames / ratio).floor();
+  final out = Float32List(outLen);
+  for (var i = 0; i < outLen; i++) {
+    final p = i * ratio;
+    final i0 = p.floor();
+    final a = mono[i0];
+    final b = i0 + 1 < srcFrames ? mono[i0 + 1] : a;
+    out[i] = a + (b - a) * (p - i0);
+  }
+  return out;
+}
+
+/// Mono floats to a 16-bit mono WAV.
+Uint8List encodeWavMono16(Float32List samples, int sampleRate) =>
+    buildWav(WavFormat(sampleRate: sampleRate), floatToPcm16(samples));
+
+/// Interleaved stereo floats to a 16-bit stereo WAV.
+Uint8List encodeWavStereo16(Float32List interleaved, int sampleRate) =>
+    buildWav(
+      WavFormat(sampleRate: sampleRate, channels: 2),
+      floatToPcm16(interleaved),
+    );
+
+/// Peaks of mono floats, one per [framesPerPeak].
+Float32List floatPeaks(Float32List samples, int framesPerPeak) {
+  final out = Float32List((samples.length / framesPerPeak).ceil());
+  for (var i = 0; i < samples.length; i++) {
+    final v = samples[i].abs();
+    final k = i ~/ framesPerPeak;
+    if (v > out[k]) out[k] = v;
+  }
+  return out;
+}

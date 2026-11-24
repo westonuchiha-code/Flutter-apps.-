@@ -47,6 +47,32 @@ void main() {
     );
   });
 
+  test('decode to mono with resampling, encode back', () {
+    // Stereo 8 kHz: left 0.5, right -0.25 -> mono 0.125.
+    final st = Int16List(16);
+    for (var i = 0; i < 8; i++) {
+      st[i * 2] = 16384;
+      st[i * 2 + 1] = -8192;
+    }
+    final wav = buildWav(
+      const WavFormat(sampleRate: 8000, channels: 2),
+      st.buffer.asUint8List(),
+    );
+    final same = decodeWavMono(wav, targetRate: 8000);
+    expect(same.length, 8);
+    expect(same.first, closeTo(0.125, 1e-4));
+    expect(decodeWavMono(wav, targetRate: 16000).length, 16);
+    expect(decodeWavMono(wav, targetRate: 8000, maxSeconds: 0.0005).length, 4);
+    final mono = encodeWavMono16(same, 8000);
+    expect(parseWav(mono).frames, 8);
+    final stereo = encodeWavStereo16(Float32List(10), 8000);
+    expect(parseWav(stereo).format.channels, 2);
+    expect(floatPeaks(Float32List.fromList([0.1, -0.5, 0.2]), 2), [
+      0.5,
+      closeTo(0.2, 1e-6),
+    ]);
+  });
+
   test('float to 16-bit clamps', () {
     final out = Int16List.view(
       floatToPcm16(Float32List.fromList([2, -2, 0.5])).buffer,

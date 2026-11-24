@@ -1,0 +1,11 @@
+name: beat_kit
+description: "Pure-Dart beat engine: tempo clock with swing, step sequencer, sample pads (trim, pitch, reverse, modes) and synced loop layers."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.14.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0
