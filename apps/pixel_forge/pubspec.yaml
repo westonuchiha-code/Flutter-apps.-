@@ -40,6 +40,8 @@ dependencies:
   file_selector: ^1.1.0
   pixel_kit:
     path: ../../packages/pixel_kit
+  image_picker: ^1.2.4
+  image: ^4.13.1
 
 dev_dependencies:
   flutter_test:

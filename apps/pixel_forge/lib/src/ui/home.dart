@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:app_shell/app_shell.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +8,10 @@ import 'package:pixel_kit/pixel_kit.dart' as px;
 
 import '../editor.dart';
 import '../library.dart';
+import '../map_editor.dart';
+import 'map_page.dart';
+import 'pictures.dart';
+import 'timeline.dart';
 import 'canvas_view.dart';
 import 'panels.dart';
 
@@ -262,6 +267,129 @@ class _HomePageState extends State<HomePage> {
             );
           }
         });
+      case 'sheet':
+      case 'gif':
+        final isGif = action == 'gif';
+        final scale = await showDialog<int>(
+          context: context,
+          builder: (context) => SimpleDialog(
+            title: Text(isGif ? 'GIF size' : 'Sprite sheet size'),
+            children: [
+              for (final sc in [1, 2, 4, 8])
+                SimpleDialogOption(
+                  onPressed: () => Navigator.pop(context, sc),
+                  child: Text('×$sc'),
+                ),
+            ],
+          ),
+        );
+        if (scale == null || !mounted) return;
+        final where = await showDialog<String>(
+          context: context,
+          builder: (context) => SimpleDialog(
+            title: const Text('Where to?'),
+            children: [
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, 'locker'),
+                child: const Text('Asset Locker (Sprites)'),
+              ),
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, 'share'),
+                child: const Text('Export / share'),
+              ),
+            ],
+          ),
+        );
+        if (where == null) return;
+        if (where == 'locker' && !await _locker()) return;
+        await _guard(() async {
+          final n = e.sprite.frames.length;
+          final cols = n <= 8 ? 0 : (n / 2).ceil().clamp(1, 16);
+          final bytes = isGif
+              ? px.spriteToGif(e.sprite, scale: scale)
+              : px.spriteSheetPng(e.sprite, columns: cols, scale: scale);
+          final ext = isGif ? 'gif' : 'png';
+          final label = isGif ? '${e.name} (animated)' : '${e.name} (sheet)';
+          if (where == 'locker') {
+            await shell.locker.save(
+              type: AssetType.sprite,
+              name: label,
+              bytes: bytes,
+              extension: ext,
+              thumbnail: ForgeLibrary.thumbnail(e.sprite),
+              tags: ['pixel forge', ext],
+              extra: {
+                'frames': n,
+                'frameWidth': e.sprite.width * scale,
+                'frameHeight': e.sprite.height * scale,
+              },
+            );
+            _snack('Saved "$label" to Sprites');
+          } else {
+            await shell.exporter.exportFile(
+              '${e.name}.$ext',
+              bytes,
+              mimeType: isGif ? 'image/gif' : 'image/png',
+            );
+          }
+        });
+      case 'picture':
+        final pic = await pickPicture(context);
+        if (pic == null || !mounted) return;
+        final opts = await askImportOptions(context);
+        if (opts == null) return;
+        e.importPicture(pic, snap: opts.$1, dither: opts.$2);
+      case 'map':
+        final size = await showDialog<int>(
+          context: context,
+          builder: (context) => SimpleDialog(
+            title: const Text('Tile size'),
+            children: [
+              for (final t in [8, 16, 32])
+                if (t <= e.sprite.width && t <= e.sprite.height)
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, t),
+                    child: Text('$t×$t pixels'),
+                  ),
+            ],
+          ),
+        );
+        if (size == null || !mounted) return;
+        final m = MapEditor.fromPicture(
+          e.sprite.flatten(e.frame),
+          e.sprite.width,
+          e.sprite.height,
+          size,
+        )..name = '${e.name} map';
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => MapPage(map: m, sprite: e),
+          ),
+        );
+      case 'openMap':
+        if (!await _locker() || !mounted) return;
+        final info = await pickFromLocker(
+          context,
+          shell.locker,
+          types: const [AssetType.map],
+        );
+        if (info == null || !mounted) return;
+        px.TileMap? map;
+        await _guard(() async {
+          final bytes = await shell.locker.read(info);
+          if (bytes == null) throw StateError('The file is missing.');
+          map = px.TileMap.fromJson(jsonDecode(utf8.decode(bytes)));
+        });
+        if (map == null || !mounted) return;
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => MapPage(
+              map: MapEditor(map!, name: info.name),
+              sprite: e,
+              asset: info,
+            ),
+          ),
+        );
       case 'resize':
         final size = await _askSize(
           'Canvas size',
@@ -335,6 +463,11 @@ class _HomePageState extends State<HomePage> {
     switch (choice) {
       case px.Palette():
         e.setPalette(choice);
+      case 'photo':
+        final pic = await pickPicture(context);
+        if (pic == null || !mounted) return;
+        final p = await askPhotoPalette(context, pic);
+        if (p != null && p.colors.isNotEmpty) e.setPalette(p);
       case 'used':
         final p = e.paletteFromSprite();
         if (p.colors.isEmpty) {
@@ -478,6 +611,28 @@ class _HomePageState extends State<HomePage> {
                   PopupMenuItem(value: 'saveAs', child: Text('Save as…')),
                   PopupMenuDivider(),
                   PopupMenuItem(value: 'png', child: Text('Export PNG…')),
+                  PopupMenuItem(
+                    value: 'sheet',
+                    child: Text('Export sprite sheet…'),
+                  ),
+                  PopupMenuItem(
+                    value: 'gif',
+                    child: Text('Export animated GIF…'),
+                  ),
+                  PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'picture',
+                    child: Text('Add a picture as a layer…'),
+                  ),
+                  PopupMenuItem(
+                    value: 'map',
+                    child: Text('Tile map from this sprite…'),
+                  ),
+                  PopupMenuItem(
+                    value: 'openMap',
+                    child: Text('Open a tile map…'),
+                  ),
+                  PopupMenuDivider(),
                   PopupMenuItem(value: 'resize', child: Text('Canvas size…')),
                   PopupMenuItem(value: 'fit', child: Text('Fit to screen')),
                 ],
@@ -503,7 +658,15 @@ class _HomePageState extends State<HomePage> {
                               child: ToolBar(e: e, vertical: true),
                             ),
                             const VerticalDivider(width: 1),
-                            Expanded(child: canvas),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Expanded(child: canvas),
+                                  const Divider(height: 1),
+                                  Timeline(e: e),
+                                ],
+                              ),
+                            ),
                             const VerticalDivider(width: 1),
                             SizedBox(
                               width: 300,
@@ -534,6 +697,7 @@ class _HomePageState extends State<HomePage> {
                     if (_busy) const LinearProgressIndicator(),
                     Expanded(child: canvas),
                     const Divider(height: 1),
+                    Timeline(e: e),
                     ToolBar(e: e),
                     Row(
                       children: [

@@ -17,5 +17,13 @@ Pass 1 (this build): pixel editor for touch and desktop.
 - Keys: B E L U O G I M tools, X swap colours, [ ] brush size,
   Ctrl+Z/Y/C/V/A/S, Del, Esc.
 
-Pass 2 (next): animation, onion skin, tile maps, palettes from photos,
-sprite sheets and GIF.
+Pass 2:
+- Animation: frames (copy or blank), per-frame timing, move/delete, onion
+  skin (previous red, next blue), looping preview.
+- Tile maps: cut the sprite into 8/16/32 px tiles (duplicates merged), paint,
+  erase, fill and pick on a map, resize, re-cut tiles after editing; maps
+  save to the Asset Locker (Maps); export PNG.
+- Palettes from a photo (camera on Android) or any picture: 2–32 colours.
+- Add a picture as a layer: shrunk to fit, optionally snapped to the palette
+  with ordered dithering.
+- Export sprite sheets (PNG) and animated GIFs with exact colours.

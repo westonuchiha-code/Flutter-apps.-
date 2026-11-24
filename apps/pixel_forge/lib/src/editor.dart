@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:pixel_kit/pixel_kit.dart';
+import 'package:pixel_kit/pixel_kit.dart' as pk;
 
 enum Tool {
   pencil('Pencil', 'B'),
@@ -45,6 +46,9 @@ class Editor extends ChangeNotifier {
   int brushSize = 1;
   bool mirrorX = false, mirrorY = false;
   bool shapeFilled = false;
+
+  /// Show the previous (red) and next (blue) frames faintly.
+  bool onionSkin = false;
   bool fillGlobal = false;
   int primary = 0xFF000000;
   int secondary = 0xFFFFFFFF;
@@ -471,6 +475,71 @@ class Editor extends ChangeNotifier {
   void renameLayer(int i, String n) {
     sprite.layers[i].name = n;
     notifyListeners();
+  }
+
+  // ---- Frames ----
+
+  void selectFrame(int i) {
+    commitFloating();
+    frame = i.clamp(0, sprite.frames.length - 1);
+    version++;
+    notifyListeners();
+  }
+
+  /// New frame after the current one: a copy, or blank.
+  void addFrame({bool copy = true}) => _structural(() {
+    sprite.addFrame(after: frame, copy: copy);
+    frame++;
+  });
+
+  void deleteFrame(int i) => _structural(() {
+    sprite.removeFrame(i);
+    if (frame >= i && frame > 0) frame--;
+  });
+
+  void moveFrame(int from, int to) => _structural(() {
+    final f = sprite.frames.removeAt(from);
+    sprite.frames.insert(to.clamp(0, sprite.frames.length), f);
+    frame = to.clamp(0, sprite.frames.length - 1);
+  });
+
+  void setFrameDuration(int i, int ms, {bool all = false}) => _structural(() {
+    for (var k = 0; k < sprite.frames.length; k++) {
+      if (all || k == i) sprite.frames[k].durationMs = ms.clamp(10, 10000);
+    }
+  });
+
+  void toggleOnion() {
+    onionSkin = !onionSkin;
+    version++;
+    notifyListeners();
+  }
+
+  // ---- Pictures ----
+
+  /// Adds [pic] as a new layer, shrunk to fit and centred; optionally
+  /// snapped to the palette (with ordered dithering).
+  void importPicture(
+    ({int width, int height, Uint32List pixels}) pic, {
+    bool snap = false,
+    bool dither = false,
+    String name = 'Picture',
+  }) {
+    final fit = fitPicture(pic, sprite.width, sprite.height);
+    var px = fit.pixels;
+    if (snap) px = pk.reduceToPalette(px, fit.width, palette, dither: dither);
+    _structural(() {
+      sprite.addLayer(name, at: layer + 1);
+      layer++;
+      final cel = sprite.cel(frame, layer);
+      final ox = (sprite.width - fit.width) ~/ 2,
+          oy = (sprite.height - fit.height) ~/ 2;
+      for (var y = 0; y < fit.height; y++) {
+        for (var x = 0; x < fit.width; x++) {
+          cel[(oy + y) * sprite.width + ox + x] = px[y * fit.width + x];
+        }
+      }
+    });
   }
 
   // ---- Whole sprite ----

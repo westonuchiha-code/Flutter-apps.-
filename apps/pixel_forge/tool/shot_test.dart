@@ -1,4 +1,5 @@
 // Screenshots on a phone and a desktop window (layout check).
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -9,7 +10,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pixel_forge/main.dart';
 import 'package:pixel_forge/src/editor.dart';
+import 'package:pixel_forge/src/map_editor.dart';
 import 'package:pixel_forge/src/ui/home.dart';
+import 'package:pixel_forge/src/ui/map_page.dart';
 import 'package:pixel_kit/pixel_kit.dart' as px;
 
 /// A small test drawing: a mushroom made of shapes.
@@ -89,6 +92,21 @@ void main() {
         return s;
       }))!;
       final e = sample();
+      if (name == 'forge_phone') {
+        e
+          ..addFrame()
+          ..selectLayer(0)
+          ..setTool(Tool.select)
+          ..selectAll();
+        e.strokeStart(5, 5);
+        e.strokeMove(5, 6);
+        e.strokeEnd();
+        e
+          ..commitFloating()
+          ..deselect()
+          ..setTool(Tool.pencil)
+          ..toggleOnion();
+      }
       await tester.pumpWidget(
         RepaintBoundary(
           key: const Key('s'),
@@ -104,14 +122,54 @@ void main() {
         );
         await tester.pump();
       }
-      final b = tester.renderObject<RenderRepaintBoundary>(
-        find.byKey(const Key('s')),
-      );
-      await tester.runAsync(() async {
-        final img = await b.toImage(pixelRatio: 1);
-        final png = await img.toByteData(format: ui.ImageByteFormat.png);
-        File('$out/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
-      });
+      Future<void> shot(String n) async {
+        final b = tester.renderObject<RenderRepaintBoundary>(
+          find.byKey(const Key('s')),
+        );
+        await tester.runAsync(() async {
+          final img = await b.toImage(pixelRatio: 1);
+          final png = await img.toByteData(format: ui.ImageByteFormat.png);
+          File('$out/$n.png').writeAsBytesSync(png!.buffer.asUint8List());
+        });
+      }
+
+      await shot(name);
+      if (name == 'forge_phone') {
+        // Tile map: the mushroom cut into 8x8 tiles, painted in a row.
+        final m = MapEditor.fromPicture(
+          e.sprite.flatten(0),
+          16,
+          16,
+          8,
+          cols: 12,
+          rows: 9,
+        )..name = 'Mushroom field';
+        for (var c = 0; c < 12; c += 2) {
+          for (final (dc, dr, t) in [
+            (0, 6, 1),
+            (1, 6, 2),
+            (0, 7, 3),
+            (1, 7, 4),
+          ]) {
+            if (t < m.map.tileSet.length) m.map.set(c + dc, dr, t);
+          }
+        }
+        final nav = tester.state<NavigatorState>(find.byType(Navigator).last);
+        unawaited(
+          nav.push(
+            MaterialPageRoute<void>(
+              builder: (_) => MapPage(map: m, sprite: e),
+            ),
+          ),
+        );
+        for (var i = 0; i < 20; i++) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 30)),
+          );
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        await shot('forge_map');
+      }
     });
   }
 }

@@ -5,5 +5,8 @@ library;
 export 'src/codec.dart';
 export 'src/color.dart';
 export 'src/draw.dart';
+export 'src/export.dart';
 export 'src/palette.dart';
+export 'src/quantize.dart';
 export 'src/sprite.dart';
+export 'src/tiles.dart';

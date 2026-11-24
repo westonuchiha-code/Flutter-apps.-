@@ -12,3 +12,9 @@ Pure-Dart pixel art core (no Flutter) shared by the visual apps.
   flood fill (contiguous or global), mirror drawing, selection masks.
 - `PixelPatch`: copy/flip/rotate/stamp selections. `Rect`.
 - `spriteToPng`, `decodePicture` (via `package:image`).
+- `medianCut` / `paletteFromPixels` (palettes from pictures),
+  `reduceToPalette` (optional 4×4 ordered dither), `fitPicture`.
+- `TileSet.cut` (de-duplicated tiles; tile 0 is empty), `TileMap` (paint,
+  fill, render, JSON kind `tile_map` with the tiles embedded).
+- `spriteSheet` / `spriteSheetPng`, `spriteToGif` (exact colours, per-frame
+  timing, transparency).

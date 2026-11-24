@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
@@ -76,7 +77,9 @@ class CanvasViewState extends State<CanvasView> {
     _building = true;
     final version = e.version;
     final s = e.sprite;
-    final pixels = s.flatten(e.frame);
+    final pixels = e.onionSkin && s.frames.length > 1
+        ? onionComposite(s, e.frame)
+        : s.flatten(e.frame);
     // ARGB words in little-endian memory are B,G,R,A bytes.
     ui.decodeImageFromPixels(
       pixels.buffer.asUint8List(),
@@ -342,4 +345,28 @@ class _CanvasPainter extends CustomPainter {
       old.offset != offset ||
       old.selection != selection ||
       old.version != version;
+}
+
+/// The current frame over faint copies of its neighbours: the previous
+/// frame tinted red and the next tinted blue (like other animation tools).
+Uint32List onionComposite(px.Sprite s, int frame) {
+  final out = Uint32List(s.pixelCount);
+  final n = s.frames.length;
+  void ghost(int f, int tint) {
+    final p = s.flatten(f);
+    for (var i = 0; i < p.length; i++) {
+      final c = p[i];
+      if (px.alphaOf(c) == 0) continue;
+      final mixed = px.blendOver(c | 0xFF000000, tint, 0.5);
+      out[i] = px.blendOver(out[i], (mixed & 0x00FFFFFF) | 0x55000000);
+    }
+  }
+
+  if (frame > 0) ghost(frame - 1, 0xFFFF3030);
+  if (frame < n - 1) ghost(frame + 1, 0xFF3080FF);
+  final cur = s.flatten(frame);
+  for (var i = 0; i < cur.length; i++) {
+    if (cur[i] != 0) out[i] = px.blendOver(out[i], cur[i]);
+  }
+  return out;
 }

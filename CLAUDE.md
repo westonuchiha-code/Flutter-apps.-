@@ -53,7 +53,8 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   `apps/ambience_machine`'s `PlaybackService` (mediaPlayback foreground
   service + notification) and `lib/src/keeper.dart`.
 - Pixel art: use `packages/pixel_kit` (`Sprite`, `Palette`, `Canvas`) and its
-  file formats (kinds `pixel_sprite`, `palette`) so every visual app shares them.
+  file formats (kinds `pixel_sprite`, `palette`, `tile_map`) so every visual app
+  shares them.
 - Asset Locker details live in `<id>.info.json` (0.1 used `<id>.json`, which
   overwrote JSON assets' data; old details files are still read).
 - Save user creations (samples, presets, sprites, palettes, maps,
@@ -122,7 +123,8 @@ apps/        # one folder per Flutter application
              #   ambience_machine - drifting layered atmospheres, scene crossfades, sleep timer;
              #                      Android background playback via a media foreground service
              #   speech_chip_lab  - text to speech on TMS5220/SP0256/Votrax recreations; sing mode
-             #   pixel_forge      - pixel art editor (layers, palettes, selections); sprites to the Locker
+             #   pixel_forge      - pixel art editor: layers, frames/onion skin, palettes (also from
+             #                      photos), selections, tile maps, PNG/sheet/GIF; all to the Locker
 packages/    # shared Dart/Flutter packages
              #   app_shell     - shared app foundation (theme, settings, crash-safe
              #                   storage, error log, about page, export/share)
@@ -135,7 +137,8 @@ packages/    # shared Dart/Flutter packages
              #                   sample voices, synced loop layers, kit format
              #   fx_kit        - pure-Dart stereo effects (11), FxChain, SoundPreset format
              #   pixel_kit     - pure-Dart pixel art core: sprites (layers x frames), palettes,
-             #                   drawing tools, selections, PNG/picture codecs (package:image)
+             #                   median-cut + dithering, drawing tools, selections, tile sets/maps,
+             #                   PNG, sprite sheets, exact-colour GIF (package:image)
              #   light_capture - webcam brightness frames on Windows/Linux
              #                   (the official camera plugin can't stream frames on Windows)
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,
