@@ -72,7 +72,7 @@ class _Tri {
   final fog = Float32List(3);
   double depth = 0;
   int layer = 0;
-  Material? material;
+  Surface? material;
 }
 
 /// One clipped vertex in camera space with everything it carries.
@@ -104,7 +104,7 @@ class Renderer {
   final _clipIn = List.generate(4, (_) => _V()),
       _clipOut = List.generate(4, (_) => _V());
   final _shaders = <(ui.Image, bool), ui.ImageShader>{};
-  final _defaultMaterial = Material(color: 0xFFC0C0C0);
+  final _defaultMaterial = Surface(color: 0xFFC0C0C0);
 
   /// Paints [scene] from [camera] into [size] on [canvas].
   void paint(
@@ -149,10 +149,28 @@ class Renderer {
     Camera camera,
     RenderOptions o,
   ) {
-    canvas.drawRect(
-      ui.Rect.fromLTWH(0, 0, w, h),
-      ui.Paint()..color = ui.Color(scene.sky),
-    );
+    final horizonColor = scene.skyHorizon;
+    if (horizonColor == null) {
+      canvas.drawRect(
+        ui.Rect.fromLTWH(0, 0, w, h),
+        ui.Paint()..color = ui.Color(scene.sky),
+      );
+    } else {
+      // Sky colour overhead fading to the horizon colour, which stays where
+      // the horizon is as the camera tilts.
+      final fy = 1 / math.tan(camera.fov * math.pi / 360);
+      final horizon = h / 2 + math.tan(camera.pitch) * fy * h / 2;
+      final top = horizon - h * 0.9;
+      canvas.drawRect(
+        ui.Rect.fromLTWH(0, 0, w, h),
+        ui.Paint()
+          ..shader = ui.Gradient.linear(
+            ui.Offset(0, top),
+            ui.Offset(0, horizon),
+            [ui.Color(scene.sky), ui.Color(horizonColor)],
+          ),
+      );
+    }
     _used = 0;
     stats
       ..triangles = 0
@@ -232,7 +250,7 @@ class Renderer {
         lg[i] = g;
         lb[i] = b;
       }
-      final idx = mesh.indices, uvs = mesh.uvs;
+      final idx = mesh.indices, uvs = mesh.uvs, vc = mesh.colors;
       for (final (start, count, material) in parts) {
         final lit = o.lighting && material.lit;
         final tex = material.texture;
@@ -253,10 +271,10 @@ class Renderer {
               ..z = vz[i]
               ..u = uvs[i * 2] * tw
               ..v = uvs[i * 2 + 1] * th
-              ..r = lit ? lr[i] : 1
-              ..g = lit ? lg[i] : 1
-              ..b = lit ? lb[i] : 1
-              ..fog = fog[i];
+              ..r = (lit ? lr[i] : 1) * (vc == null ? 1 : _ch(vc[i], 16))
+              ..g = (lit ? lg[i] : 1) * (vc == null ? 1 : _ch(vc[i], 8))
+              ..b = (lit ? lb[i] : 1) * (vc == null ? 1 : _ch(vc[i], 0))
+              ..fog = material.fogged ? fog[i] : 0;
           }
           // Clip against the near plane (Sutherland–Hodgman, 3 → up to 4).
           var m = 0;
@@ -300,7 +318,7 @@ class Renderer {
     _V a,
     _V b,
     _V c,
-    Material m,
+    Surface m,
     int layer,
     double f,
     double half,

@@ -51,7 +51,7 @@ class _Gltf {
   final Uint8List? bin;
   final _buffers = <int, Uint8List>{};
   final _images = <int, ui.Image?>{};
-  final _materials = <int, Material>{};
+  final _materials = <int, Surface>{};
 
   Uint8List _buffer(int i) => _buffers[i] ??= () {
     final b = _map(_list(j['buffers'])[i]);
@@ -154,9 +154,9 @@ class _Gltf {
     return _images[i] = out;
   }
 
-  Future<Material> _material(int? i) async {
+  Future<Surface> _material(int? i) async {
     if (i == null) {
-      return Material(color: 0xFFCCCCCC);
+      return Surface(color: 0xFFCCCCCC);
     }
     if (_materials.containsKey(i)) {
       return _materials[i]!;
@@ -167,7 +167,7 @@ class _Gltf {
     int c(int k) => ((f.length > k ? (f[k] as num).toDouble() : 1.0) * 255)
         .round()
         .clamp(0, 255);
-    final mat = Material(
+    final mat = Surface(
       name: (m['name'] as String?) ?? '',
       color: (c(3) << 24) | (c(0) << 16) | (c(1) << 8) | c(2),
       doubleSided: m['doubleSided'] == true,
@@ -187,7 +187,7 @@ class _Gltf {
     final mesh = _map(_list(j['meshes'])[i]);
     final pos = <double>[], nor = <double>[], uv = <double>[];
     final idx = <int>[];
-    final parts = <(int, int, Material)>[];
+    final parts = <(int, int, Surface)>[];
     for (final prim in _list(mesh['primitives'])) {
       final p = _map(prim);
       if (_int(p['mode'], 4) != 4) continue; // triangles only

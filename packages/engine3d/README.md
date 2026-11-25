@@ -2,6 +2,9 @@
 
 Lightweight 3D for the apps (pure Dart + Flutter's `Canvas.drawVertices`).
 
+- Materials are `Surface` (colour, texture, lit, doubleSided, fogged); meshes
+  can carry per-vertex colours. `Scene.skyHorizon` gives a gradient sky.
+  Cameras include `FlyRig`.
 - Scene graph (`Node`: position, rotation, scale, mesh, material, children,
   `layer`), `Scene` (sky, ambient, sun, point lights, fog).
 - Meshes: box, subdivided plane, sphere, cylinder, height-map terrain (with

@@ -3,12 +3,13 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 /// Surface look: a colour, optionally a texture (tiled), lit or not.
-class Material {
-  Material({
+class Surface {
+  Surface({
     this.color = 0xFFFFFFFF,
     this.texture,
     this.lit = true,
     this.doubleSided = false,
+    this.fogged = true,
     this.name = '',
   });
 
@@ -19,6 +20,9 @@ class Material {
   /// Unlit surfaces ignore lights (skies, signs, glowing things).
   bool lit;
   bool doubleSided;
+
+  /// Fades into the fog with distance (off for the sun, moon and sky).
+  bool fogged;
   String name;
 }
 

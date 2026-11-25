@@ -177,3 +177,50 @@ class WalkRig extends CameraRig {
     p.y += (target - p.y) * math.min(1, dt * 12);
   }
 }
+
+/// Flies freely: drag to look, move along where you look, never below the
+/// ground (plus a margin).
+class FlyRig extends CameraRig {
+  FlyRig({
+    Vector3? start,
+    double yaw = 0,
+    double pitch = -0.2,
+    this.speed = 12,
+    this.ground,
+    this.clearance = 1.5,
+  }) {
+    camera
+      ..position = start ?? Vector3(0, 20, 60)
+      ..yaw = yaw
+      ..pitch = pitch;
+  }
+
+  @override
+  final camera = Camera();
+  double speed, clearance;
+  double Function(double x, double z)? ground;
+
+  @override
+  void drag(double dx, double dy) {
+    camera
+      ..yaw -= dx * 0.005
+      ..pitch = (camera.pitch - dy * 0.004).clamp(-1.4, 1.4);
+  }
+
+  @override
+  void zoom(double factor) => speed = (speed * factor).clamp(1.0, 200.0);
+
+  @override
+  void move(double forward, double strafe, double dt) {
+    final f = camera.forward;
+    final right = Vector3(math.cos(camera.yaw), 0, -math.sin(camera.yaw));
+    camera.position += (f * forward + right * strafe) * (speed * dt);
+  }
+
+  @override
+  void update(double dt) {
+    final p = camera.position;
+    final floor = (ground?.call(p.x, p.z) ?? -double.infinity) + clearance;
+    if (p.y < floor) p.y = floor;
+  }
+}

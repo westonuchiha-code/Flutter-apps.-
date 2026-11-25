@@ -8,7 +8,7 @@ import 'scene.dart';
 
 /// Reads a Wavefront OBJ (positions, texture coordinates, normals, faces of
 /// any size). Materials files are not read: the model gets [material].
-Node loadObj(String text, {String name = 'model', Material? material}) {
+Node loadObj(String text, {String name = 'model', Surface? material}) {
   final v = <double>[], vt = <double>[], vn = <double>[];
   final pos = <double>[], nor = <double>[], uv = <double>[];
   final idx = <int>[];
@@ -103,7 +103,7 @@ Node loadObj(String text, {String name = 'model', Material? material}) {
         uvs: Float32List.fromList(uv),
         indices: Uint32List.fromList(idx),
       ),
-      material: material ?? Material(color: 0xFFC8C8C8),
+      material: material ?? Surface(color: 0xFFC8C8C8),
     ),
   );
 }

@@ -122,9 +122,11 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     spirit of Labyrinth, eWorld and Sega's online city. Websites are buildings
     on themed streets, with trees and NPCs, and you can build the world out
     over time. Replaces the earlier 2D Internet City idea.
-18. ⬜ **Bryce for 2026.** Generate fractal landscapes (mountains, water,
-    skies, fog, suns and moons) with simple controls, explore them in real
-    time, and render stills or flyover videos.
+18. ✅ **Bryce for 2026** (app: **Vista**). Fractal landscapes with erosion,
+    presets (Alps, Desert, Islands, Canyon, Moon), sky and time of day,
+    clouds and haze; fly or walk (PS1 look); ray-traced stills with shadows
+    and water reflections; flyover videos (fast or ray traced); landscapes
+    and height maps to the Asset Locker.
 19. ⬜ **3D Choreographer, modern.** Make little movies without skill: a
     stage, generic characters (man, woman, boy, girl, old man, old woman), tens
     to hundreds of preset animations applied with a tap, camera shots, and a

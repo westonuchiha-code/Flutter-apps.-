@@ -74,7 +74,7 @@ class LabWorld {
       Node(
         name: 'floor',
         mesh: planeMesh(24, 24, split: 24, tile: 2),
-        material: Material(texture: checker),
+        material: Surface(texture: checker),
         layer: -1,
       ),
     );
@@ -90,14 +90,14 @@ class LabWorld {
           hole: (x, z) => x.abs() < 12 && z.abs() < 12,
         ),
         layer: -1,
-        material: Material(texture: grass),
+        material: Surface(texture: grass),
         position: Vector3(0, -0.02, 0),
       ),
     );
 
     // Walls with a gap to the hills on the far side.
     final walls = <Box>[];
-    final wallMat = Material(texture: bricks);
+    final wallMat = Surface(texture: bricks);
     void wall(double x, double z, double w, double d) {
       root.add(
         Node(
@@ -117,7 +117,7 @@ class LabWorld {
     wall(7, -12, 10, 0.6);
 
     // Pillars and crates.
-    final stone = Material(color: 0xFFB8B0A4);
+    final stone = Surface(color: 0xFFB8B0A4);
     for (final (x, z) in [(-6.0, -6.0), (6.0, -6.0), (-6.0, 6.0), (6.0, 6.0)]) {
       root.add(
         Node(
@@ -129,7 +129,7 @@ class LabWorld {
       );
       walls.add(Box(x - 0.5, z - 0.5, x + 0.5, z + 0.5));
     }
-    final crateMat = Material(texture: crate);
+    final crateMat = Surface(texture: crate);
     for (final (x, y, z, s) in [
       (8.0, 0.5, 2.0, 1.0),
       (8.6, 0.5, 3.1, 1.0),
@@ -152,7 +152,7 @@ class LabWorld {
       Node(
         name: 'ball',
         mesh: sphereMesh(0.7, segments: 14, rings: 9),
-        material: Material(color: 0xFFD8504A),
+        material: Surface(color: 0xFFD8504A),
         position: Vector3(-4, 0.7, 3),
       ),
     );
@@ -174,7 +174,7 @@ class LabWorld {
       Node(
         name: 'cube',
         mesh: boxMesh(1, 1, 1),
-        material: Material(texture: crate),
+        material: Surface(texture: crate),
         position: Vector3(0, 0.9, 0),
       ),
     );
@@ -184,7 +184,7 @@ class LabWorld {
       Node(
         name: 'post',
         mesh: boxMesh(0.15, 2, 0.15),
-        material: Material(color: 0xFF5A4030),
+        material: Surface(color: 0xFF5A4030),
         position: Vector3(3, 1, -4),
       ),
     );
@@ -192,7 +192,7 @@ class LabWorld {
       Node(
         name: 'flame',
         mesh: sphereMesh(0.15, segments: 6, rings: 4),
-        material: Material(color: 0xFFFFC060, lit: false),
+        material: Surface(color: 0xFFFFC060, lit: false),
         position: Vector3(3, 2.15, -4),
       ),
     );

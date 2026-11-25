@@ -61,7 +61,7 @@ void main() {
     () async {
       final box = Node(
         mesh: boxMesh(2, 2, 2),
-        material: Material(color: red),
+        material: Surface(color: red),
         position: Vector3(0, 0, -5),
       );
       final s = await shot(flatScene([box]), Camera(position: Vector3.zero()));
@@ -79,7 +79,7 @@ void main() {
     // A plane facing up, seen from below.
     Node plane(bool two) => Node(
       mesh: planeMesh(4, 4, split: 2),
-      material: Material(color: red, doubleSided: two),
+      material: Surface(color: red, doubleSided: two),
       position: Vector3(0, 1, -4),
     );
     final cam = Camera(position: Vector3.zero(), pitch: 0.4);
@@ -90,12 +90,12 @@ void main() {
   test('near things cover far things (sorted far to near)', () async {
     final far = Node(
       mesh: boxMesh(4, 4, 1),
-      material: Material(color: blue),
+      material: Surface(color: blue),
       position: Vector3(0, 0, -10),
     );
     final near = Node(
       mesh: boxMesh(1, 1, 1),
-      material: Material(color: red),
+      material: Surface(color: red),
       position: Vector3(0, 0, -4),
     );
     final s = await shot(
@@ -110,7 +110,7 @@ void main() {
     // A long floor running under and behind the camera.
     final floor = Node(
       mesh: planeMesh(4, 40, split: 1),
-      material: Material(color: red, doubleSided: true),
+      material: Surface(color: red, doubleSided: true),
       position: Vector3(0, -1, 0),
     );
     final s = await shot(flatScene([floor]), Camera(position: Vector3.zero()));
@@ -122,7 +122,7 @@ void main() {
         flatScene([
             Node(
               mesh: boxMesh(20, 20, 1),
-              material: Material(color: red),
+              material: Surface(color: red),
               position: Vector3(0, 0, -30),
             ),
           ])

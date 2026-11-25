@@ -52,7 +52,10 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
 - 3D: use `packages/engine3d`. The PS1 look (`RenderOptions()`) is the
   default (owner's choice); offer `RenderOptions.clean` as a setting. No
   depth buffer: put floors/terrain on `Node.layer = -1`. 3D models go to
-  the Locker as `AssetType.model` (.glb preferred).
+  the Locker as `AssetType.model` (.glb preferred). The engine's material
+  class is `Surface` (Flutter has its own `Material`). See-through
+  textures need `fogged: false` (the fog pass covers whole triangles).
+  Pixels for `decodeImageFromPixels`/`imageFromArgb` are premultiplied.
 - Background work: use `runInBackground(topLevelFunction, arg)` from
   `app_shell`, never `Isolate.run(() => ...)` inside a widget or controller
   (the closure can drag the State and its ports along: "object is
@@ -151,6 +154,8 @@ apps/        # one folder per Flutter application
              #   sprite_pet       - pixel pet (8 built-in species drawn in code, or a Pixel Forge
              #                      sprite): needs, sleep, weather, Locker treats; Android
              #                      home-screen widget (home_widget), desktop mini window
+             #   vista            - fractal landscapes: terrain + erosion, sky/time of day, fly/walk,
+             #                      ray-traced stills (all cores), flyover MP4s
              #   texture_capture  - photo -> game texture: perspective corners, even lighting,
              #                      seamless tiling, photo checks, PS1/N64/PS2/GameCube/Dreamcast
              #                      formats (CLUT, S3TC, VQ) with their memory limits

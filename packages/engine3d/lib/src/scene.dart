@@ -21,7 +21,7 @@ class Node {
 
   String name;
   Mesh? mesh;
-  Material? material;
+  Surface? material;
   Vector3 position;
   Quaternion rotation;
   Vector3 scale;
@@ -34,7 +34,7 @@ class Node {
   int layer;
 
   /// Mesh materials by triangle range, for models with several (glTF).
-  List<(int start, int count, Material material)>? parts;
+  List<(int start, int count, Surface material)>? parts;
 
   Matrix4 get local => Matrix4.compose(position, rotation, scale);
 
@@ -77,6 +77,7 @@ class Scene {
   Scene({
     Node? root,
     this.sky = 0xFF2A3550,
+    this.skyHorizon,
     this.ambient = 0xFF505868,
     Vector3? sunDirection,
     this.sunColor = 0xFFE8E0D0,
@@ -90,6 +91,9 @@ class Scene {
 
   final Node root;
   int sky, ambient;
+
+  /// If set, the sky fades from [sky] overhead to this at the horizon.
+  int? skyHorizon;
 
   /// Direction the sunlight travels.
   Vector3 sunDirection;
