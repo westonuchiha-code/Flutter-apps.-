@@ -117,6 +117,8 @@ class Actor {
     this.animal,
     this.prop,
     this.scale = 1,
+    this.body = const Body(),
+    Set<Extra>? extras,
     this.model,
     this.size = 1.75,
     this.turn = 0,
@@ -130,6 +132,7 @@ class Actor {
                : animal != null
                ? animalLooks[animal]!
                : defaultLooks[kind]!),
+       extras = extras ?? {},
        actions = actions ?? [];
 
   final String id;
@@ -149,6 +152,10 @@ class Actor {
 
   /// Size of a built-in figure (1: as made).
   double scale;
+
+  /// A person's proportions and what they wear.
+  Body body;
+  final Set<Extra> extras;
 
   /// An imported model instead of a built-in figure.
   ModelRef? model;
@@ -171,6 +178,8 @@ class Actor {
     if (animal != null) 'animal': animal!.name,
     if (prop != null) 'prop': prop!.name,
     if (scale != 1) 'scale': scale,
+    if (!body.isDefault) 'body': body.toJson(),
+    if (extras.isNotEmpty) 'extras': [for (final e in extras) e.name],
     'x': x,
     'z': z,
     'facing': facing,
@@ -203,6 +212,11 @@ class Actor {
       animal: animal,
       prop: prop,
       scale: ((j['scale'] as num?) ?? 1).toDouble(),
+      body: Body.fromJson(j['body']),
+      extras: {
+        for (final e in (j['extras'] as List?) ?? const [])
+          ...Extra.values.where((x) => x.name == e),
+      },
       name:
           (j['name'] as String?) ?? prop?.label ?? animal?.label ?? kind.label,
       look: j['look'] is Map ? Look.fromJson(j['look'] as Map, look) : look,
@@ -219,6 +233,30 @@ class Actor {
       ],
     );
   }
+}
+
+/// A person saved to reuse: kind, colours, body and extras (Asset Locker
+/// Presets, kind [templateKind]).
+const templateKind = 'puppet_template';
+
+Map<String, Object?> templateJson(Actor a) => {
+  'kind': templateKind,
+  'version': 1,
+  'name': a.name,
+  'actor': {
+    ...a.toJson()
+      ..remove('actions')
+      ..remove('id'),
+  },
+};
+
+/// A new actor from a template (null if it isn't one).
+Actor? actorFromTemplate(Object? j, {double x = 0, double z = 0}) {
+  if (j is! Map || j['kind'] != templateKind || j['actor'] is! Map) {
+    return null;
+  }
+  final a = Actor.fromJson({...j['actor'] as Map, 'x': x, 'z': z});
+  return a;
 }
 
 /// A camera angle that starts at [time].

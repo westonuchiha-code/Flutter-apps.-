@@ -31,12 +31,15 @@ void main() {
       restPose(c);
       final b = boundsOf(c.root)!;
       final height = b[4] - b[1];
-      final child = kind == Kind.boy || kind == Kind.girl;
-      expect(
-        height,
-        child ? inInclusiveRange(1.0, 1.35) : inInclusiveRange(1.55, 1.9),
-        reason: kind.name,
-      );
+      final range = switch (kind) {
+        Kind.boy || Kind.girl => (1.0, 1.35),
+        Kind.toddler => (0.75, 1.0),
+        Kind.teen => (1.35, 1.65),
+        _ => (1.55, 1.95),
+      };
+      expect(height, inInclusiveRange(range.$1, range.$2), reason: kind.name);
+      // Feet on the floor at rest, for any body.
+      expect(b[1], closeTo(0, 0.03), reason: '${kind.name} feet');
     }
   });
 
@@ -114,6 +117,62 @@ void main() {
     expect(back.prop, Prop.pine);
     expect(back.scale, 2);
     expect(back.look.top, propLooks[Prop.pine]!.top);
+  });
+
+  test('body sliders change the figure; feet stay on the floor', () {
+    double h(Body body, [Set<Extra> extras = const {}]) {
+      final c = buildCharacter(
+        Kind.man,
+        defaultLooks[Kind.man]!,
+        body: body,
+        extras: extras,
+      );
+      restPose(c);
+      final b = boundsOf(c.root)!;
+      expect(b[1], closeTo(0, 0.03));
+      return b[4] - b[1];
+    }
+
+    final normal = h(const Body());
+    expect(h(const Body(height: 1.2)), greaterThan(normal * 1.15));
+    expect(h(const Body(legs: 1.3)), greaterThan(normal + 0.2));
+    expect(h(const Body(head: 1.5)), greaterThan(normal + 0.05));
+    expect(h(const Body(), {Extra.hat}), greaterThan(normal + 0.05));
+    // Every extra on every kind builds, and moves still work.
+    for (final k in Kind.values) {
+      final c = buildCharacter(
+        k,
+        defaultLooks[k]!,
+        body: const Body(build: 1.6, arms: 0.7),
+        extras: Extra.values.toSet(),
+      );
+      expect(clipsFor(c).length, moves.length);
+    }
+  });
+
+  test('templates keep kind, colours, body and extras', () {
+    final a = Actor(
+      kind: Kind.teen,
+      name: 'Kim',
+      look: defaultLooks[Kind.teen]!.copyWith(accent: 0xFF123456),
+      body: const Body(height: 1.1, head: 1.3),
+      extras: {Extra.cap, Extra.backpack},
+      actions: [Action(ActionType.wait)],
+    );
+    final b = actorFromTemplate(
+      jsonDecode(jsonEncode(templateJson(a))),
+      x: 2,
+      z: 1,
+    )!;
+    expect(b.kind, Kind.teen);
+    expect(b.name, 'Kim');
+    expect(b.look.accent, 0xFF123456);
+    expect(b.body.head, 1.3);
+    expect(b.extras, {Extra.cap, Extra.backpack});
+    expect(b.actions, isEmpty);
+    expect((b.x, b.z), (2.0, 1.0));
+    expect(b.id, isNot(a.id));
+    expect(actorFromTemplate({'kind': 'other'}), isNull);
   });
 
   test('actions laid out in time: walking takes distance / speed', () {

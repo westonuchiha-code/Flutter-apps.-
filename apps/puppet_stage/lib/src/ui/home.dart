@@ -155,6 +155,8 @@ class _HomePageState extends State<HomePage> {
         a.kind.name,
         a.animal?.name,
         a.prop?.name,
+        a.body.toJson(),
+        [for (final e in a.extras) e.name]..sort(),
         a.scale,
         a.look.toJson(),
         a.model?.toJson(),
@@ -233,7 +235,9 @@ class _HomePageState extends State<HomePage> {
         labels: {'call': animal.call},
       );
     } else {
-      fig = BuiltFigure(buildCharacter(a.kind, a.look));
+      fig = BuiltFigure(
+        buildCharacter(a.kind, a.look, body: a.body, extras: a.extras),
+      );
     }
     fig.root.scale = Vector3.all(a.scale);
     return fig;
@@ -826,6 +830,8 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           if (a.model != null) ..._modelControls(a),
+          if (a.model == null && a.animal == null && a.prop == null)
+            ..._personControls(a),
           if (a.animal != null || a.prop != null)
             Row(
               children: [
@@ -886,6 +892,12 @@ class _HomePageState extends State<HomePage> {
                 (Look l) => l.bottom,
                 (Look l, int c) => l.copyWith(bottom: c),
               ),
+              if (a.animal == null && a.prop == null)
+                (
+                  'Extras',
+                  (Look l) => l.accent,
+                  (Look l, int c) => l.copyWith(accent: c),
+                ),
             ])
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
@@ -990,6 +1002,17 @@ class _HomePageState extends State<HomePage> {
                       Actor(kind: k, name: '${k.label} $n', x: x, z: z),
                     ),
                 ]),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _addFromTemplate();
+                    },
+                    icon: const Icon(Icons.bookmarks_outlined, size: 18),
+                    label: const Text('From a saved template…'),
+                  ),
+                ),
                 section('Animals', [
                   for (final an in Animal.values)
                     (
@@ -1097,6 +1120,134 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     ];
+  }
+
+  /// Body sliders, things to wear and saving as a template.
+  List<Widget> _personControls(Actor a) => [
+    ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: EdgeInsets.zero,
+      title: const Text('Body'),
+      subtitle: a.body.isDefault ? null : const Text('changed'),
+      children: [
+        for (final (k, label) in [
+          ('height', 'Height'),
+          ('build', 'Build'),
+          ('head', 'Head'),
+          ('arms', 'Arms'),
+          ('legs', 'Legs'),
+        ])
+          Row(
+            children: [
+              SizedBox(width: 70, child: Text(label)),
+              Expanded(
+                child: Slider(
+                  value: a.body[k].clamp(
+                    Body.ranges[k]!.$1,
+                    Body.ranges[k]!.$2,
+                  ),
+                  min: Body.ranges[k]!.$1,
+                  max: Body.ranges[k]!.$2,
+                  onChanged: (v) => setState(() => a.body = a.body.with_(k, v)),
+                  onChangeEnd: (_) => _rebuild(),
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                child: Text(
+                  '${(a.body[k] * 100).round()}%',
+                  textAlign: TextAlign.end,
+                ),
+              ),
+            ],
+          ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: a.body.isDefault
+                ? null
+                : () {
+                    setState(() => a.body = const Body());
+                    _rebuild();
+                  },
+            child: const Text('Reset body'),
+          ),
+        ),
+      ],
+    ),
+    Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        for (final e in Extra.values)
+          FilterChip(
+            label: Text(e.label),
+            selected: a.extras.contains(e),
+            onSelected: (on) {
+              setState(() {
+                if (on) {
+                  a.extras.add(e);
+                  // One thing on the head at a time.
+                  if (e == Extra.hat) a.extras.remove(Extra.cap);
+                  if (e == Extra.cap) a.extras.remove(Extra.hat);
+                } else {
+                  a.extras.remove(e);
+                }
+              });
+              _rebuild();
+            },
+          ),
+      ],
+    ),
+    Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: () => _saveTemplate(a),
+        icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+        label: const Text('Save as a template'),
+      ),
+    ),
+  ];
+
+  Future<void> _saveTemplate(Actor a) async {
+    final locker = Shell.of(context).locker;
+    if (!locker.ready && !await locker.connect()) return;
+    await locker.save(
+      type: AssetType.preset,
+      name: a.name,
+      bytes: utf8.encode(jsonEncode(templateJson(a))),
+      extension: 'json',
+      tags: const ['puppet stage', 'template'],
+      extra: {'kind': templateKind},
+    );
+    _snack('Saved "${a.name}" as a template (Asset Locker, Presets)');
+  }
+
+  Future<void> _addFromTemplate() async {
+    final locker = Shell.of(context).locker;
+    if (!locker.ready && !await locker.connect()) return;
+    if (!mounted) return;
+    final info = await pickFromLocker(
+      context,
+      locker,
+      types: const [AssetType.preset],
+    );
+    if (info == null) return;
+    try {
+      final (x, z) = _nextSpot;
+      final a = actorFromTemplate(
+        jsonDecode(utf8.decode((await locker.read(info))!)),
+        x: x,
+        z: z,
+      );
+      if (a == null) {
+        _snack('That preset is not a Puppet Stage template');
+        return;
+      }
+      await _addActor(a);
+    } catch (e) {
+      _snack('Could not read that template: $e');
+    }
   }
 
   /// How long a move action lasts when added.

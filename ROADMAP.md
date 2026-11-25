@@ -130,8 +130,10 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
 19. ✅ **3D Choreographer, modern** (app: **Puppet Stage**). Little movies
     without skill: four sets, six kinds of people (PS1-style figures made in
     code), 18 moves plus walk/run to a tapped spot, turn and wait, camera
-    shots, stop-motion posing, MP4 export. Next: import free (CC0) rigged
-    characters and animation packs (the engine already plays skinned glTF).
+    shots, stop-motion posing, MP4 export. Imports rigged 3D models (built-in
+    moves retargeted onto their skeletons), 7 animals with their own moves,
+    22 plants and props, person templates (body sliders, extras, saved to
+    the Locker).
 
 ## On hold · needs AI (voices or a language model)
 
