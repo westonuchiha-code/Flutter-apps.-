@@ -141,8 +141,9 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     phone and the Retroid Pocket Classic, in parts:
     1. ✅ XMB menu, game library (PC folder rules), launching RetroArch /
        PPSSPP / DuckStation / Dolphin, pins, history, play time.
-    2. ⬜ Cross saves through the private `Cross-Save` GitHub repo (pull
-       before a game, push after; conflicts keep both; backups first).
+    2. ✅ Cross saves through the private `Cross-Save` GitHub repo, following
+       its PROTOCOL.md (GitHub API, git blob hashes; pull before a game, push
+       after; conflicts keep both and the player picks; backups first).
     3. ⬜ Comic reader (CBZ/PDF first, then CBR/CB7; manga, panels).
     4. ⬜ Save manager (PS1 memory cards, PSP save folders).
     5. ⬜ Pokéville: view and arrange the Box synced from the PC.

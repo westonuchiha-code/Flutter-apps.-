@@ -45,6 +45,10 @@ class MenuState extends ChangeNotifier {
   /// "portrait" there turns everything sideways.
   String screen = 'auto';
 
+  /// Start RetroArch with its own settings instead of the menu's (the
+  /// menu's put saves where cross saves look for them).
+  bool raOwnConfig = false;
+
   /// RetroArch build to use (null: the first one installed).
   String? retroArchPackage;
 
@@ -178,6 +182,7 @@ class MenuState extends ChangeNotifier {
     'swapAB': swapAB,
     'screen': screen,
     'retroArchPackage': retroArchPackage,
+    'raOwnConfig': raOwnConfig,
     'cores': cores,
     'preferRetroArch': preferRetroArch.toList(),
     'running': running,
@@ -214,6 +219,7 @@ class MenuState extends ChangeNotifier {
         ? j['screen'] as String
         : 'auto';
     retroArchPackage = j['retroArchPackage'] as String?;
+    raOwnConfig = j['raOwnConfig'] == true;
     cores
       ..clear()
       ..addAll({

@@ -41,6 +41,7 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "storageRoots" -> result.success(storageRoots())
+                    "deviceModel" -> result.success("${Build.MANUFACTURER} ${Build.MODEL}")
                     "launch" -> {
                         @Suppress("UNCHECKED_CAST")
                         result.success(launch(call.arguments as Map<String, Any?>))

@@ -89,8 +89,9 @@ LaunchChoice? chooseRunner(
   return null;
 }
 
-/// The intent that starts [game] with [choice].
-LaunchSpec launchSpec(Game game, LaunchChoice choice) {
+/// The intent that starts [game] with [choice]. [raConfig]: RetroArch's
+/// settings file (the menu's own, so saves land where the sync looks).
+LaunchSpec launchSpec(Game game, LaunchChoice choice, {String? raConfig}) {
   final pkg = choice.package;
   switch (choice.runner) {
     case Runner.retroarch:
@@ -104,6 +105,7 @@ LaunchSpec launchSpec(Game game, LaunchChoice choice) {
           'LIBRETRO':
               '/data/data/$pkg/cores/${choice.core}_libretro_android.so',
           'CONFIGFILE':
+              raConfig ??
               '/storage/emulated/0/Android/data/$pkg/files/retroarch.cfg',
           'QUITFOCUS': '',
         },

@@ -40,6 +40,12 @@ class AndroidBridge {
     return r ?? const ['/storage/emulated/0'];
   }
 
+  /// "Manufacturer Model" (tells a Retroid from a phone).
+  Future<String> deviceModel() async {
+    if (!available) return '';
+    return await _channel.invokeMethod<String>('deviceModel') ?? '';
+  }
+
   /// Starts an app; returns an error message, or null when it started.
   Future<String?> launch(LaunchSpec spec) async {
     if (!available) return 'Games start on Android only.';

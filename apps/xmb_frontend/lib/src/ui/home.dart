@@ -11,14 +11,25 @@ import '../launch.dart';
 import '../library/scanner.dart';
 import '../library/systems.dart';
 import '../state.dart';
+import '../sync/controller.dart';
+import '../sync/cross_save.dart';
+import '../sync/setup.dart';
 import 'xmb.dart';
 
 /// The menu: Settings and Game for now (more categories come with the
 /// save sync, comics, save manager, Pokéville and CRT TV).
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, this.bridge = const AndroidBridge(), this.state});
+  const HomePage({
+    super.key,
+    this.bridge = const AndroidBridge(),
+    this.state,
+    this.crossSave,
+  });
 
   final AndroidBridge bridge;
+
+  /// For tests: a ready cross-save controller.
+  final CrossSaveController? crossSave;
 
   /// For tests: a ready state (otherwise loaded from storage).
   final MenuState? state;
@@ -44,8 +55,11 @@ class _HomePageState extends State<HomePage> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _life = AppLifecycleListener(onResume: _resumed);
     _s.addListener(_changed);
-    unawaited(_start());
+    // After the first frame: start-up reads inherited services (storage).
+    WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_start()));
   }
+
+  CrossSaveController? _cs;
 
   @override
   void dispose() {
@@ -56,36 +70,64 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _start() async {
+    final storage = Shell.of(context).storage;
     if (widget.state == null) {
-      _s.load(await Shell.of(context).storage.readJson('menu.json'));
+      _s.load(await storage.readJson('menu.json'));
     }
+    final cs = widget.crossSave ?? CrossSaveController(storage);
+    if (widget.crossSave == null) await cs.load();
+    cs.addListener(_bump);
+    _cs = cs;
     // Not awaited: the menu must never wait on the system for this.
     unawaited(_applyScreen().catchError((_) {}));
     await _checkDevice();
+    try {
+      cs.model = await _a.deviceModel();
+    } catch (_) {}
     _loaded = true;
     _bump();
-    if (_s.romsDir == null) {
-      await _setupDefaultFolder();
-    } else {
+    await _setupFolders();
+    if (_s.romsDir != null) {
       // The cached list shows at once; look for new games behind it.
       await _scan(quiet: _s.games.isNotEmpty);
     }
     _bump();
+    unawaited(_sync(quiet: true));
   }
 
-  /// Makes the menu's own ROMs folder (with a folder per console) and uses
-  /// it. Needs storage access; tried again when it is allowed.
-  Future<void> _setupDefaultFolder() async {
+  /// Makes the menu's `XMB Frontend` folder (ROMs with a folder per
+  /// console, BIOS, saves for each emulator) and RetroArch's settings file.
+  /// Needs storage access; tried again when it is allowed.
+  Future<void> _setupFolders() async {
     if (!_allFiles || !_a.available) return;
     try {
       final roots = await _a.storageRoots();
-      final dir = defaultRomsDir(roots.first);
-      prepareRomsFolder(dir);
-      _s.romsDir = dir;
-      _s.changed();
-      await _scan(quiet: true);
+      final f = XmbFolders(p.join(roots.first, 'XMB Frontend'))..create();
+      writeRetroArchConfig(f);
+      _cs?.folders = f;
+      if (_s.romsDir == null) {
+        prepareRomsFolder(f.roms);
+        _s.romsDir = f.roms;
+        _s.changed();
+        await _scan(quiet: true);
+      }
     } catch (e) {
-      _xmb.currentState?.toast('Could not make the ROMs folder: $e');
+      _xmb.currentState?.toast('Could not set up the XMB Frontend folder: $e');
+    }
+  }
+
+  /// A cross save now (if set up); says what moved.
+  Future<void> _sync({bool quiet = false}) async {
+    final cs = _cs;
+    if (cs == null || !cs.ready) return;
+    final rep = await cs.sync();
+    if (rep == null) return;
+    if (rep.took.isNotEmpty) await _scan(quiet: true);
+    final line = rep.summary;
+    if (line.isNotEmpty) {
+      _xmb.currentState?.toast(line);
+    } else if (!quiet) {
+      _xmb.currentState?.toast('Cross save: everything is up to date');
     }
   }
 
@@ -107,15 +149,23 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _resumed() async {
+    final fromGame = _s.running != null;
     _s.returned(DateTime.now().millisecondsSinceEpoch);
     await _checkDevice();
-    if (_s.romsDir == null) {
-      await _setupDefaultFolder();
+    if (_cs?.folders == null || _s.romsDir == null) {
+      await _setupFolders();
     } else if (_allFiles) {
       // Games may have been copied in while the menu was away.
       await _scan(quiet: true);
     }
     _bump();
+    // Back from a game: send what it saved. Otherwise now and then.
+    final last = _cs?.last;
+    if (fromGame ||
+        last == null ||
+        DateTime.now().difference(last) > const Duration(minutes: 10)) {
+      await _sync(quiet: true);
+    }
   }
 
   void _changed() {
@@ -190,7 +240,21 @@ class _HomePageState extends State<HomePage> {
       );
       return;
     }
-    final err = await _a.launch(launchSpec(g, choice));
+    // Pull first, so the game loads the newest save (give up after 12 s).
+    final cs = _cs;
+    if (cs != null && cs.ready) {
+      _xmb.currentState?.toast('Getting your newest saves…');
+      try {
+        await _sync(quiet: true).timeout(const Duration(seconds: 12));
+      } catch (_) {}
+    }
+    final err = await _a.launch(
+      launchSpec(
+        g,
+        choice,
+        raConfig: _s.raOwnConfig ? null : cs?.folders?.raConfig,
+      ),
+    );
     if (err != null) {
       _xmb.currentState?.showPanel(
         XPanel(
@@ -307,7 +371,7 @@ class _HomePageState extends State<HomePage> {
           XItem(
             title: 'Setting Up the ROMs Folder…',
             icon: Icons.hourglass_empty,
-            onPress: _setupDefaultFolder,
+            onPress: _setupFolders,
           ),
         );
       }
@@ -661,6 +725,7 @@ class _HomePageState extends State<HomePage> {
           _s.changed();
         },
       ),
+      _crossSaveItem(),
       XItem(
         title: 'About',
         subtitle:
@@ -678,6 +743,233 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     ];
+  }
+
+  /// One line under the clock about cross saves (null: not set up).
+  String? _crossLine() {
+    final cs = _cs;
+    if (cs == null || cs.token.isEmpty) return null;
+    if (cs.busy) return 'Syncing saves…';
+    if (cs.conflicts.isNotEmpty) {
+      return '${cs.conflicts.length} save${cs.conflicts.length == 1 ? '' : 's'} changed on both sides';
+    }
+    final l = cs.last;
+    if (l == null) return null;
+    if (cs.lastError != null) return 'Cross save: not synced';
+    return 'Saves synced ${playedAgo(l.millisecondsSinceEpoch, DateTime.now()).replaceFirst('Played ', '')}';
+  }
+
+  XItem _crossSaveItem() {
+    final cs = _cs;
+    return XItem(
+      title: 'Cross Save',
+      subtitle: cs == null || cs.token.isEmpty
+          ? 'Share saves with the PC through your Cross-Save repo'
+          : _crossLine() ?? 'Ready',
+      icon: Icons.sync,
+      children: _crossSaveList,
+    );
+  }
+
+  List<XItem> _crossSaveList() {
+    final cs = _cs!;
+    final f = cs.folders;
+    return [
+      XItem(
+        title: 'GitHub Token',
+        subtitle: cs.token.isEmpty
+            ? 'Not set: needed to reach the Cross-Save repo'
+            : 'Set (Contents: read and write on Cross-Save)',
+        icon: Icons.key_outlined,
+        onPress: _askToken,
+        options: () => [
+          XOption('How to Make One', _tokenHelp),
+          if (cs.token.isNotEmpty)
+            XOption('Forget the Token', cs.forgetToken, danger: true),
+        ],
+      ),
+      if (cs.token.isNotEmpty)
+        XItem(
+          title: cs.busy ? 'Syncing…' : 'Sync Now',
+          subtitle: [
+            if (cs.last != null)
+              'Last: ${playedAgo(cs.last!.millisecondsSinceEpoch, DateTime.now()).replaceFirst('Played ', '')}',
+            if (cs.lastSummary.isNotEmpty) cs.lastSummary,
+          ].join('  ·  '),
+          icon: Icons.sync,
+          onPress: () => _sync(),
+        ),
+      if (cs.conflicts.isNotEmpty)
+        XItem(
+          title: 'Changed on Both Sides',
+          subtitle:
+              '${cs.conflicts.length} save${cs.conflicts.length == 1 ? '' : 's'}: pick which to keep',
+          icon: Icons.call_split,
+          children: () => [for (final c in _cs!.conflicts) _conflictItem(c)],
+        ),
+      XItem(
+        title: 'This Device',
+        subtitle:
+            '"${cs.device}"${cs.deviceOverride == null ? ' (from ${cs.model.isEmpty ? 'the model' : cs.model})' : ''}: names its commits',
+        icon: Icons.devices_other,
+        onPress: () => _xmb.currentState?.showPanel(
+          XPanel(
+            title: 'This Device',
+            lines: const ['Commits say which device sent a save.'],
+            options: [
+              for (final (v, l) in [
+                (null, 'Automatic'),
+                ('phone', 'Phone'),
+                ('retroid', 'Retroid'),
+              ])
+                XOption('${cs.deviceOverride == v ? '● ' : ''}$l', () {
+                  cs.deviceOverride = v;
+                  unawaited(cs.save());
+                  _bump();
+                }),
+            ],
+          ),
+        ),
+      ),
+      XItem(
+        title: 'Save Folders',
+        subtitle: 'Where each emulator must save (set once)',
+        icon: Icons.folder_copy_outlined,
+        onPress: () => _xmb.currentState?.showPanel(
+          XPanel(
+            title: 'Save Folders',
+            lines: f == null
+                ? const ['Allow storage access first.']
+                : [
+                    'RetroArch: automatic (the menu starts it with its own '
+                        'settings: saves sorted by core, as on the PC).',
+                    '   ${_shortPath(f.raSaves)}',
+                    'PPSSPP: in PPSSPP, Settings > System > Memory Stick '
+                        'folder: choose',
+                    '   ${_shortPath(f.ppssppStick)}',
+                    'DuckStation: set its memory card folder to',
+                    '   ${_shortPath(f.duckCards)}',
+                    '   (memory card type: separate card per game title)',
+                    'BIOS files for RetroArch: ${_shortPath(f.bios)}',
+                    'Backups before anything is replaced: ${_shortPath(f.backups)}',
+                  ],
+          ),
+        ),
+      ),
+      XItem(
+        title: 'RetroArch Settings',
+        subtitle: _s.raOwnConfig
+            ? "RetroArch's own (set its save folder yourself)"
+            : "The menu's (saves go where cross saves look)",
+        icon: Icons.tune,
+        onPress: () {
+          _s.raOwnConfig = !_s.raOwnConfig;
+          _s.changed();
+        },
+      ),
+    ];
+  }
+
+  XItem _conflictItem(Conflict c) {
+    String when(String path) {
+      try {
+        final t = File(path).lastModifiedSync();
+        return '${t.month}/${t.day} ${t.hour}:${t.minute.toString().padLeft(2, '0')}';
+      } catch (_) {
+        return '?';
+      }
+    }
+
+    final name = p.basenameWithoutExtension(c.key);
+    return XItem(
+      title: name,
+      subtitle:
+          'This device: ${when(c.local)}  ·  other copy arrived ${when(c.copy)}',
+      icon: Icons.call_split,
+      onPress: () => _xmb.currentState?.showPanel(
+        XPanel(
+          title: name,
+          lines: [
+            'This save changed here and on another device before they synced.',
+            'This device saved it ${when(c.local)}.',
+            'The other copy (from the repo) is beside it: ${p.basename(c.copy)}.',
+            'Whichever you pick, the other one is backed up first.',
+          ],
+          options: [
+            XOption(
+              "Keep This Device's",
+              () => _cs!.resolve(c, keepThisDevice: true),
+            ),
+            XOption(
+              'Use the Other One',
+              () => _cs!.resolve(c, keepThisDevice: false),
+            ),
+            XOption('Decide Later', () {}),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _tokenHelp() => _xmb.currentState?.showPanel(
+    XPanel(
+      title: 'Making the GitHub Token',
+      lines: const [
+        '1. On github.com: Settings > Developer settings > Personal access '
+            'tokens > Fine-grained tokens > Generate new token.',
+        '2. Repository access: Only select repositories > Cross-Save.',
+        '3. Permissions > Repository permissions > Contents: Read and write.',
+        '4. Generate, copy it, and paste it here (Cross Save > GitHub Token).',
+        'It stays in this app on this device only.',
+      ],
+    ),
+  );
+
+  Future<void> _askToken() async {
+    final cs = _cs!;
+    final field = TextEditingController();
+    final t = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('GitHub token'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Paste the fine-grained token that can read and write the '
+              'Cross-Save repo.',
+            ),
+            TextField(
+              controller: field,
+              autofocus: true,
+              obscureText: true,
+              decoration: const InputDecoration(hintText: 'github_pat_…'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, field.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (t == null || t.trim().isEmpty) return;
+    final err = await cs.setToken(t);
+    if (err != null) {
+      _xmb.currentState?.showPanel(
+        XPanel(title: 'That token did not work', lines: [err]),
+      );
+      return;
+    }
+    _xmb.currentState?.toast('Connected to Cross-Save. Syncing…');
+    await _sync();
   }
 
   List<XItem> _emulatorsList() => [
@@ -765,7 +1057,10 @@ class _HomePageState extends State<HomePage> {
         revision: _revision,
         swapAB: _s.swapAB,
         initialCategory: 1,
-        status: emus.isEmpty ? null : emus.join('  ·  '),
+        status: [
+          if (emus.isNotEmpty) emus.join('  ·  '),
+          if (_crossLine() != null) _crossLine()!,
+        ].join('\n'),
         categories: [
           XCategory('settings', 'Settings', Icons.work_outline, _settingsRow),
           XCategory('game', 'Game', Icons.sports_esports_outlined, _gameRow),

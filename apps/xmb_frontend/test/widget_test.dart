@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:xmb_frontend/main.dart';
 import 'package:xmb_frontend/src/library/scanner.dart';
 import 'package:xmb_frontend/src/state.dart';
+import 'package:xmb_frontend/src/sync/controller.dart';
 import 'package:xmb_frontend/src/ui/home.dart';
 
 void main() {
@@ -40,7 +41,10 @@ void main() {
     await tester.pumpWidget(
       ShellApp(
         services: services,
-        home: (_) => HomePage(state: state),
+        home: (_) => HomePage(
+          state: state,
+          crossSave: CrossSaveController(services.storage),
+        ),
       ),
     );
     for (var i = 0; i < 10; i++) {

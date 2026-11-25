@@ -51,6 +51,25 @@ over (cross saves come in part 3, through the `Cross-Save` GitHub repo).
 The intents follow each emulator's documented extras but must be tried on
 the device: paths differ between Play Store and sideloaded builds.
 
+## Cross saves (part 3)
+
+Follows the `Cross-Save` repo's PROTOCOL.md (see its `devices/android.md`):
+`lib/src/sync/` (`cross_save.dart` the table and sync over a `SaveRepo`,
+`github.dart` GitHub's REST API, `setup.dart` the `XMB Frontend` folders and
+RetroArch settings, `controller.dart` token, state and conflicts).
+
+- Everything lives in `XMB Frontend/` (shared storage): `ROMs/`, `BIOS/`,
+  `Saves/RetroArch/<Core>/`, `Saves/DuckStation/memcards/`,
+  `Saves/PPSSPP/PSP/SAVEDATA/`, `Pokeville/`, `Backups/`. RetroArch is started
+  with the menu's own `RetroArch/retroarch.cfg` (saves sorted by core, as on
+  the PC); PPSSPP's memory stick and DuckStation's memory card folder are set
+  once by the player (Settings > Cross Save > Save Folders).
+- Settings > Cross Save: GitHub token (fine-grained, Cross-Save only,
+  Contents read/write), Sync Now, Changed on Both Sides (pick a side), This
+  Device (`phone` / `retroid`), Save Folders, RetroArch Settings.
+- Syncs on start, before a game (12 s at most), after a game, every 10 min.
+- `tool/github_read_test.dart`: a read-only check against the real repo.
+
 ## Next parts
 
 2. (with 1) — 3. Cross saves via the `Cross-Save` repo — 4. Comic reader —
