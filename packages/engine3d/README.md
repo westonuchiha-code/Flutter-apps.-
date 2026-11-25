@@ -21,6 +21,8 @@ Lightweight 3D for the apps (pure Dart + Flutter's `Canvas.drawVertices`).
 - Animation: `AnimationClip` (translation/rotation/scale channels, step /
   linear / cubic), `retarget`, `blend`; `Animator` plays clips with
   crossfades; `Skin` does CPU skinning (glTF JOINTS_0/WEIGHTS_0).
+- `Node.depthBias`: metres a node counts as nearer when sorted, for things
+  worn flat on a bigger surface (glasses on a face) so they don't sink in.
 - `groundPoint` turns a screen tap into a spot on the floor.
 - `Viewport3D` widget: frame loop, touch joystick, drag/pinch, keys,
   `onTap`, stats overlay.

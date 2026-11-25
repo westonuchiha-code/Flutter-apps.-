@@ -295,8 +295,19 @@ Character buildCharacter(
 
   Node joint(String name, double x, double y, double z) =>
       Node(name: name, position: Vector3(x, y, z));
-  Node part(Mesh m, Surface sf, double x, double y, double z) =>
-      Node(name: 'part', mesh: m, material: sf, position: Vector3(x, y, z));
+  Node part(Mesh m, Surface sf, double x, double y, double z, {double? bias}) =>
+      Node(
+        name: 'part',
+        mesh: m,
+        material: sf,
+        position: Vector3(x, y, z),
+        // Things worn flat on a body part sort a little nearer so they never
+        // sink into it (the renderer has no depth buffer). Hair sits over the
+        // head the same way.
+        depthBias: (bias ?? (identical(sf, hair) ? 0.015 : 0.0)) * s,
+      );
+  // A hat or cap replaces the top of the hair (they fought otherwise).
+  final covered = extras.contains(Extra.hat) || extras.contains(Extra.cap);
   Mesh box(double x, double y, double z) => boxMesh(x, y, z, split: 1);
 
   final thighLen = 0.42 * s * legs, shinLen = 0.41 * s * legs;
@@ -352,7 +363,8 @@ Character buildCharacter(
         top,
         0,
         0.1 * s,
-        0.105 * s * (0.6 + w * 0.4) + 0.004,
+        0.105 * s * (0.6 + w * 0.4) + 0.006,
+        bias: 0.04,
       ),
     );
   }
@@ -364,7 +376,8 @@ Character buildCharacter(
         bottom,
         0,
         0.12 * s,
-        0.106 * s + 0.003,
+        0.106 * s + 0.004,
+        bias: 0.03,
       ),
     );
     for (final x in [-0.05, 0.0, 0.05]) {
@@ -374,7 +387,8 @@ Character buildCharacter(
           eyes,
           x * s,
           0.12 * s,
-          0.106 * s + 0.008,
+          0.106 * s + 0.01,
+          bias: 0.05,
         ),
       );
     }
@@ -397,7 +411,14 @@ Character buildCharacter(
   if (robot) {
     // Visor eyes and an antenna.
     head.add(
-      part(box(hs * 0.7, hs * 0.16, 0.01), eyes, 0, hs * 0.58, hs * 0.455),
+      part(
+        box(hs * 0.7, hs * 0.16, 0.01),
+        eyes,
+        0,
+        hs * 0.58,
+        hs * 0.46,
+        bias: 0.03,
+      ),
     );
     head.add(
       part(box(hs * 0.08, hs * 0.35, hs * 0.08), bottom, 0, hs * 1.15, 0),
@@ -424,6 +445,7 @@ Character buildCharacter(
           sx * hs * 0.18,
           hs * 0.55,
           hs * 0.455,
+          bias: 0.02,
         ),
       );
     }
@@ -431,19 +453,21 @@ Character buildCharacter(
   // Hair.
   switch (kind) {
     case Kind.man || Kind.boy || Kind.teen || Kind.bigMan:
-      head.add(
-        part(
-          box(hs * 0.88, hs * 0.22, hs * 0.96),
-          hair,
-          0,
-          hs * 1.02,
-          -hs * 0.02,
-        ),
-      );
+      if (!covered) {
+        head.add(
+          part(
+            box(hs * 0.88, hs * 0.22, hs * 0.96),
+            hair,
+            0,
+            hs * 1.02,
+            -hs * 0.02,
+          ),
+        );
+      }
       head.add(
         part(box(hs * 0.88, hs * 0.5, hs * 0.2), hair, 0, hs * 0.8, -hs * 0.4),
       );
-      if (kind == Kind.teen) {
+      if (kind == Kind.teen && !covered) {
         // A fringe.
         head.add(
           part(
@@ -456,22 +480,32 @@ Character buildCharacter(
         );
       }
     case Kind.toddler:
-      head.add(
-        part(
-          box(hs * 0.86, hs * 0.14, hs * 0.94),
-          hair,
-          0,
-          hs * 1.0,
-          -hs * 0.02,
-        ),
-      );
-      head.add(
-        part(box(hs * 0.12, hs * 0.2, hs * 0.12), hair, 0, hs * 1.12, hs * 0.1),
-      );
+      if (!covered) {
+        head.add(
+          part(
+            box(hs * 0.86, hs * 0.14, hs * 0.94),
+            hair,
+            0,
+            hs * 1.0,
+            -hs * 0.02,
+          ),
+        );
+        head.add(
+          part(
+            box(hs * 0.12, hs * 0.2, hs * 0.12),
+            hair,
+            0,
+            hs * 1.12,
+            hs * 0.1,
+          ),
+        );
+      }
     case Kind.woman || Kind.girl:
-      head.add(
-        part(box(hs * 0.92, hs * 0.24, hs * 1.0), hair, 0, hs * 1.02, 0),
-      );
+      if (!covered) {
+        head.add(
+          part(box(hs * 0.92, hs * 0.24, hs * 1.0), hair, 0, hs * 1.02, 0),
+        );
+      }
       head.add(
         part(
           box(hs * 0.96, hs * (kind == Kind.girl ? 0.9 : 1.15), hs * 0.3),
@@ -500,10 +534,21 @@ Character buildCharacter(
         part(box(hs * 0.9, hs * 0.3, hs * 0.5), hair, 0, hs * 0.55, -hs * 0.25),
       );
       head.add(
-        part(box(hs * 0.4, hs * 0.07, 0.02), hair, 0, hs * 0.3, hs * 0.46),
+        part(
+          box(hs * 0.4, hs * 0.07, 0.02),
+          hair,
+          0,
+          hs * 0.3,
+          hs * 0.46,
+          bias: 0.02,
+        ),
       );
     case Kind.oldWoman:
-      head.add(part(box(hs * 0.9, hs * 0.22, hs * 0.96), hair, 0, hs * 1.0, 0));
+      if (!covered) {
+        head.add(
+          part(box(hs * 0.9, hs * 0.22, hs * 0.96), hair, 0, hs * 1.0, 0),
+        );
+      }
       head.add(
         part(
           sphereMesh(hs * 0.22, segments: 6, rings: 4),
@@ -517,22 +562,46 @@ Character buildCharacter(
   }
   // Things worn on the head.
   if (extras.contains(Extra.hat)) {
-    head.add(part(box(hs * 1.3, hs * 0.05, hs * 1.3), accent, 0, hs * 1.12, 0));
     head.add(
-      part(box(hs * 0.86, hs * 0.38, hs * 0.9), accent, 0, hs * 1.32, 0),
+      part(
+        box(hs * 1.3, hs * 0.05, hs * 1.3),
+        accent,
+        0,
+        hs * 1.02,
+        0,
+        bias: 0.02,
+      ),
+    );
+    head.add(
+      part(
+        box(hs * 0.9, hs * 0.42, hs * 0.96),
+        accent,
+        0,
+        hs * 1.24,
+        0,
+        bias: 0.02,
+      ),
     );
   } else if (extras.contains(Extra.cap)) {
     head.add(
       part(
-        box(hs * 0.92, hs * 0.22, hs * 1.0),
+        box(hs * 0.96, hs * 0.26, hs * 1.02),
         accent,
         0,
-        hs * 1.1,
+        hs * 1.04,
         -hs * 0.02,
+        bias: 0.02,
       ),
     );
     head.add(
-      part(box(hs * 0.8, hs * 0.04, hs * 0.45), accent, 0, hs * 1.0, hs * 0.6),
+      part(
+        box(hs * 0.8, hs * 0.05, hs * 0.45),
+        accent,
+        0,
+        hs * 0.94,
+        hs * 0.62,
+        bias: 0.02,
+      ),
     );
   }
   if (extras.contains(Extra.glasses)) {
@@ -540,30 +609,46 @@ Character buildCharacter(
     for (final sx in [-1.0, 1.0]) {
       head.add(
         part(
-          box(hs * 0.28, hs * 0.2, 0.01),
+          box(hs * 0.28, hs * 0.2, hs * 0.06),
           frame,
           sx * hs * 0.2,
           hs * 0.56,
-          hs * 0.47,
+          hs * 0.49,
+          bias: 0.04,
         ),
       );
       head.add(
         part(
-          box(hs * 0.2, hs * 0.12, 0.012),
+          box(hs * 0.2, hs * 0.12, hs * 0.02),
           mat(0xFFB8D8F0),
           sx * hs * 0.2,
           hs * 0.56,
-          hs * 0.472,
+          hs * 0.515,
+          bias: 0.06,
         ),
       );
     }
     head.add(
-      part(box(hs * 0.14, hs * 0.04, 0.01), frame, 0, hs * 0.6, hs * 0.47),
+      part(
+        box(hs * 0.14, hs * 0.04, hs * 0.04),
+        frame,
+        0,
+        hs * 0.6,
+        hs * 0.5,
+        bias: 0.04,
+      ),
     );
   }
   if (extras.contains(Extra.beard)) {
     head.add(
-      part(box(hs * 0.84, hs * 0.38, hs * 0.2), hair, 0, hs * 0.18, hs * 0.38),
+      part(
+        box(hs * 0.86, hs * 0.4, hs * 0.24),
+        hair,
+        0,
+        hs * 0.18,
+        hs * 0.38,
+        bias: 0.03,
+      ),
     );
   }
   if (extras.contains(Extra.backpack)) {
@@ -574,6 +659,7 @@ Character buildCharacter(
         0,
         0.06 * s,
         -0.17 * s * (0.6 + w * 0.4),
+        bias: 0.02,
       ),
     );
   }

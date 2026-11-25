@@ -68,7 +68,8 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   Animation: `AnimationClip`/`Animator` (crossfades), skinned glTF via
   `loadGltfModel` (`.animations`); layer -2 for base ground under -1 paths.
   Puppet Stage's `Action` clashes with Flutter's: import Material
-  `hide Action`.
+  `hide Action`. Things worn flat on a bigger part (glasses, a cap) need
+  `Node.depthBias` (a few cm) or they sink into it in the sort.
 - Background work: use `runInBackground(topLevelFunction, arg)` from
   `app_shell`, never `Isolate.run(() => ...)` inside a widget or controller
   (the closure can drag the State and its ports along: "object is

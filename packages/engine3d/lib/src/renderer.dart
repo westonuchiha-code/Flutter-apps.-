@@ -295,6 +295,7 @@ class Renderer {
               _clipOut[q + 1],
               material,
               node.layer,
+              node.depthBias,
               f,
               half,
               cx,
@@ -322,6 +323,7 @@ class Renderer {
     _V c,
     Surface m,
     int layer,
+    double bias,
     double f,
     double half,
     double cx,
@@ -352,7 +354,7 @@ class Renderer {
     // Screen y points down, so front faces (counter-clockwise) have area < 0.
     if (area == 0 || (area > 0 && !m.doubleSided)) return;
     t
-      ..depth = (a.z + b.z + c.z) / 3
+      ..depth = (a.z + b.z + c.z) / 3 + bias
       ..layer = layer
       ..material = m;
     _used++;

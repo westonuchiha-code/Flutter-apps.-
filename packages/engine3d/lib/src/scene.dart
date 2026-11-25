@@ -15,6 +15,7 @@ class Node {
     List<Node>? children,
     this.visible = true,
     this.layer = 0,
+    this.depthBias = 0,
   }) : position = position ?? Vector3.zero(),
        rotation = rotation ?? Quaternion.identity(),
        scale = scale ?? Vector3.all(1),
@@ -33,6 +34,12 @@ class Node {
   /// distance. Put floors and terrain on -1 so things standing on them are
   /// never covered (the PS1's ordering table had the same trick).
   int layer;
+
+  /// Metres this node's triangles count as nearer the camera when sorted:
+  /// for things worn flat on a bigger surface (glasses on a face, a cap on
+  /// hair), so they never sink behind it. Keep it small (a few cm): from the
+  /// other side the surface is still far nearer.
+  double depthBias;
 
   /// Bends [mesh] to a skeleton (animated glTF characters).
   Skin? skin;

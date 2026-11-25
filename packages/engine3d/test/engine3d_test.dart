@@ -107,6 +107,55 @@ void main() {
     expect(px(s, 32 + 6, 24), blue);
   });
 
+  test('depth bias puts worn things over the surface they sit on', () async {
+    Future<int> centre(double redBias, double blueBias) async {
+      // Two boxes in the same place: only the bias decides.
+      final r = Node(
+        mesh: boxMesh(1, 1, 0.1),
+        material: Surface(color: red),
+        position: Vector3(0, 0, -4),
+        depthBias: redBias,
+      );
+      final b = Node(
+        mesh: boxMesh(1, 1, 0.1),
+        material: Surface(color: blue),
+        position: Vector3(0, 0, -4),
+        depthBias: blueBias,
+      );
+      return px(
+        await shot(flatScene([r, b]), Camera(position: Vector3.zero())),
+        32,
+        24,
+      );
+    }
+
+    expect(await centre(0.05, 0), red);
+    expect(await centre(0, 0.05), blue);
+    // A small bias never pulls something through a much nearer surface.
+    final behind = Node(
+      mesh: boxMesh(0.5, 0.5, 0.1),
+      material: Surface(color: red),
+      position: Vector3(0, 0, -6),
+      depthBias: 0.05,
+    );
+    final front = Node(
+      mesh: boxMesh(2, 2, 0.1),
+      material: Surface(color: blue),
+      position: Vector3(0, 0, -4),
+    );
+    expect(
+      px(
+        await shot(
+          flatScene([behind, front]),
+          Camera(position: Vector3.zero()),
+        ),
+        32,
+        24,
+      ),
+      blue,
+    );
+  });
+
   test('triangles crossing the near plane are clipped, not dropped', () async {
     // A long floor running under and behind the camera.
     final floor = Node(
