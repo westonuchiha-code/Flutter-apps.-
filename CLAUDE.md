@@ -23,6 +23,13 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
 
 ## Rules for writing apps here
 
+- **Every app gets its own 16-bit icon** (owner's rule), drawn with
+  `packages/pixel_kit` (Pixel Forge's engine): add the app to `icons` in
+  `tool/icons/bin/make_icons.dart` (a tile colour plus a 16×16 picture drawn
+  with Canvas / `grid`), run `dart run tool/icons/bin/make_icons.dart <app>`,
+  look at `apps/<app>/icon/icon_256.png`, commit. It writes the Pixel Forge
+  sprite (`icon/icon.pixel_sprite.json`), Android's launcher and adaptive
+  icons and Windows' `app_icon.ico`. CI fails an app without one.
 - Create new apps with `tool/new_app.sh <app_name> ["Display Name"] [--android-only]`:
   it runs `flutter create` with the right platforms/org and wires the app to
   `packages/app_shell` (theme, settings, storage, error log, about, export).
@@ -138,7 +145,9 @@ New apps are picked up automatically — no workflow edits needed. An app with a
 
 After each push, the `publish` job replaces the `<app>-latest` GitHub
 pre-release with the new APK, Windows zip and Linux tarball (installable
-from a phone via the repo's Releases page).
+from a phone via the repo's Releases page), and the `bundle` job puts every
+app, labelled by its Android name, in `all-apps-latest`
+(`All-Apps-Android.zip`, `All-Apps-Windows.zip`).
 
 ## Repository layout
 
@@ -219,7 +228,7 @@ packages/    # shared Dart/Flutter packages
              #                   PolySynth.wavetable to play drawn waves), speech chips
              #                   (SpeechSynth, textToSpeech)
              #                   (used by optical_theremin, touch_synth, waveform_painter)
-tool/        # developer scripts (setup_linux_dev.sh, new_app.sh)
+tool/        # developer scripts (setup_linux_dev.sh, new_app.sh, icons/ = every app's pixel icon)
 ROADMAP.md   # agreed app ideas and build order - keep it updated
 ```
 

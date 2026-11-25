@@ -1,0 +1,27 @@
+{
+ "kind": "pixel_sprite",
+ "version": 1,
+ "width": 16,
+ "height": 16,
+ "layers": [
+  {
+   "name": "Tile",
+   "visible": true,
+   "opacity": 1.0
+  },
+  {
+   "name": "Picture",
+   "visible": true,
+   "opacity": 1.0
+  }
+ ],
+ "frames": [
+  {
+   "duration": 100,
+   "cels": [
+    "AAAAACA7Gv8gOxr/IDsa/yA7Gv8gOxr/IDsa/yA7Gv8gOxr/IDsa/yA7Gv8gOxr/IDsa/yA7Gv8gOxr/AAAAACA7Gv9Dezb/S4s9/0uLPf9Liz3/S4s9/0uLPf9Liz3/S4s9/0uLPf9Liz3/S4s9/0uLPf9Liz3/S4s9/yA7Gv8gOxr/Q3s2/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/8gOxr/IDsa/0N7Nv86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//IDsa/yA7Gv9Dezb/Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/yA7Gv8gOxr/Q3s2/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/8gOxr/IDsa/0N7Nv86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//IDsa/yA7Gv9Dezb/Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/yA7Gv8gOxr/Q3s2/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/8gOxr/IDsa/0N7Nv86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//IDsa/yA7Gv9Dezb/Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/yA7Gv8gOxr/Q3s2/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/8gOxr/IDsa/0N7Nv86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//IDsa/yA7Gv9Dezb/Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/yA7Gv8gOxr/Q3s2/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/8gOxr/AAAAACA7Gv8gOxr/IDsa/yA7Gv8gOxr/IDsa/yA7Gv8gOxr/IDsa/yA7Gv8gOxr/IDsa/yA7Gv8gOxr/AAAAAA==",
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAdFhb/HRYW/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB0WFv8dFhb/oPC4/6DwuP8dFhb/HRYW/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHRYW/x0WFv+g8Lj/oPC4/6DwuP+g8Lj/oPC4/6DwuP8dFhb/HRYW/wAAAAAAAAAAAAAAAAAAAAAAAAAAHRYW/6DwuP+g8Lj/oPC4/6DwuP+g8Lj/oPC4/6DwuP+g8Lj/oPC4/6DwuP8dFhb/AAAAAAAAAAAAAAAAHRYW/1q/av9av2r/oPC4/6DwuP+g8Lj/oPC4/6DwuP+g8Lj/oPC4/6DwuP86ij7/Ooo+/x0WFv8AAAAAAAAAAB0WFv9av2r/Wr9q/1q/av9av2r/oPC4/6DwuP+g8Lj/oPC4/zqKPv86ij7/Ooo+/zqKPv8dFhb/AAAAAAAAAAAdFhb/Wr9q/1q/av9av2r/Wr9q/1q/av9av2r/Ooo+/zqKPv86ij7/Ooo+/zqKPv86ij7/HRYW/wAAAAAAAAAAHRYW/1q/av9av2r/Wr9q/1q/av9av2r/Wr9q/zqKPv86ij7/Ooo+/zqKPv86ij7/Ooo+/x0WFv8AAAAAAAAAAB0WFv9av2r/Wr9q/1q/av9av2r/Wr9q/1q/av86ij7/Ooo+/zqKPv86ij7/Ooo+/zqKPv8dFhb/AAAAAAAAAAAdFhb/Wr9q/1q/av9av2r/Wr9q/1q/av9av2r/Ooo+/zqKPv86ij7/Ooo+/zqKPv86ij7/HRYW/wAAAAAAAAAAAAAAAB0WFv9av2r/Wr9q/1q/av9av2r/Wr9q/zqKPv86ij7/Ooo+/zqKPv86ij7/HRYW/wAAAAAAAAAAAAAAAAAAAAAAAAAAHRYW/x0WFv9av2r/Wr9q/1q/av86ij7/Ooo+/zqKPv8dFhb/HRYW/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHRYW/x0WFv9av2r/Ooo+/x0WFv8dFhb/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHRYW/x0WFv8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+   ]
+  }
+ ]
+}

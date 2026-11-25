@@ -48,6 +48,19 @@ jobs:
           echo "windows_apps=$(list windows)" >> "$GITHUB_OUTPUT"
           echo "linux_apps=$(list linux)" >> "$GITHUB_OUTPUT"
           if [ "$apps" = "[]" ]; then echo "has_apps=false" >> "$GITHUB_OUTPUT"; else echo "has_apps=true" >> "$GITHUB_OUTPUT"; fi
+      # Every app has its own 16-bit icon, drawn with pixel_kit (Pixel Forge's
+      # engine) by tool/icons/bin/make_icons.dart (CLAUDE.md).
+      - name: Every app has its pixel icon
+        run: |
+          missing=""
+          for d in apps/*/; do
+            [ -f "$d/pubspec.yaml" ] || continue
+            [ -f "$d/icon/icon.pixel_sprite.json" ] || missing="$missing $(basename "$d")"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::No icon for:$missing. Draw it in tool/icons/bin/make_icons.dart and run: dart run tool/icons/bin/make_icons.dart"
+            exit 1
+          fi
 
   analyze-test:
     name: Analyze & test (${{ matrix.app }})
@@ -272,3 +285,58 @@ jobs:
             --notes "Built from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}.
           Android: download the .apk on your phone and open it to install.
           Windows (if included): unzip and run ${{ matrix.app }}.exe."
+
+  # Every app in two labelled zips ("All-Apps-Android.zip" with
+  # "<App Name>.apk", "All-Apps-Windows.zip" with a folder per app), as
+  # the all-apps-latest pre-release.
+  bundle:
+    name: Bundle every app
+    needs: [discover, publish]
+    if: >-
+      always() && github.event_name != 'pull_request' &&
+      needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Make the zips
+        run: |
+          mkdir -p "out/android" "out/windows"
+          {
+            echo "Weston's apps, built from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}."
+            echo
+            echo "Android: open the .apk on the phone to install (or update) it."
+            echo "Windows: unzip, open the app's folder, run its .exe."
+            echo
+          } > out/README.txt
+          for d in apps/*/; do
+            app=$(basename "$d")
+            label=$(grep -oP 'android:label="\K[^"]+' "$d/android/app/src/main/AndroidManifest.xml" 2>/dev/null | head -1)
+            [ -n "$label" ] || label="$app"
+            if [ -f "dist/$app-android-apk/app-release.apk" ]; then
+              cp "dist/$app-android-apk/app-release.apk" "out/android/$label.apk"
+              echo "$label ($app): Android" >> out/README.txt
+            fi
+            if [ -d "dist/$app-windows-x64" ]; then
+              cp -r "dist/$app-windows-x64" "out/windows/$label"
+              echo "$label ($app): Windows" >> out/README.txt
+            fi
+          done
+          cp out/README.txt out/android/ && cp out/README.txt out/windows/
+          (cd out/android && zip -qr "../All-Apps-Android.zip" .)
+          (cd out/windows && zip -qr "../All-Apps-Windows.zip" .)
+          ls -l out
+      - name: Replace the all-apps-latest pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete all-apps-latest --cleanup-tag --yes || true
+          gh release create all-apps-latest "out/All-Apps-Android.zip" "out/All-Apps-Windows.zip" \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "All apps (latest builds)" \
+            --notes "Every app, labelled. Android: unzip, then open each .apk. Windows: unzip, open the app's folder, run its .exe."

@@ -1,0 +1,9 @@
+name: icon_maker
+description: Draws every app's 16-bit launcher icon with pixel_kit (Pixel Forge's engine).
+publish_to: none
+environment:
+  sdk: ^3.10.0
+dependencies:
+  image: ^4.13.1
+  pixel_kit:
+    path: ../../packages/pixel_kit

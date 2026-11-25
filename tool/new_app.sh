@@ -83,3 +83,6 @@ fi
 
 dart format lib test >/dev/null
 echo "Created apps/$name ($platforms). CI picks it up on the next push."
+
+echo "Next: draw its 16-bit icon (CLAUDE.md): add \"$1\" to icons in tool/icons/bin/make_icons.dart,"
+echo "then run: dart run tool/icons/bin/make_icons.dart $1"
