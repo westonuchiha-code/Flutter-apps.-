@@ -474,9 +474,13 @@ Float32List renderSong(
 /// Vocal level for the 'line' flow (the first render used 1.5).
 var vocalLevel = 2.2;
 
+/// 'clean' or 'record' (the voice as a dusty vocal sample).
+var vocalChain = 'clean';
+
 /// A clearer vocal chain: no drive, presence for the consonants, gentle
 /// compression, almost dry.
 Float32List _cleanVoice(Float32List v) {
+  if (vocalChain == 'record') return _recordVoice(v);
   final hp = Biquad.highPass(140);
   final pres = Biquad.peak(3200, 4, 1.0);
   for (var i = 0; i < v.length; i++) {
@@ -484,6 +488,19 @@ Float32List _cleanVoice(Float32List v) {
   }
   compress(v, threshold: 0.3, ratio: 3, makeup: 1.3);
   return room(v, size: 0.15, mix: 0.06);
+}
+
+/// The voice as if sampled off a record: the chip's buzz filtered away
+/// (telephone-ish band), a little warmth, a room around it.
+Float32List _recordVoice(Float32List v) {
+  final hp = Biquad.highPass(260);
+  final lp1 = Biquad.lowPass(2800), lp2 = Biquad.lowPass(3400);
+  final body = Biquad.peak(900, 2, 0.8);
+  for (var i = 0; i < v.length; i++) {
+    v[i] = sat(body.run(lp2.run(lp1.run(hp.run(v[i])))) * 1.2, 1.1);
+  }
+  compress(v, threshold: 0.25, ratio: 3, makeup: 1.4);
+  return room(v, size: 0.35, mix: 0.22);
 }
 
 /// The vocal chain: a touch of drive, presence, compression and a small

@@ -63,6 +63,8 @@ void main(List<String> args) {
         pitchLift = double.parse(v);
       case 'level':
         vocalLevel = double.parse(v);
+      case 'chain':
+        vocalChain = v;
       case 'take':
         song = takes[v]!(song);
     }
