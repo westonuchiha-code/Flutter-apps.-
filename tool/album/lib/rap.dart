@@ -144,3 +144,43 @@ void rapLine(
   }
   mixInto(dst, out, at + beat * 0.05, gain * mc.gain);
 }
+
+/// A chant: one eighth note per syllable, every word starting on its
+/// eighth and spoken at its own speed (squeezed only if it can't fit), so
+/// the words sit on the beat and stay whole.
+void rapChant(
+  Float32List dst,
+  String line,
+  Mc mc,
+  double at,
+  double bpm, {
+  double gain = 1,
+}) {
+  final eighth = 60 / bpm / 2;
+  var slot = 0;
+  for (final w in textToSpeech(line)) {
+    final n = syllables(w.phonemes);
+    final plain = SpokenWord(w.text, w.phonemes, pauseAfter: '');
+    SpeechSettings s(double speed) => SpeechSettings(
+      chip: mc.chip,
+      pitch: mc.pitch * pitchLift,
+      speed: speed,
+      contour: Contour.statement,
+    );
+    var out = trim(renderSpeech([plain], s(1), rate: sr), 0.004);
+    final fit = n * eighth * 0.95;
+    if (out.length / sr > fit) {
+      out = trim(
+        renderSpeech([plain], s(out.length / sr / fit), rate: sr),
+        0.004,
+      );
+    }
+    final copy = Float32List.fromList(out);
+    final edge = math.min(100, copy.length ~/ 4);
+    for (var i = 0; i < edge; i++) {
+      copy[copy.length - 1 - i] *= i / edge;
+    }
+    mixInto(dst, copy, at + slot * eighth, gain * mc.gain);
+    slot += n;
+  }
+}

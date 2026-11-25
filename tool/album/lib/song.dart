@@ -319,10 +319,14 @@ Float32List renderSong(
               sec.mc != null &&
               i < sec.lines.length) {
             final v = buf(bar + 1);
-            if (flow == 'line') {
+            if (flow == 'line' || flow == 'chant') {
               final line = sec.lines[i];
               if (line.isNotEmpty) {
-                rapLine(v, line, sec.mc!, 0, song.bpm);
+                if (flow == 'chant') {
+                  rapChant(v, line, sec.mc!, 0, song.bpm);
+                } else {
+                  rapLine(v, line, sec.mc!, 0, song.bpm);
+                }
                 mix.add(_cleanVoice(v), t, vocalLevel);
                 lastLine = (line, sec.mc!);
               } else if (lastLine != null && stems.contains('dj')) {
