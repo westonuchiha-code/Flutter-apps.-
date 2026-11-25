@@ -111,6 +111,11 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   pitch (don't "fix" hardware tuning), real volume steps, frame-rate effects,
   machine output filters; no clicks or clipping the hardware never had.
 
+- **Creative work uses only this repo's tools** (owner's rule): music,
+  voices, pictures and video are made with our packages and apps (chip_synth,
+  fx_kit, pixel_kit, engine3d, video_kit, video_encoder, Puppet Stage, Vista,
+  Lo-Fi Video Maker...), not outside generators or converters.
+
 ## Toolchain
 
 - Flutter **3.50.1** (stable), Dart 3.14. The version is pinned in
@@ -229,6 +234,8 @@ packages/    # shared Dart/Flutter packages
              #                   (SpeechSynth, textToSpeech)
              #                   (used by optical_theremin, touch_synth, waveform_painter)
 tool/        # developer scripts (setup_linux_dev.sh, new_app.sh, icons/ = every app's pixel icon)
+             #   album/ = "Twelve-Bit Science", a boom bap album rendered by our own code (chip-voice
+             #   raps, synthesized loops/drums/scratches); CI publishes it as album-latest
 ROADMAP.md   # agreed app ideas and build order - keep it updated
 ```
 

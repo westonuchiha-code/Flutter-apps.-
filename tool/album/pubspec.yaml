@@ -1,0 +1,8 @@
+name: album
+description: Renders the boom bap album (beats, scratches, chip-voice raps) as WAV files.
+publish_to: none
+environment:
+  sdk: ^3.10.0
+dependencies:
+  chip_synth:
+    path: ../../packages/chip_synth

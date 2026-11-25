@@ -1,0 +1,4 @@
+out/
+pack/
+*.zip
+.dart_tool/

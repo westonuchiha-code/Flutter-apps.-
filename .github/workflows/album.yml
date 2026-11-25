@@ -1,0 +1,61 @@
+name: Album
+
+# Renders "Twelve-Bit Science" (tool/album) and publishes it as the
+# album-latest pre-release: the songs, the instrumentals and the lyrics.
+on:
+  push:
+    paths:
+      - "tool/album/**"
+      - "packages/chip_synth/**"
+      - ".github/workflows/album.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: album-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  album:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.50.1"
+          channel: stable
+          cache: true
+      - name: Render the album
+        working-directory: tool/album
+        run: |
+          dart pub get
+          dart run bin/make_album.dart out
+          dart run bin/check.dart out
+      - name: Package
+        working-directory: tool/album/out
+        run: |
+          mkdir -p "../pack/Twelve-Bit Science" "../pack/Twelve-Bit Science (Instrumentals)"
+          for f in *.wav; do
+            case "$f" in
+              *"(Instrumental)"*) mv "$f" "../pack/Twelve-Bit Science (Instrumentals)/" ;;
+              *) mv "$f" "../pack/Twelve-Bit Science/" ;;
+            esac
+          done
+          cp Lyrics.txt "../pack/Twelve-Bit Science/"
+          cp Lyrics.txt ../pack/Lyrics.txt
+          cd ../pack
+          zip -qr ../Twelve-Bit-Science.zip "Twelve-Bit Science"
+          zip -qr ../Twelve-Bit-Science-Instrumentals.zip "Twelve-Bit Science (Instrumentals)"
+          ls -l ..
+      - name: Replace the album-latest pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete album-latest --cleanup-tag --yes || true
+          gh release create album-latest tool/album/Twelve-Bit-Science.zip \
+            tool/album/Twelve-Bit-Science-Instrumentals.zip tool/album/pack/Lyrics.txt \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "Twelve-Bit Science - The Allophones (latest render)" \
+            --notes "Rendered by tool/album from ${GITHUB_SHA::7}: 12 tracks (WAV), the 8 instrumentals, and the lyrics."
