@@ -76,13 +76,29 @@ class Action {
 
   String describe() => switch (type) {
     ActionType.move =>
-      '${moveById(move)?.label ?? move} ${seconds.toStringAsFixed(1)} s',
+      '${moveById(move)?.label ?? move.replaceFirst('own:', '')} '
+          '${seconds.toStringAsFixed(1)} s',
     ActionType.walk => 'Walk',
     ActionType.run => 'Run',
     ActionType.turn => 'Turn ${angle.round()}°',
     ActionType.wait => 'Wait ${seconds.toStringAsFixed(1)} s',
     ActionType.pose => 'Pose ${seconds.toStringAsFixed(2)} s',
   };
+}
+
+/// A 3D file in the Asset Locker.
+class ModelRef {
+  const ModelRef(this.id, this.extension, this.name);
+  final String id, extension, name;
+
+  Map<String, Object?> toJson() => {'id': id, 'ext': extension, 'name': name};
+  static ModelRef? fromJson(Object? j) => j is Map && j['id'] is String
+      ? ModelRef(
+          j['id'] as String,
+          (j['ext'] as String?) ?? 'glb',
+          (j['name'] as String?) ?? 'Model',
+        )
+      : null;
 }
 
 /// Someone in the movie.
@@ -95,6 +111,10 @@ class Actor {
     this.x = 0,
     this.z = 0,
     this.facing = 0,
+    this.model,
+    this.size = 1.75,
+    this.turn = 0,
+    this.ownWalk = true,
     List<Action>? actions,
   }) : id = id ?? DateTime.now().microsecondsSinceEpoch.toRadixString(36),
        look = look ?? defaultLooks[kind]!,
@@ -109,6 +129,19 @@ class Actor {
   double x, z, facing;
   final List<Action> actions;
 
+  /// An imported model instead of a built-in figure.
+  ModelRef? model;
+
+  /// A model's height in metres, and how far it is turned inside (for
+  /// files that face away).
+  double size, turn;
+
+  /// A model plays its own walk / run / idle when it has them.
+  bool ownWalk;
+
+  /// What it is, for lists.
+  String get what => model?.name ?? kind.label;
+
   Map<String, Object?> toJson() => {
     'id': id,
     'kind': kind.name,
@@ -118,6 +151,12 @@ class Actor {
     'z': z,
     'facing': facing,
     'actions': [for (final a in actions) a.toJson()],
+    if (model != null) ...{
+      'model': model!.toJson(),
+      'size': size,
+      'turn': turn,
+      'ownWalk': ownWalk,
+    },
   };
 
   factory Actor.fromJson(Map j) {
@@ -135,6 +174,10 @@ class Actor {
       x: ((j['x'] as num?) ?? 0).toDouble(),
       z: ((j['z'] as num?) ?? 0).toDouble(),
       facing: ((j['facing'] as num?) ?? 0).toDouble(),
+      model: ModelRef.fromJson(j['model']),
+      size: ((j['size'] as num?) ?? 1.75).toDouble(),
+      turn: ((j['turn'] as num?) ?? 0).toDouble(),
+      ownWalk: j['ownWalk'] != false,
       actions: [
         for (final a in (j['actions'] as List?) ?? const [])
           Action.fromJson(a as Map),
@@ -400,7 +443,7 @@ void applyState(Character c, Map<String, AnimationClip> clips, ActorState st) {
 /// The current joint angles of [c] as a pose (to start editing from).
 Pose poseOf(Character c) {
   final out = <String, (double, double, double)>{};
-  for (final name in jointNames) {
+  for (final name in c.joints.keys) {
     final node = c.joints[name];
     if (node == null) {
       continue;

@@ -743,7 +743,7 @@ Map<String, AnimationClip> clipsFor(Character c) => {
 
 /// Puts every joint back to its resting pose.
 void restPose(Character c) {
-  for (final name in jointNames) {
+  for (final name in c.joints.keys) {
     final node = c.joints[name];
     if (node == null) continue;
     final r = c.rest[name];

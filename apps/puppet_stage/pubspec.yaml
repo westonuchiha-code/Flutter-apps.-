@@ -42,6 +42,7 @@ dependencies:
   video_encoder:
     path: ../../packages/video_encoder
   path_provider: ^2.1.6
+  file_selector: ^1.1.0
 
 dev_dependencies:
   flutter_test:

@@ -166,7 +166,8 @@ apps/        # one folder per Flutter application
              #   vista            - fractal landscapes: terrain + erosion, sky/time of day, fly/walk,
              #                      ray-traced stills (all cores), flyover MP4s
              #   puppet_stage     - little 3D movies: sets, 6 kinds of people, 18 moves, walk/run
-             #                      to tapped spots, camera shots, stop-motion posing -> MP4
+             #                      to tapped spots, camera shots, stop-motion posing -> MP4;
+             #                      imports rigged models (moves retargeted onto their skeleton)
              #   texture_capture  - photo -> game texture: perspective corners, even lighting,
              #                      seamless tiling, photo checks, PS1/N64/PS2/GameCube/Dreamcast
              #                      formats (CLUT, S3TC, VQ) with their memory limits

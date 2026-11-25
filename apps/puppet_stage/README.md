@@ -22,5 +22,14 @@ Windows, Android, Linux. Little 3D movies without skill (roadmap #19,
 Pure-Dart core (tested): `cast.dart`, `moves.dart`, `movie.dart`,
 `sets.dart`, `export.dart`.
 
-Not yet: importing rigged characters/animations from free (CC0) packs.
-`engine3d` can already load and play skinned, animated glTF models.
+- **Import 3D models** (.glb / .gltf / .obj) from the Asset Locker or a
+  file (files are kept in Models so movies find them again). People with
+  a skeleton (Mixamo, Rigify, Quaternius, VRoid-style names) do every
+  built-in move and can be posed (`retarget.dart`: a hidden blocky
+  stand-in does the move and the skeleton copies it); models that face
+  away are turned automatically. Animated models bring their own moves
+  (and their own walk/run if wanted); anything else slides along.
+  Height and "faces the wrong way" per model.
+
+Local checks with real models (not in CI): `tool/model_check_test.dart`
+and `tool/import_shot_test.dart` (`--dart-define=MODELS=<folder of .glb>`).

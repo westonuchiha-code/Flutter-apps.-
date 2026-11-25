@@ -2,14 +2,17 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:app_shell/app_shell.dart';
 import 'package:engine3d/engine3d.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:material_ui/material_ui.dart' hide Action;
 import 'package:path_provider/path_provider.dart';
 
 import '../cast.dart';
 import '../export.dart';
+import '../figure.dart';
 import '../movie.dart';
 import '../moves.dart';
 import '../sets.dart';
@@ -65,7 +68,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late Movie _movie = widget.movie ?? _starter();
   Scene? _scene;
-  final _actors = <String, (Character, Map<String, AnimationClip>)>{};
+  final _actors = <String, Figure>{};
+
+  /// What each figure was built from (rebuilt only when that changes).
+  final _built = <String, String>{};
+  final _modelBytes = <String, Uint8List>{};
   final _orbit = OrbitRig(
     target: Vector3(0, 1, 0),
     distance: 8,
@@ -123,11 +130,22 @@ class _HomePageState extends State<HomePage> {
   /// Rebuilds the set and the cast's figures.
   Future<void> _rebuild() async {
     final scene = await buildSet(_movie.set);
-    _actors.clear();
+    final ids = {for (final a in _movie.actors) a.id};
+    _actors.removeWhere((id, _) => !ids.contains(id));
     for (final a in _movie.actors) {
-      final c = buildCharacter(a.kind, a.look);
-      _actors[a.id] = (c, clipsFor(c));
-      scene.root.add(c.root);
+      final key = jsonEncode([
+        a.kind.name,
+        a.look.toJson(),
+        a.model?.toJson(),
+        a.size,
+        a.turn,
+        a.ownWalk,
+      ]);
+      if (_built[a.id] != key || _actors[a.id] == null) {
+        _actors[a.id] = await _figureFor(a);
+        _built[a.id] = key;
+      }
+      scene.root.add(_actors[a.id]!.root);
     }
     if (!mounted) {
       return;
@@ -136,23 +154,71 @@ class _HomePageState extends State<HomePage> {
     _poseAll(_t);
   }
 
+  Future<Figure> _figureFor(Actor a) async {
+    final ref = a.model;
+    if (ref != null) {
+      try {
+        var bytes = _modelBytes[ref.id];
+        if (bytes == null) {
+          final locker = Shell.of(context).locker;
+          if (locker.ready || await locker.connect()) {
+            bytes = await locker.read(
+              AssetInfo(
+                id: ref.id,
+                type: AssetType.model,
+                name: ref.name,
+                extension: ref.extension,
+                app: '',
+                created: DateTime(2000),
+              ),
+            );
+          }
+        }
+        if (bytes != null) {
+          _modelBytes[ref.id] = bytes;
+          return await loadModelFigure(
+            bytes,
+            ref.extension,
+            height: a.size,
+            turn: a.turn,
+            ownWalk: a.ownWalk,
+            name: ref.name,
+          );
+        }
+        _snack('"${ref.name}" is not in the Asset Locker any more');
+      } catch (e) {
+        _snack('Could not load "${ref.name}": $e');
+      }
+      // Stand-in so the movie still opens.
+      return BuiltFigure(
+        buildCharacter(
+          Kind.man,
+          const Look(
+            skin: 0xFF9A9A9A,
+            hair: 0xFF6A6A6A,
+            top: 0xFF8A8A8A,
+            bottom: 0xFF6A6A6A,
+          ),
+        ),
+      );
+    }
+    return BuiltFigure(buildCharacter(a.kind, a.look));
+  }
+
   void _poseAll(double t) {
     for (final a in _movie.actors) {
-      final entry = _actors[a.id];
-      if (entry == null) {
+      final fig = _actors[a.id];
+      if (fig == null) {
         continue;
       }
-      applyState(entry.$1, entry.$2, stateAt(a, t));
-    }
-    final p = _pose, sel = _actors[_selected];
-    if (p != null && sel != null && !_playing) {
-      // Show the pose being edited.
-      final c = sel.$1;
-      restPose(c);
-      p.forEach((name, e) {
-        final r = c.rest[name] ?? (0.0, 0.0, 0.0);
-        c.joints[name]?.rotation = euler(r.$1 + e.$1, r.$2 + e.$2, r.$3 + e.$3);
-      });
+      final st = stateAt(a, t);
+      final p = _pose;
+      if (p != null && a.id == _selected && !_playing) {
+        // Show the pose being edited.
+        fig.apply(ActorState(st.x, st.z, st.facing, 'idle', 0, pose: p));
+      } else {
+        fig.apply(st);
+      }
     }
   }
 
@@ -659,6 +725,11 @@ class _HomePageState extends State<HomePage> {
                   await _rebuild();
                 },
               ),
+            ActionChip(
+              avatar: const Icon(Icons.view_in_ar_outlined, size: 16),
+              label: const Text('Import 3D model'),
+              onPressed: _import,
+            ),
           ],
         ),
         const Divider(),
@@ -667,13 +738,15 @@ class _HomePageState extends State<HomePage> {
             dense: true,
             contentPadding: EdgeInsets.zero,
             selected: act.id == _selected,
-            leading: CircleAvatar(
-              radius: 12,
-              backgroundColor: Color(act.look.top),
-            ),
+            leading: act.model != null
+                ? const Icon(Icons.view_in_ar_outlined)
+                : CircleAvatar(
+                    radius: 12,
+                    backgroundColor: Color(act.look.top),
+                  ),
             title: Text(act.name),
             subtitle: Text(
-              '${act.kind.label} · ${act.actions.length} action${act.actions.length == 1 ? '' : 's'}',
+              '${act.what} · ${act.actions.length} action${act.actions.length == 1 ? '' : 's'}',
             ),
             onTap: () => setState(() => _selected = act.id),
             trailing: IconButton(
@@ -724,65 +797,238 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          for (final (label, get, set) in [
-            (
-              'Skin',
-              (Look l) => l.skin,
-              (Look l, int c) => l.copyWith(skin: c),
-            ),
-            (
-              'Hair',
-              (Look l) => l.hair,
-              (Look l, int c) => l.copyWith(hair: c),
-            ),
-            ('Top', (Look l) => l.top, (Look l, int c) => l.copyWith(top: c)),
-            (
-              'Bottom',
-              (Look l) => l.bottom,
-              (Look l, int c) => l.copyWith(bottom: c),
-            ),
-          ])
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  SizedBox(width: 70, child: Text(label)),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (final c in _palette)
-                            InkWell(
-                              onTap: () async {
-                                setState(() => a.look = set(a.look, c));
-                                await _rebuild();
-                              },
-                              child: Container(
-                                width: 24,
-                                height: 24,
-                                margin: const EdgeInsets.only(right: 3),
-                                decoration: BoxDecoration(
-                                  color: Color(c),
-                                  border: Border.all(
-                                    color: get(a.look) == c
-                                        ? Colors.white
-                                        : Colors.transparent,
-                                    width: 2,
+          if (a.model != null) ..._modelControls(a),
+          if (a.model == null)
+            for (final (label, get, set) in [
+              (
+                'Skin',
+                (Look l) => l.skin,
+                (Look l, int c) => l.copyWith(skin: c),
+              ),
+              (
+                'Hair',
+                (Look l) => l.hair,
+                (Look l, int c) => l.copyWith(hair: c),
+              ),
+              ('Top', (Look l) => l.top, (Look l, int c) => l.copyWith(top: c)),
+              (
+                'Bottom',
+                (Look l) => l.bottom,
+                (Look l, int c) => l.copyWith(bottom: c),
+              ),
+            ])
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    SizedBox(width: 70, child: Text(label)),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (final c in _palette)
+                              InkWell(
+                                onTap: () async {
+                                  setState(() => a.look = set(a.look, c));
+                                  await _rebuild();
+                                },
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  margin: const EdgeInsets.only(right: 3),
+                                  decoration: BoxDecoration(
+                                    color: Color(c),
+                                    border: Border.all(
+                                      color: get(a.look) == c
+                                          ? Colors.white
+                                          : Colors.transparent,
+                                      width: 2,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
         ],
       ],
     );
+  }
+
+  List<Widget> _modelControls(Actor a) {
+    final fig = _actors[a.id];
+    final hasOwn = fig is ModelFigure && fig.own.isNotEmpty;
+    return [
+      Row(
+        children: [
+          const SizedBox(width: 70, child: Text('Height')),
+          Expanded(
+            child: Slider(
+              value: a.size.clamp(0.1, 10),
+              min: 0.1,
+              max: 10,
+              onChanged: (v) => setState(() => a.size = v),
+              onChangeEnd: (_) => _rebuild(),
+            ),
+          ),
+          SizedBox(
+            width: 52,
+            child: Text(
+              '${a.size.toStringAsFixed(a.size < 2 ? 2 : 1)} m',
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+      Wrap(
+        spacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          OutlinedButton.icon(
+            onPressed: () {
+              setState(() => a.turn = (a.turn + 180) % 360);
+              _rebuild();
+            },
+            icon: const Icon(Icons.flip_camera_android_outlined, size: 18),
+            label: const Text('Faces the wrong way'),
+          ),
+          if (hasOwn && fig.humanoid)
+            FilterChip(
+              label: const Text('Its own walk/run'),
+              selected: a.ownWalk,
+              onSelected: (v) {
+                setState(() => a.ownWalk = v);
+                _rebuild();
+              },
+            ),
+        ],
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Text(
+          fig is ModelFigure
+              ? [
+                  if (fig.humanoid)
+                    'Skeleton found: it can do every move and be posed.'
+                  else
+                    'No person skeleton: it slides when walking.',
+                  if (hasOwn) '${fig.own.length} animations of its own.',
+                ].join(' ')
+              : '',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ),
+    ];
+  }
+
+  /// How long a move action lasts when added.
+  double _lengthOf(Actor a, String id) {
+    final fig = _actors[a.id];
+    if (id.startsWith(ownPrefix) && fig is ModelFigure) {
+      final d = fig.own[id.substring(ownPrefix.length)]?.duration ?? 2;
+      return d < 0.8 ? d * 3 : d;
+    }
+    final m = moveById(id);
+    if (m == null) return 2;
+    return m.loop ? m.duration * 2 : m.duration + 0.5;
+  }
+
+  /// Adds a 3D model (from the Asset Locker or a file) to the cast.
+  Future<void> _import() async {
+    final shell = Shell.of(context);
+    final where = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                '.glb, .gltf (one file) or .obj. People with a skeleton '
+                '(Mixamo, Quaternius, Kenney, VRoid…) can do every move; '
+                'animated models also bring their own moves.',
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.inventory_2_outlined),
+              title: const Text('From the Asset Locker (Models)'),
+              onTap: () => Navigator.pop(context, 'locker'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder_open),
+              title: const Text('From a file'),
+              onTap: () => Navigator.pop(context, 'file'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (where == null || !mounted) return;
+    final locker = shell.locker;
+    if (!locker.ready && !await locker.connect()) return;
+    if (!mounted) return;
+    AssetInfo? info;
+    Uint8List? bytes;
+    try {
+      if (where == 'file') {
+        final f = await openFile(
+          acceptedTypeGroups: const [
+            XTypeGroup(
+              label: '3D models',
+              extensions: ['glb', 'gltf', 'obj'],
+              uniformTypeIdentifiers: ['public.item'],
+            ),
+          ],
+        );
+        if (f == null) return;
+        bytes = await f.readAsBytes();
+        final dot = f.name.lastIndexOf('.');
+        final ext = dot < 0 ? 'glb' : f.name.substring(dot + 1).toLowerCase();
+        // Kept in the Locker so saved movies can find it again.
+        info = await locker.save(
+          type: AssetType.model,
+          name: dot < 0 ? f.name : f.name.substring(0, dot),
+          bytes: bytes,
+          extension: ext,
+          tags: const ['puppet stage'],
+        );
+      } else {
+        if (!mounted) return;
+        info = await pickFromLocker(
+          context,
+          locker,
+          types: const [AssetType.model],
+        );
+        if (info == null) return;
+        bytes = await locker.read(info);
+      }
+    } catch (e) {
+      _snack('Could not open that file: $e');
+      return;
+    }
+    if (bytes == null) return;
+    _modelBytes[info.id] = bytes;
+    final n = _movie.actors.length;
+    final actor = Actor(
+      kind: Kind.man,
+      name: info.name,
+      model: ModelRef(info.id, info.extension, info.name),
+      x: (n % 4 - 1.5) * 1.2,
+      z: n ~/ 4 * -1.2,
+    );
+    setState(() {
+      _movie.actors.add(actor);
+      _selected = actor.id;
+    });
+    await _rebuild();
+    if (where == 'file') _snack('Also saved to the Asset Locker (Models)');
   }
 
   Future<void> _rename(Actor a) async {
@@ -888,7 +1134,7 @@ class _HomePageState extends State<HomePage> {
           spacing: 6,
           runSpacing: 6,
           children: [
-            for (final m in moves.where((m) => m.id != 'walk' && m.id != 'run'))
+            for (final m in _actors[a.id]?.moves ?? const <MoveChoice>[])
               ActionChip(
                 label: Text(m.label),
                 onPressed: () => setState(
@@ -896,7 +1142,7 @@ class _HomePageState extends State<HomePage> {
                     Action(
                       ActionType.move,
                       move: m.id,
-                      seconds: m.loop ? m.duration * 2 : m.duration + 0.5,
+                      seconds: _lengthOf(a, m.id),
                     ),
                   ),
                 ),
@@ -1020,9 +1266,21 @@ class _HomePageState extends State<HomePage> {
   );
 
   Widget _poseTab() {
-    final a = _actor, entry = _actors[_selected];
-    if (a == null || entry == null) {
+    final a = _actor, rig = _actors[_selected]?.rig;
+    if (a == null) {
       return const Center(child: Text('Add someone in Cast first.'));
+    }
+    if (rig == null) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            'This model has no skeleton the Pose tab understands '
+            '(people with arms and legs work).',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
     }
     final pose = _pose;
     if (pose == null) {
@@ -1037,7 +1295,7 @@ class _HomePageState extends State<HomePage> {
           FilledButton.icon(
             onPressed: () => setState(() {
               _playing = false;
-              _pose = poseOf(entry.$1);
+              _pose = poseOf(rig);
             }),
             icon: const Icon(Icons.accessibility_new),
             label: Text('Start posing ${a.name}'),
