@@ -9,7 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:vista/main.dart';
-import 'package:vista/src/land.dart';
+import 'package:landscape/landscape.dart';
 import 'package:vista/src/ui/home.dart';
 
 void main() {

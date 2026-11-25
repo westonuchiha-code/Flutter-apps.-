@@ -1,8 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'land.dart';
-import 'sky.dart';
+import 'package:landscape/landscape.dart';
 
 /// A camera for stills and flyovers (plain data, sendable to isolates).
 class Shot {

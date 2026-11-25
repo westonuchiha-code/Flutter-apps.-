@@ -7,7 +7,9 @@ import 'package:image/image.dart' as img;
 import 'package:material_ui/material_ui.dart';
 
 import '../flyover.dart';
-import '../land.dart';
+
+import 'package:landscape/landscape.dart';
+
 import '../raytrace.dart';
 
 Uint8List _png((Uint32List, int, int) a) {

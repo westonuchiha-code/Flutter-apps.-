@@ -11,8 +11,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../flyover.dart';
-import '../land.dart';
-import '../world.dart';
+
+import 'package:landscape/landscape.dart';
+
 import 'still_page.dart';
 
 HeightField _generate(LandSettings s) => generate(s);

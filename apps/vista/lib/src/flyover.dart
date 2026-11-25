@@ -7,9 +7,9 @@ import 'package:app_shell/app_shell.dart' show runInBackground;
 import 'package:engine3d/engine3d.dart';
 import 'package:video_encoder/video_encoder.dart';
 
-import 'land.dart';
+import 'package:landscape/landscape.dart';
+
 import 'raytrace.dart';
-import 'world.dart';
 
 /// A smooth camera flight through the points you set.
 class CameraPath {

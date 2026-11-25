@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:vista/src/land.dart';
+import 'package:landscape/landscape.dart';
 import 'package:vista/src/raytrace.dart';
 
 void main() {

@@ -1,0 +1,19 @@
+name: landscape
+description: Fractal landscapes (terrain, erosion, sky, time of day) as engine3d scenes. Shared by Vista and Puppet Stage.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.14.0
+  flutter: ">=3.50.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  engine3d:
+    path: ../engine3d
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

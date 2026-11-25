@@ -39,6 +39,8 @@ dependencies:
     path: ../../packages/app_shell
   engine3d:
     path: ../../packages/engine3d
+  landscape:
+    path: ../../packages/landscape
   video_encoder:
     path: ../../packages/video_encoder
   image: ^4.13.1

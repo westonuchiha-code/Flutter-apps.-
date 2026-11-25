@@ -4,7 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:vista/src/land.dart';
+import 'package:landscape/landscape.dart';
 
 void main() {
   const out = String.fromEnvironment('OUT', defaultValue: '.');
