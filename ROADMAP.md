@@ -135,6 +135,19 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     22 plants and props, person templates (body sliders, extras, saved to
     the Locker).
 
+## Phase 4 · XMB Frontend for Android
+
+20. 🔨 **XMB Frontend (Android).** The PC XMB Frontend's companion for the
+    phone and the Retroid Pocket Classic, in parts:
+    1. ✅ XMB menu, game library (PC folder rules), launching RetroArch /
+       PPSSPP / DuckStation / Dolphin, pins, history, play time.
+    2. ⬜ Cross saves through the private `Cross-Save` GitHub repo (pull
+       before a game, push after; conflicts keep both; backups first).
+    3. ⬜ Comic reader (CBZ/PDF first, then CBR/CB7; manga, panels).
+    4. ⬜ Save manager (PS1 memory cards, PSP save folders).
+    5. ⬜ Pokéville: view and arrange the Box synced from the PC.
+    6. ⬜ CRT TV (from the PC suite's `apps/crt_tv`).
+
 ## On hold · needs AI (voices or a language model)
 
 The owner won't pay a per-minute voice or AI service. These wait until voices can

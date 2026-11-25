@@ -18,6 +18,8 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
 - `sa_companion` — **Android only** (owner's request).
 - `scan_ranch` — **Android only** (owner's request).
 - `touch_synth` — **Android only** (owner's request).
+- `xmb_frontend` — **Android only** (the Android companion to the PC's XMB
+  Frontend; see its README).
 
 ## Rules for writing apps here
 
@@ -170,6 +172,10 @@ apps/        # one folder per Flutter application
              #                      imports rigged models (moves retargeted onto their skeleton),
              #                      animals (4-legged + birds, own moves), plants and props,
              #                      person templates (body sliders, extras)
+             #   xmb_frontend     - PS3-style game menu for Android (Retroid / phone): the PC
+             #                      XMB Frontend's companion; starts RetroArch / PPSSPP /
+             #                      DuckStation / Dolphin; cross saves, comics, save manager,
+             #                      Pokéville and CRT TV come in later parts (Android only)
              #   texture_capture  - photo -> game texture: perspective corners, even lighting,
              #                      seamless tiling, photo checks, PS1/N64/PS2/GameCube/Dreamcast
              #                      formats (CLUT, S3TC, VQ) with their memory limits
