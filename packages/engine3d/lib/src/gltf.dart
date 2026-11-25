@@ -5,13 +5,28 @@ import 'dart:ui' as ui;
 
 import 'package:vector_math/vector_math_64.dart';
 
+import 'animation.dart';
 import 'mesh.dart';
 import 'scene.dart';
 import 'textures.dart';
 
 /// Reads a glTF 2.0 model (.glb, or .gltf with embedded data) into nodes:
 /// meshes (triangles), base colours and textures, node transforms.
-Future<Node> loadGltf(Uint8List bytes, {String name = 'model'}) async {
+Future<Node> loadGltf(Uint8List bytes, {String name = 'model'}) async =>
+    (await loadGltfModel(bytes, name: name)).node;
+
+/// A glTF model with its animations (by name), skins attached.
+class GltfModel {
+  GltfModel(this.node, this.animations);
+  final Node node;
+  final Map<String, AnimationClip> animations;
+}
+
+/// Like [loadGltf], also reading skins (skinned characters) and animations.
+Future<GltfModel> loadGltfModel(
+  Uint8List bytes, {
+  String name = 'model',
+}) async {
   Map<String, Object?> json;
   Uint8List? bin;
   if (bytes.length >= 12 &&
@@ -38,7 +53,9 @@ Future<Node> loadGltf(Uint8List bytes, {String name = 'model'}) async {
   } else {
     json = jsonDecode(utf8.decode(bytes)) as Map<String, Object?>;
   }
-  return _Gltf(json, bin).load(name);
+  final g = _Gltf(json, bin);
+  final node = await g.load(name);
+  return GltfModel(node, g.animations());
 }
 
 List _list(Object? v) => v is List ? v : const [];
@@ -52,6 +69,9 @@ class _Gltf {
   final _buffers = <int, Uint8List>{};
   final _images = <int, ui.Image?>{};
   final _materials = <int, Surface>{};
+  final _nodes = <int, Node>{};
+  final _skinData = <Node, (List<int>, List<double>)>{};
+  final _pendingSkins = <(Node, int)>[];
 
   Uint8List _buffer(int i) => _buffers[i] ??= () {
     final b = _map(_list(j['buffers'])[i]);
@@ -188,6 +208,8 @@ class _Gltf {
     final pos = <double>[], nor = <double>[], uv = <double>[];
     final idx = <int>[];
     final parts = <(int, int, Surface)>[];
+    final joints = <int>[], weights = <double>[];
+    var skinned = false;
     for (final prim in _list(mesh['primitives'])) {
       final p = _map(prim);
       if (_int(p['mode'], 4) != 4) continue; // triangles only
@@ -197,6 +219,21 @@ class _Gltf {
       }
       final ps = _read(_int(attrs['POSITION']));
       final n = ps.length ~/ 3;
+      if (attrs['JOINTS_0'] != null && attrs['WEIGHTS_0'] != null) {
+        final js = _read(_int(attrs['JOINTS_0'])),
+            ws = _read(_int(attrs['WEIGHTS_0']));
+        if (js.length == n * 4 && ws.length == n * 4) {
+          skinned = true;
+          joints.addAll(js.map((e) => e.toInt()));
+          weights.addAll(ws);
+        } else {
+          joints.addAll(List.filled(n * 4, 0));
+          weights.addAll(List.filled(n * 4, 0.0));
+        }
+      } else {
+        joints.addAll(List.filled(n * 4, 0));
+        weights.addAll(List.filled(n * 4, 0.0));
+      }
       final ns = attrs['NORMAL'] != null ? _read(_int(attrs['NORMAL'])) : null;
       final ts = attrs['TEXCOORD_0'] != null
           ? _read(_int(attrs['TEXCOORD_0']))
@@ -269,12 +306,16 @@ class _Gltf {
     if (parts.length > 1) {
       node.parts = parts;
     }
+    if (skinned) {
+      _skinData[node] = (joints, weights);
+    }
     return node;
   }
 
   Future<Node> _node(int i, int depth) async {
     final n = _map(_list(j['nodes'])[i]);
     final node = Node(name: (n['name'] as String?) ?? 'node');
+    _nodes[i] = node;
     final m = _list(n['matrix']);
     if (m.length == 16) {
       final mat = Matrix4.fromList([for (final v in m) (v as num).toDouble()]);
@@ -298,6 +339,9 @@ class _Gltf {
       final mesh = await _mesh(_int(n['mesh']));
       if (mesh != null) {
         node.add(mesh);
+        if (n['skin'] != null && _skinData.containsKey(mesh)) {
+          _pendingSkins.add((mesh, _int(n['skin'])));
+        }
       }
     }
     if (depth < 64) {
@@ -329,6 +373,89 @@ class _Gltf {
     for (final r in roots) {
       root.add(await _node(_int(r), 0));
     }
+    for (final (meshNode, k) in _pendingSkins) {
+      final skin = _map(_list(j['skins'])[k]);
+      final jointNodes = [
+        for (final ji in _list(skin['joints']))
+          _nodes[_int(ji)] ?? Node(name: 'missing'),
+      ];
+      final ibm = skin['inverseBindMatrices'] != null
+          ? _read(_int(skin['inverseBindMatrices']))
+          : null;
+      final inverse = [
+        for (var b = 0; b < jointNodes.length; b++)
+          ibm != null && ibm.length >= (b + 1) * 16
+              ? Matrix4.fromList(ibm.sublist(b * 16, b * 16 + 16))
+              : Matrix4.identity(),
+      ];
+      final (js, ws) = _skinData[meshNode]!;
+      meshNode.skin = Skin(
+        joints: jointNodes,
+        inverseBind: inverse,
+        jointIndices: Uint16List.fromList([
+          for (final x in js) x.clamp(0, math.max(0, jointNodes.length - 1)),
+        ]),
+        weights: Float32List.fromList(ws),
+        mesh: meshNode.mesh!,
+      );
+    }
     return root;
+  }
+
+  /// The model's animations (call after [load]).
+  Map<String, AnimationClip> animations() {
+    final out = <String, AnimationClip>{};
+    final anims = _list(j['animations']);
+    for (var a = 0; a < anims.length; a++) {
+      final anim = _map(anims[a]);
+      final samplers = _list(anim['samplers']);
+      final channels = <Channel>[];
+      for (final ch in _list(anim['channels'])) {
+        final c = _map(ch), target = _map(c['target']);
+        final node = _nodes[_int(target['node'], -1)];
+        final path = switch (target['path']) {
+          'translation' => AnimPath.translation,
+          'rotation' => AnimPath.rotation,
+          'scale' => AnimPath.scale,
+          _ => null,
+        };
+        if (node == null || path == null) {
+          continue;
+        }
+        final smp = _map(samplers[_int(c['sampler'])]);
+        final times = _read(_int(smp['input']));
+        var values = _read(_int(smp['output']));
+        final w = path == AnimPath.rotation ? 4 : 3;
+        final interp = smp['interpolation'] as String? ?? 'LINEAR';
+        if (interp == 'CUBICSPLINE') {
+          // In-tangent, value, out-tangent per key: keep the values.
+          values = [
+            for (var k = 0; k < times.length; k++)
+              ...values.sublist((k * 3 + 1) * w, (k * 3 + 2) * w),
+          ];
+        }
+        if (values.length < times.length * w) {
+          continue;
+        }
+        channels.add(
+          Channel(
+            node,
+            path,
+            Float32List.fromList(times),
+            Float32List.fromList(values),
+            step: interp == 'STEP',
+          ),
+        );
+      }
+      if (channels.isEmpty) {
+        continue;
+      }
+      var name = (anim['name'] as String?) ?? 'animation ${a + 1}';
+      while (out.containsKey(name)) {
+        name = '$name+';
+      }
+      out[name] = AnimationClip(name, channels);
+    }
+    return out;
   }
 }

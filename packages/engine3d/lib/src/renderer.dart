@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:vector_math/vector_math_64.dart';
 
+import 'animation.dart';
 import 'camera.dart';
 import 'mesh.dart';
 import 'scene.dart';
@@ -176,6 +177,7 @@ class Renderer {
       ..triangles = 0
       ..drawn = 0
       ..batches = 0;
+    if (_hasSkins(scene.root)) updateSkins(scene.root);
     final view = camera.view;
     final f = 1 / math.tan(camera.fov * math.pi / 360);
     final half = h / 2, cx = w / 2, cy = h / 2;
@@ -450,6 +452,14 @@ class Renderer {
         ui.Paint(),
       );
     }
+  }
+
+  static bool _hasSkins(Node n) {
+    if (n.skin != null) return true;
+    for (final c in n.children) {
+      if (_hasSkins(c)) return true;
+    }
+    return false;
   }
 
   /// Forget cached shaders (call when textures are replaced or filtering

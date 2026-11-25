@@ -1,5 +1,6 @@
 import 'package:vector_math/vector_math_64.dart';
 
+import 'animation.dart';
 import 'mesh.dart';
 
 /// Something in the world: a transform, maybe a mesh, and children.
@@ -33,6 +34,9 @@ class Node {
   /// never covered (the PS1's ordering table had the same trick).
   int layer;
 
+  /// Bends [mesh] to a skeleton (animated glTF characters).
+  Skin? skin;
+
   /// Mesh materials by triangle range, for models with several (glTF).
   List<(int start, int count, Surface material)>? parts;
 
@@ -51,6 +55,30 @@ class Node {
     for (final c in children) {
       c.visit(world, f);
     }
+  }
+
+  /// The first node called [name] under (and including) this one.
+  Node? find(String name) {
+    if (this.name == name) return this;
+    for (final c in children) {
+      final f = c.find(name);
+      if (f != null) return f;
+    }
+    return null;
+  }
+
+  /// Every node under (and including) this one by name.
+  Map<String, Node> byName() {
+    final out = <String, Node>{};
+    void walk(Node n) {
+      out.putIfAbsent(n.name, () => n);
+      for (final c in n.children) {
+        walk(c);
+      }
+    }
+
+    walk(this);
+    return out;
   }
 
   /// Turns around the Y axis by [radians].

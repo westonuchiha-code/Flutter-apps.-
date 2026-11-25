@@ -9,7 +9,8 @@ Lightweight 3D for the apps (pure Dart + Flutter's `Canvas.drawVertices`).
   `layer`), `Scene` (sky, ambient, sun, point lights, fog).
 - Meshes: box, subdivided plane, sphere, cylinder, height-map terrain (with
   holes); `MeshBuilder`; glTF 2.0 (`loadGltf`: .glb or embedded .gltf —
-  meshes, base colours, textures, node transforms; no skins/animation yet)
+  meshes, base colours, textures, node transforms; `loadGltfModel` also
+  returns skins and animations)
   and OBJ (`loadObj`). `fitModel` scales a model to a height.
 - Cameras: `OrbitRig`, `WalkRig` (walls as `Box`es, ground height).
 - `Renderer`: per-vertex lighting, near-plane clipping, back-face culling,
@@ -17,7 +18,11 @@ Lightweight 3D for the apps (pure Dart + Flutter's `Canvas.drawVertices`).
   table — use `Node.layer = -1` for floors), textured batches, fog.
 - `RenderOptions()` is the PS1 look (240-line picture, vertex snapping,
   sharp texels, fog); `RenderOptions.clean` is full resolution and smooth.
+- Animation: `AnimationClip` (translation/rotation/scale channels, step /
+  linear / cubic), `retarget`, `blend`; `Animator` plays clips with
+  crossfades; `Skin` does CPU skinning (glTF JOINTS_0/WEIGHTS_0).
+- `groundPoint` turns a screen tap into a spot on the floor.
 - `Viewport3D` widget: frame loop, touch joystick, drag/pinch, keys,
-  stats overlay.
+  `onTap`, stats overlay.
 
 Speed is measured on devices with 3D Lab's fps counter.

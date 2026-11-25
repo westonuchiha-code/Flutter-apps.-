@@ -5,6 +5,7 @@ library;
 export 'package:vector_math/vector_math_64.dart'
     show Vector3, Quaternion, Matrix4;
 
+export 'src/animation.dart';
 export 'src/camera.dart';
 export 'src/gltf.dart';
 export 'src/mesh.dart';

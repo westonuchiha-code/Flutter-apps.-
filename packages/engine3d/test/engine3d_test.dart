@@ -45,6 +45,7 @@ Scene flatScene(List<Node> nodes) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  animationTests();
 
   test('camera looks down -Z by default and turns with yaw', () {
     final c = Camera(position: Vector3.zero());
@@ -276,3 +277,91 @@ void main() {
 
 Uint8List _u32(int v) =>
     (ByteData(4)..setUint32(0, v, Endian.little)).buffer.asUint8List();
+
+void animationTests() {
+  test('clips move nodes, crossfade, and skins follow their joints', () {
+    final root = Node(name: 'root');
+    final arm = root.add(Node(name: 'arm', position: Vector3(0, 1, 0)));
+    final quarter = Quaternion.axisAngle(Vector3(0, 0, 1), 1.5707963);
+    final clip = AnimationClip('raise', [
+      Channel(
+        arm,
+        AnimPath.rotation,
+        Float32List.fromList([0, 1]),
+        Float32List.fromList([
+          0,
+          0,
+          0,
+          1,
+          quarter.x,
+          quarter.y,
+          quarter.z,
+          quarter.w,
+        ]),
+      ),
+    ], loop: false);
+    clip.apply(0.5);
+    expect(arm.rotation.radians, closeTo(1.5707963 / 2, 1e-3));
+    clip.apply(5);
+    expect(arm.rotation.radians, closeTo(1.5707963, 1e-3));
+    // Retargeting by name drives another skeleton built the same way.
+    final other = Node(name: 'root')..add(Node(name: 'arm'));
+    clip.retarget(other.byName()).apply(1);
+    expect(other.find('arm')!.rotation.radians, closeTo(1.5707963, 1e-3));
+    // Animator crossfades from one clip to another.
+    final idle = AnimationClip('idle', [
+      Channel(
+        arm,
+        AnimPath.rotation,
+        Float32List.fromList([0]),
+        Float32List.fromList([0, 0, 0, 1]),
+      ),
+    ]);
+    final a = Animator({'raise': clip, 'idle': idle})..play('raise');
+    a.update(1);
+    a.play('idle', fade: 0.5);
+    a.update(0.25);
+    expect(arm.rotation.radians, inExclusiveRange(0.2, 1.4)); // half way
+    a.update(0.5);
+    expect(arm.rotation.radians, closeTo(0, 1e-3));
+
+    // A one-vertex "mesh" bound fully to the arm: rotating the arm by 90°
+    // about Z moves the vertex from (1, 1, 0) to (0, 2, 0).
+    final mesh = Mesh(
+      positions: Float32List.fromList([1, 1, 0]),
+      normals: Float32List.fromList([1, 0, 0]),
+      uvs: Float32List(2),
+      indices: Uint32List(0),
+    );
+    final body = root.add(Node(name: 'body', mesh: mesh));
+    body.skin = Skin(
+      joints: [arm],
+      inverseBind: [Matrix4.translation(Vector3(0, -1, 0))],
+      jointIndices: Uint16List.fromList([0, 0, 0, 0]),
+      weights: Float32List.fromList([1, 0, 0, 0]),
+      mesh: mesh,
+    );
+    arm.rotation = quarter;
+    updateSkins(root);
+    expect(mesh.positions[0], closeTo(0, 1e-5));
+    expect(mesh.positions[1], closeTo(2, 1e-5));
+    expect(mesh.normals[1], closeTo(1, 1e-5));
+  });
+
+  test('a tap finds the floor under it', () {
+    final c = Camera(position: Vector3(0, 2, 0), pitch: -0.7853981);
+    final p = groundPoint(c, 200, 100, 100, 50)!; // centre: 45° down
+    expect(p.y, closeTo(0, 1e-9));
+    expect(p.z, closeTo(-2, 1e-6));
+    expect(
+      groundPoint(
+        Camera(position: Vector3(0, 2, 0), pitch: 0.5),
+        200,
+        100,
+        100,
+        50,
+      ),
+      isNull,
+    );
+  });
+}

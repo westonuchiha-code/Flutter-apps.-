@@ -56,6 +56,10 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   class is `Surface` (Flutter has its own `Material`). See-through
   textures need `fogged: false` (the fog pass covers whole triangles).
   Pixels for `decodeImageFromPixels`/`imageFromArgb` are premultiplied.
+  Animation: `AnimationClip`/`Animator` (crossfades), skinned glTF via
+  `loadGltfModel` (`.animations`); layer -2 for base ground under -1 paths.
+  Puppet Stage's `Action` clashes with Flutter's: import Material
+  `hide Action`.
 - Background work: use `runInBackground(topLevelFunction, arg)` from
   `app_shell`, never `Isolate.run(() => ...)` inside a widget or controller
   (the closure can drag the State and its ports along: "object is
@@ -161,6 +165,8 @@ apps/        # one folder per Flutter application
              #                      home-screen widget (home_widget), desktop mini window
              #   vista            - fractal landscapes: terrain + erosion, sky/time of day, fly/walk,
              #                      ray-traced stills (all cores), flyover MP4s
+             #   puppet_stage     - little 3D movies: sets, 6 kinds of people, 18 moves, walk/run
+             #                      to tapped spots, camera shots, stop-motion posing -> MP4
              #   texture_capture  - photo -> game texture: perspective corners, even lighting,
              #                      seamless tiling, photo checks, PS1/N64/PS2/GameCube/Dreamcast
              #                      formats (CLUT, S3TC, VQ) with their memory limits

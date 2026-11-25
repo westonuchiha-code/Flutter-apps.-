@@ -37,6 +37,29 @@ class Camera {
   }
 }
 
+/// Where a tap at [p] on a [width]×[height] view meets the floor
+/// (y = [floorY]), or null if the ray points away from it.
+Vector3? groundPoint(
+  Camera c,
+  double width,
+  double height,
+  double px,
+  double py, {
+  double floorY = 0,
+}) {
+  final t = math.tan(c.fov * math.pi / 360);
+  final x = (px - width / 2) / (height / 2) * t,
+      y = -(py - height / 2) / (height / 2) * t;
+  final f = c.forward;
+  final right = Vector3(math.cos(c.yaw), 0, -math.sin(c.yaw));
+  final up = right.cross(f);
+  final d = f + right * x + up * y;
+  if (d.y.abs() < 1e-6) return null;
+  final k = (floorY - c.position.y) / d.y;
+  if (k <= 0) return null;
+  return c.position + d * k;
+}
+
 /// A box that blocks walking.
 class Box {
   const Box(this.minX, this.minZ, this.maxX, this.maxZ, {this.height = 100});

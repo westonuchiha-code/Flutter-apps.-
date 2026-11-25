@@ -114,7 +114,7 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     glTF/OBJ models, orbit and walk cameras with collisions, vertex lighting,
     fog, triangles sorted far to near and drawn on the GPU; PS1 look by
     default (owner's choice), clean look optional. Test app: 3D Lab.
-    Not yet: skinned/animated characters (comes with #19).
+    Skinned, animated glTF characters added with #19.
 16. ⏸ **Desktop Aquarium.** *(On hold, owner's choice.)* PS1-style low-poly fish wearing real fish photo
     textures (made with Texture Capture), swimming in a tank on the home
     screen or desktop. The smallest 3D app, so it tests the engine first.
@@ -127,11 +127,11 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     clouds and haze; fly or walk (PS1 look); ray-traced stills with shadows
     and water reflections; flyover videos (fast or ray traced); landscapes
     and height maps to the Asset Locker.
-19. ⬜ **3D Choreographer, modern.** Make little movies without skill: a
-    stage, generic characters (man, woman, boy, girl, old man, old woman), tens
-    to hundreds of preset animations applied with a tap, camera shots, and a
-    stop-motion mode for posing by hand. The biggest app on the list; free,
-    openly licensed animation libraries can help.
+19. ✅ **3D Choreographer, modern** (app: **Puppet Stage**). Little movies
+    without skill: four sets, six kinds of people (PS1-style figures made in
+    code), 18 moves plus walk/run to a tapped spot, turn and wait, camera
+    shots, stop-motion posing, MP4 export. Next: import free (CC0) rigged
+    characters and animation packs (the engine already plays skinned glTF).
 
 ## On hold · needs AI (voices or a language model)
 

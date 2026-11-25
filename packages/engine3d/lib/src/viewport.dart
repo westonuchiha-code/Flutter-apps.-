@@ -21,6 +21,7 @@ class Viewport3D extends StatefulWidget {
     this.onFrame,
     this.showStats = false,
     this.joystick,
+    this.onTap,
   });
 
   final Scene scene;
@@ -33,6 +34,9 @@ class Viewport3D extends StatefulWidget {
 
   /// Show the touch joystick (default: on phones).
   final bool? joystick;
+
+  /// A tap (press and release without moving) at a point of the view.
+  final void Function(Offset position, Size size)? onTap;
 
   @override
   State<Viewport3D> createState() => _Viewport3DState();
@@ -53,6 +57,9 @@ class _Viewport3DState extends State<Viewport3D>
   Offset? _stickOrigin;
   Offset _stick = Offset.zero;
   double? _pinchStart;
+  Offset? _tapStart;
+  int _tapTime = 0;
+  double _tapTravel = 0;
 
   bool get _touchUi =>
       widget.joystick ?? (Theme.of(context).platform == TargetPlatform.android);
@@ -120,6 +127,9 @@ class _Viewport3DState extends State<Viewport3D>
 
   void _down(PointerDownEvent e, Size size) {
     _focus.requestFocus();
+    _tapStart = e.localPosition;
+    _tapTime = e.timeStamp.inMilliseconds;
+    _tapTravel = 0;
     if (_touchUi &&
         e.kind == PointerDeviceKind.touch &&
         _stickPointer == null &&
@@ -143,6 +153,7 @@ class _Viewport3DState extends State<Viewport3D>
   }
 
   void _move(PointerMoveEvent e) {
+    _tapTravel += e.delta.distance;
     if (e.pointer == _stickPointer) {
       final d = (e.localPosition - _stickOrigin!) / 56;
       _stick = d.distance > 1 ? d / d.distance : d;
@@ -164,7 +175,17 @@ class _Viewport3DState extends State<Viewport3D>
     }
   }
 
-  void _up(PointerEvent e) {
+  void _up(PointerEvent e, [Size? size]) {
+    final start = _tapStart;
+    if (e is PointerUpEvent &&
+        size != null &&
+        start != null &&
+        _tapTravel < 10 &&
+        e.timeStamp.inMilliseconds - _tapTime < 400 &&
+        e.pointer != _stickPointer) {
+      widget.onTap?.call(e.localPosition, size);
+    }
+    _tapStart = null;
     if (e.pointer == _stickPointer) {
       _stickPointer = null;
       _stickOrigin = null;
@@ -188,7 +209,7 @@ class _Viewport3DState extends State<Viewport3D>
           behavior: HitTestBehavior.opaque,
           onPointerDown: (e) => _down(e, size),
           onPointerMove: _move,
-          onPointerUp: _up,
+          onPointerUp: (e) => _up(e, size),
           onPointerCancel: _up,
           onPointerSignal: (e) {
             if (e is PointerScrollEvent) {
