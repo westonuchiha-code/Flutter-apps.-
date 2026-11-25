@@ -4,6 +4,7 @@ import 'package:engine3d/engine3d.dart';
 
 import 'animals.dart';
 import 'cast.dart';
+import 'props.dart';
 import 'moves.dart';
 import 'sets.dart';
 
@@ -114,6 +115,8 @@ class Actor {
     this.z = 0,
     this.facing = 0,
     this.animal,
+    this.prop,
+    this.scale = 1,
     this.model,
     this.size = 1.75,
     this.turn = 0,
@@ -122,7 +125,11 @@ class Actor {
   }) : id = id ?? DateTime.now().microsecondsSinceEpoch.toRadixString(36),
        look =
            look ??
-           (animal != null ? animalLooks[animal]! : defaultLooks[kind]!),
+           (prop != null
+               ? propLooks[prop]!
+               : animal != null
+               ? animalLooks[animal]!
+               : defaultLooks[kind]!),
        actions = actions ?? [];
 
   final String id;
@@ -137,6 +144,12 @@ class Actor {
   /// An animal instead of a person.
   final Animal? animal;
 
+  /// A plant or a thing instead of a person.
+  final Prop? prop;
+
+  /// Size of a built-in figure (1: as made).
+  double scale;
+
   /// An imported model instead of a built-in figure.
   ModelRef? model;
 
@@ -148,7 +161,7 @@ class Actor {
   bool ownWalk;
 
   /// What it is, for lists.
-  String get what => model?.name ?? animal?.label ?? kind.label;
+  String get what => model?.name ?? prop?.label ?? animal?.label ?? kind.label;
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -156,6 +169,8 @@ class Actor {
     'name': name,
     'look': look.toJson(),
     if (animal != null) 'animal': animal!.name,
+    if (prop != null) 'prop': prop!.name,
+    if (scale != 1) 'scale': scale,
     'x': x,
     'z': z,
     'facing': facing,
@@ -176,12 +191,20 @@ class Actor {
     final animal = Animal.values
         .where((a) => a.name == j['animal'])
         .firstOrNull;
-    final look = animal != null ? animalLooks[animal]! : defaultLooks[kind]!;
+    final prop = Prop.values.where((p) => p.name == j['prop']).firstOrNull;
+    final look = prop != null
+        ? propLooks[prop]!
+        : animal != null
+        ? animalLooks[animal]!
+        : defaultLooks[kind]!;
     return Actor(
       id: j['id'] as String?,
       kind: kind,
       animal: animal,
-      name: (j['name'] as String?) ?? animal?.label ?? kind.label,
+      prop: prop,
+      scale: ((j['scale'] as num?) ?? 1).toDouble(),
+      name:
+          (j['name'] as String?) ?? prop?.label ?? animal?.label ?? kind.label,
       look: j['look'] is Map ? Look.fromJson(j['look'] as Map, look) : look,
       x: ((j['x'] as num?) ?? 0).toDouble(),
       z: ((j['z'] as num?) ?? 0).toDouble(),

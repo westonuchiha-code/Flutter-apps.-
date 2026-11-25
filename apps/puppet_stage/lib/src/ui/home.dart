@@ -15,6 +15,7 @@ import '../cast.dart';
 import '../export.dart';
 import '../figure.dart';
 import '../movie.dart';
+import '../props.dart';
 import '../moves.dart';
 import '../sets.dart';
 
@@ -153,6 +154,8 @@ class _HomePageState extends State<HomePage> {
       final key = jsonEncode([
         a.kind.name,
         a.animal?.name,
+        a.prop?.name,
+        a.scale,
         a.look.toJson(),
         a.model?.toJson(),
         a.size,
@@ -220,14 +223,20 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     }
-    final animal = a.animal;
-    if (animal != null) {
-      return BuiltFigure(
+    final Figure fig;
+    final animal = a.animal, prop = a.prop;
+    if (prop != null) {
+      fig = PropFigure(buildProp(prop, a.look), scale: a.scale);
+    } else if (animal != null) {
+      fig = BuiltFigure(
         buildAnimal(animal, a.look),
         labels: {'call': animal.call},
       );
+    } else {
+      fig = BuiltFigure(buildCharacter(a.kind, a.look));
     }
-    return BuiltFigure(buildCharacter(a.kind, a.look));
+    fig.root.scale = Vector3.all(a.scale);
+    return fig;
   }
 
   /// The name of a move for [a]'s figure.
@@ -817,25 +826,63 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           if (a.model != null) ..._modelControls(a),
+          if (a.animal != null || a.prop != null)
+            Row(
+              children: [
+                const SizedBox(width: 70, child: Text('Size')),
+                Expanded(
+                  child: Slider(
+                    value: a.scale.clamp(0.25, 4),
+                    min: 0.25,
+                    max: 4,
+                    onChanged: (v) => setState(() => a.scale = v),
+                    onChangeEnd: (_) => _rebuild(),
+                  ),
+                ),
+                SizedBox(
+                  width: 52,
+                  child: Text(
+                    '×${a.scale.toStringAsFixed(2)}',
+                    textAlign: TextAlign.end,
+                  ),
+                ),
+              ],
+            ),
           if (a.model == null)
             for (final (label, get, set) in [
               (
-                a.animal == null ? 'Skin' : 'Nose',
+                a.prop != null
+                    ? 'Detail'
+                    : a.animal != null
+                    ? 'Nose'
+                    : 'Skin',
                 (Look l) => l.skin,
                 (Look l, int c) => l.copyWith(skin: c),
               ),
               (
-                a.animal == null ? 'Hair' : 'Mane',
+                a.prop != null
+                    ? 'Accent'
+                    : a.animal != null
+                    ? 'Mane'
+                    : 'Hair',
                 (Look l) => l.hair,
                 (Look l, int c) => l.copyWith(hair: c),
               ),
               (
-                a.animal == null ? 'Top' : 'Coat',
+                a.prop != null
+                    ? 'Main'
+                    : a.animal != null
+                    ? 'Coat'
+                    : 'Top',
                 (Look l) => l.top,
                 (Look l, int c) => l.copyWith(top: c),
               ),
               (
-                a.animal == null ? 'Bottom' : 'Patches',
+                a.prop != null
+                    ? 'Second'
+                    : a.animal != null
+                    ? 'Patches'
+                    : 'Bottom',
                 (Look l) => l.bottom,
                 (Look l, int c) => l.copyWith(bottom: c),
               ),
@@ -957,6 +1004,26 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                 ]),
+                for (final g in {for (final p in Prop.values) p.group})
+                  section(g, [
+                    for (final p in Prop.values.where((p) => p.group == g))
+                      (
+                        switch (g) {
+                          'Plants' => Icons.park_outlined,
+                          'Furniture' => Icons.chair_outlined,
+                          'Outdoors' => Icons.directions_car_outlined,
+                          _ => Icons.category_outlined,
+                        },
+                        p.label,
+                        Actor(
+                          kind: Kind.man,
+                          prop: p,
+                          name: p.label,
+                          x: x,
+                          z: z,
+                        ),
+                      ),
+                  ]),
               ],
             ),
           ),
@@ -1234,7 +1301,8 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         const SizedBox(height: 8),
-        Text('Moves', style: Theme.of(context).textTheme.labelLarge),
+        if (_actors[a.id]?.moves.isNotEmpty ?? false)
+          Text('Moves', style: Theme.of(context).textTheme.labelLarge),
         Wrap(
           spacing: 6,
           runSpacing: 6,
@@ -1376,12 +1444,15 @@ class _HomePageState extends State<HomePage> {
       return const Center(child: Text('Add someone in Cast first.'));
     }
     if (rig == null) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Text(
-            'This model has no skeleton the Pose tab understands '
-            '(people with arms and legs work).',
+            a.model != null
+                ? 'This model has no skeleton the Pose tab understands '
+                      '(people with arms and legs work).'
+                : 'Nothing to pose on ${a.name}: it can be placed, turned '
+                      'and moved along.',
             textAlign: TextAlign.center,
           ),
         ),

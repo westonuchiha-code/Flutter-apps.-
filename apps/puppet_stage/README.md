@@ -11,6 +11,11 @@ Windows, Android, Linux. Little 3D movies without skill (roadmap #19,
   walk, run, sit, lie down, sleep, eat, jump, look around, wag, shake off
   and its call (bark, meow, moo, neigh, oink); birds peck, flap, hop, sit,
   fly and cluck/tweet. Sitting is worked out from each body's shape.
+- **Plants and props** (`props.dart`): trees (round, pine, palm), bush,
+  flowers, cactus, potted plant, rock; table, chair, bench, bed, sofa,
+  lamp; car, fence, lamp post, mailbox; box, ball, cup, sign. Colours and
+  size per item; plants sway, the car's wheels turn and the ball rolls
+  when they move along.
 - **Actions:** each person has a list: 18 moves (wave, dance, jump, sit,
   clap, bow, point, cheer, kick, fall over, think, talk, shrug, nod, shake
   head, punch, crouch, stand), walk to / run to (tap the floor), turn,

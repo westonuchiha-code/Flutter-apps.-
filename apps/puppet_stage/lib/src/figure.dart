@@ -67,6 +67,52 @@ class BuiltFigure extends Figure {
   void apply(ActorState st) => applyState(character, clips, st);
 }
 
+/// A plant or a thing: no moves, but plants sway, a car's wheels turn and
+/// a ball rolls when they move along.
+class PropFigure extends Figure {
+  PropFigure(this.root, {this.scale = 1})
+    : _sway = root.find('sway'),
+      _wheels = [
+        for (final n in _all(root))
+          if (n.name == 'wheel') n,
+      ],
+      _spin = root.find('spin');
+
+  @override
+  final Node root;
+  final double scale;
+  final Node? _sway, _spin;
+  final List<Node> _wheels;
+
+  @override
+  Character? get rig => null;
+  @override
+  List<MoveChoice> get moves => const [];
+
+  @override
+  void apply(ActorState st) {
+    _place(st);
+    final sway = _sway;
+    if (sway != null) {
+      // A gentle breeze (it is a puppet show: always a little wind).
+      final t = st.moveTime + st.x * 0.7 + st.z * 0.4;
+      sway.rotation =
+          Quaternion.axisAngle(Vector3(0, 0, 1), math.sin(t * 1.3) * 0.025) *
+          Quaternion.axisAngle(Vector3(1, 0, 0), math.sin(t * 0.9) * 0.02);
+    }
+    final moving = st.move == 'walk' || st.move == 'run';
+    final speed = st.move == 'run' ? Movie.runSpeed : Movie.walkSpeed;
+    final distance = moving ? st.moveTime * speed : 0.0;
+    for (final w in _wheels) {
+      w.rotation = Quaternion.axisAngle(Vector3(1, 0, 0), distance / 0.34);
+    }
+    _spin?.rotation = Quaternion.axisAngle(
+      Vector3(1, 0, 0),
+      distance / (0.15 * scale),
+    );
+  }
+}
+
 /// An imported model. People with a skeleton we understand do every
 /// built-in move (through a hidden blocky stand-in, see [Retarget]); any
 /// model also plays its own animations.

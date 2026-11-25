@@ -4,8 +4,10 @@ import 'package:engine3d/engine3d.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:puppet_stage/src/animals.dart';
 import 'package:puppet_stage/src/cast.dart';
+import 'package:puppet_stage/src/figure.dart';
 import 'package:puppet_stage/src/movie.dart';
 import 'package:puppet_stage/src/moves.dart';
+import 'package:puppet_stage/src/props.dart';
 import 'package:puppet_stage/src/sets.dart';
 
 void main() {
@@ -82,6 +84,36 @@ void main() {
 
     expect(height(Animal.cat), lessThan(0.65)); // tail up
     expect(height(Animal.horse), greaterThan(1.4));
+  });
+
+  test('props stand on the floor; wheels turn only when driving', () {
+    for (final p in Prop.values) {
+      final b = boundsOf(buildProp(p, propLooks[p]!))!;
+      expect(b[1], closeTo(0, 0.05), reason: '${p.name} floor');
+      expect(b[4] - b[1], greaterThan(0.05), reason: p.name);
+    }
+    final car = PropFigure(buildProp(Prop.car, propLooks[Prop.car]!));
+    final wheel = car.root.find('wheel')!;
+    car.apply(const ActorState(0, 0, 0, 'idle', 1));
+    final parked = wheel.rotation.radians;
+    car.apply(const ActorState(0, 0, 0, 'walk', 1));
+    expect(wheel.rotation.radians, isNot(closeTo(parked, 1e-6)));
+    final tree = PropFigure(buildProp(Prop.tree, propLooks[Prop.tree]!));
+    tree.apply(const ActorState(0, 0, 0, 'idle', 0.5));
+    final a = tree.root.find('sway')!.rotation.clone();
+    tree.apply(const ActorState(0, 0, 0, 'idle', 1.7));
+    expect(tree.root.find('sway')!.rotation.x, isNot(closeTo(a.x, 1e-6)));
+    // Saved and opened again.
+    final back = Actor.fromJson(
+      jsonDecode(
+        jsonEncode(
+          Actor(kind: Kind.man, name: 'T', prop: Prop.pine, scale: 2).toJson(),
+        ),
+      ) as Map,
+    );
+    expect(back.prop, Prop.pine);
+    expect(back.scale, 2);
+    expect(back.look.top, propLooks[Prop.pine]!.top);
   });
 
   test('actions laid out in time: walking takes distance / speed', () {

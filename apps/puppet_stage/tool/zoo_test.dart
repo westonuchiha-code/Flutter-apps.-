@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 import 'package:engine3d/engine3d.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:puppet_stage/src/animals.dart';
-import 'package:puppet_stage/src/cast.dart';
 import 'package:puppet_stage/src/moves.dart';
 
 void main() {

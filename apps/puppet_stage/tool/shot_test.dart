@@ -9,8 +9,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide Action;
 import 'package:puppet_stage/main.dart';
+import 'package:puppet_stage/src/animals.dart';
 import 'package:puppet_stage/src/cast.dart';
 import 'package:puppet_stage/src/movie.dart';
+import 'package:puppet_stage/src/props.dart';
 import 'package:puppet_stage/src/sets.dart';
 import 'package:puppet_stage/src/ui/home.dart';
 
@@ -50,6 +52,28 @@ void main() {
         facing: -50,
         actions: [Action(ActionType.move, move: 'think', seconds: 3)],
       ),
+      Actor(
+        kind: Kind.man,
+        animal: Animal.dog,
+        name: 'Rex',
+        x: -0.4,
+        z: 1.2,
+        facing: 30,
+        actions: [Action(ActionType.move, move: 'wag', seconds: 3)],
+      ),
+      Actor(
+        kind: Kind.man,
+        animal: Animal.chicken,
+        name: 'Hen',
+        x: 2.6,
+        z: 0.9,
+        facing: -70,
+        actions: [Action(ActionType.move, move: 'peck', seconds: 3)],
+      ),
+      Actor(kind: Kind.man, prop: Prop.tree, name: 'Tree', x: -3.4, z: -2),
+      Actor(kind: Kind.man, prop: Prop.bench, name: 'Bench', x: 1.4, z: -2.2),
+      Actor(kind: Kind.man, prop: Prop.flowers, name: 'F', x: -2.4, z: 0.4),
+      Actor(kind: Kind.man, prop: Prop.lampPost, name: 'L', x: 3.6, z: -1.6),
     ],
   );
   for (final (name, size, dpr, land) in [
