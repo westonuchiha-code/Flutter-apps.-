@@ -20,3 +20,15 @@ Hieroglyphics.
 grid), `song.dart` (arrangement and mix), `album.dart` (the songs and
 lyrics). CI (`.github/workflows/album.yml`) renders it into the
 `album-latest` release.
+
+## Songs for the music video styles
+
+`lib/style_songs.dart` gives each Puppet Stage video style its own song:
+Liberation and Backyard (new boom bap beats), Cipher (Liquid Logic), and
+three band songs from `lib/band.dart`, a bar-by-bar engine with new
+synthesized instruments (plucked and distorted guitar, synth and slap
+bass, wah clavinet, trumpet, synth whistle, toms, claps) in any meter:
+Undertow (7/8 prog-metal), Deadpan (dry alt-rock with trumpet), Mothership
+(space funk).
+
+    dart run bin/style_takes.dart out [style ...]   # song WAV/MP3, songmap, 30 s take MP3

@@ -23,8 +23,13 @@ class Action {
     this.x = 0,
     this.z = 0,
     this.angle = 0,
+    this.rate = 1,
     Pose? pose,
   }) : pose = pose ?? {};
+
+  /// How fast the move plays (1: as made; the music video director fits
+  /// dances to the song's tempo).
+  double rate;
 
   final ActionType type;
 
@@ -50,6 +55,7 @@ class Action {
     'x': x,
     'z': z,
     'angle': angle,
+    if (rate != 1) 'rate': rate,
     if (pose.isNotEmpty)
       'pose': {
         for (final e in pose.entries)
@@ -67,6 +73,7 @@ class Action {
     x: ((j['x'] as num?) ?? 0).toDouble(),
     z: ((j['z'] as num?) ?? 0).toDouble(),
     angle: ((j['angle'] as num?) ?? 0).toDouble(),
+    rate: ((j['rate'] as num?) ?? 1).toDouble(),
     pose: {
       for (final e in ((j['pose'] as Map?) ?? const {}).entries)
         if (e.value is List && (e.value as List).length == 3)
@@ -694,9 +701,12 @@ ActorState stateAt(Actor a, double t, [List<Step>? steps]) {
         st.z0 + (st.z1 - st.z0) * k,
         st.f0 + (st.f1 - st.f0) * k,
         move,
-        over && st.action.type != ActionType.move ? t - st.end : local,
+        (over && st.action.type != ActionType.move ? t - st.end : local) *
+            st.action.rate,
         previous: prev?.move,
-        previousTime: prev == null ? 0 : prev.end - prev.start + local,
+        previousTime: prev == null
+            ? 0
+            : (prev.end - prev.start + local) * prev.action.rate,
         blend: blend,
         pose: st.action.type == ActionType.pose ? st.action.pose : null,
       );

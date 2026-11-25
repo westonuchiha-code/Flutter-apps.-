@@ -32,9 +32,12 @@ void main() {
   testWidgets('music video take', (tester) async {
     await tester.runAsync(() async {
       final Int16List music = decodeWav(File(wav).readAsBytesSync())!;
-      final map = SongMap.fromJson(
-        jsonDecode(File(mapPath).readAsStringSync()) as Map,
-      );
+      final json = jsonDecode(File(mapPath).readAsStringSync()) as Map;
+      final map = SongMap.fromJson(json);
+      // The song's own take bars unless given.
+      final take = json['take'] as List?;
+      final from = fromBar > 0 || take == null ? fromBar : take[0] as int;
+      final to = toBar > 0 || take == null ? toBar : take[1] as int;
       final style = styleById(styleId);
       final movie = Director(map, style, seed: seed).direct(
         music: MusicRef(
@@ -60,8 +63,8 @@ void main() {
         music: music,
         progress: (_) {},
         cancelled: () => false,
-        from: map.timeOf(fromBar),
-        to: toBar > 0 ? map.timeOf(toBar) : null,
+        from: map.timeOf(from),
+        to: to > 0 ? map.timeOf(to) : null,
       );
       // ignore: avoid_print
       print('wrote ${file?.path} ${file?.lengthSync()}');

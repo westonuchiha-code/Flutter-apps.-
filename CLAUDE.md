@@ -250,7 +250,8 @@ packages/    # shared Dart/Flutter packages
 tool/        # developer scripts (setup_linux_dev.sh, new_app.sh, icons/ = every app's pixel icon)
              #   album/ = "Twelve-Bit Science", an instrumental boom bap album rendered by our own code
              #   (synthesized loops/drums/scratches; the chip-voice raps were dropped, owner's call;
-             #   Liquid Logic keeps a beeped robot chorus, lib/beeps.dart);
+             #   Liquid Logic keeps a beeped robot chorus, lib/beeps.dart); style_songs.dart +
+             #   band.dart = a song per music video style (boom bap, prog-metal, alt-rock, funk);
              #   CI (album.yml) publishes it as album-latest (MP3 + WAV) with a 30 s Liquid Logic
              #   music video, made as MP4 by Puppet Stage on Windows
 ROADMAP.md   # agreed app ideas and build order - keep it updated

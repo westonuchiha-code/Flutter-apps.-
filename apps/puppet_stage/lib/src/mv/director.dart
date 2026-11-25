@@ -11,6 +11,7 @@ import 'dart:math' as math;
 import '../cast.dart';
 import '../look.dart';
 import '../movie.dart';
+import '../moves.dart' show moveById;
 import '../props.dart';
 import '../sets.dart';
 import 'song_map.dart';
@@ -223,44 +224,116 @@ class Director {
       ));
     }
 
-    // ---- Moves, bar by bar. ----
+    // ---- Moves, bar by bar: everyone their own. ----
     final bar = map.barSeconds;
+    final beat = bar / 4;
+    // Dances made at 86 BPM play at the song's tempo.
+    double rateFor(String id) {
+      final d = moveById(id)?.duration ?? 0;
+      if (d <= 0) return 1;
+      final beats = math.max(1, (d / beat).round());
+      return d / (beats * beat);
+    }
+
     for (final (m, a) in people) {
       final table =
           style.moves[m.role] ??
           const {
             'all': ['idle'],
           };
-      String? current;
-      var length = 0.0;
-      void flush() {
-        if (current != null && length > 0) {
-          a.actions.add(
-            Action(ActionType.move, move: current, seconds: length),
-          );
-        }
-        length = 0;
+      // A personal palette: some of the role's moves, plus the style's
+      // dances, so no two people move alike.
+      List<String> palette(String section) {
+        final base = _bySection(table, section, table['all'] ?? ['idle']);
+        final extra = m.animal == null && m.role != 'dj'
+            ? style.dances
+            : const <String>[];
+        final all = {...base, ...extra}.toList()..shuffle(_r);
+        return all.take(math.max(2, math.min(4, all.length))).toList();
       }
 
+      final mine = <String, List<String>>{};
+      // How often they change move (bars) and when (phase).
+      final every = m.role == 'lead' ? 2 : _pick(const [1, 2, 2, 4]);
+      final phase = _r.nextInt(every);
       if (map.offset > 0) {
         a.actions.add(
           Action(ActionType.move, move: 'idle', seconds: map.offset),
         );
       }
-      // A move holds for 2 bars before it may change (less twitchy).
+      String? current;
+      var length = 0.0;
+      void flush() {
+        if (current != null && length > 0.001) {
+          a.actions.add(
+            Action(
+              ActionType.move,
+              move: current,
+              seconds: length,
+              rate: rateFor(current),
+            ),
+          );
+        }
+        length = 0;
+      }
+
+      var hx = a.x, hz = a.z, cx = a.x, cz = a.z;
       String? held;
       for (var b = 0; b < map.bars.length; b++) {
         final info = map.bars[b];
+        final newSection = b == 0 || map.bars[b - 1].section != info.section;
+        var left = bar;
+        // Wander: at a new section, walk somewhere near home (or back).
+        if (newSection &&
+            b > 0 &&
+            m.role != 'dj' &&
+            !(m.role == 'lead' && info.vocal) &&
+            _r.nextDouble() < style.roam) {
+          final home = (cx - hx).abs() + (cz - hz).abs() > 0.3;
+          final ang = _r.nextDouble() * math.pi * 2;
+          final nx = home
+              ? hx
+              : hx + math.cos(ang) * (0.6 + _r.nextDouble() * 0.8);
+          final nz = home
+              ? hz
+              : hz + math.sin(ang) * (0.6 + _r.nextDouble() * 0.6);
+          final d = math.sqrt((nx - cx) * (nx - cx) + (nz - cz) * (nz - cz));
+          final secs = d / Movie.walkSpeed;
+          if (secs < bar * 0.8) {
+            flush();
+            current = null;
+            a.actions.add(Action(ActionType.walk, x: nx, z: nz));
+            left -= secs;
+            cx = nx;
+            cz = nz;
+          }
+        }
+        // Now and then, a spin.
+        if (m.animal == null &&
+            left > 2 &&
+            m.role != 'dj' &&
+            !(m.role == 'lead' && info.vocal) &&
+            _r.nextDouble() < style.spins * (info.energy + 0.2)) {
+          flush();
+          current = null;
+          a.actions.add(
+            Action(
+              ActionType.turn,
+              angle: _r.nextBool() ? 360 : -360,
+              seconds: beat * 2,
+            ),
+          );
+          left -= 1.6; // a turn of 360° takes 1.6 s (see plan)
+        }
         String move;
         if (m.role == 'lead' && info.vocal) {
           move = m.animal == null ? 'rapMic' : 'idle';
         } else if (m.role == 'dj' && info.dj) {
           move = 'scratch';
-        } else if (b.isEven || held == null) {
-          final list = _bySection(
-            table,
+        } else if (held == null || (b + phase) % every == 0 || newSection) {
+          final list = mine.putIfAbsent(
             info.section,
-            table['all'] ?? ['idle'],
+            () => palette(info.section),
           );
           move = _pick(list);
           held = move;
@@ -271,7 +344,7 @@ class Director {
           flush();
           current = move;
         }
-        length += bar;
+        length += left;
       }
       flush();
     }
@@ -323,6 +396,15 @@ class Director {
         } else {
           kind = 'medium';
         }
+      }
+      if (subject != null && subject.prop == null) {
+        final st = stateAt(subject, map.timeOf(b) + len * map.barSeconds / 2);
+        subject = Actor.fromJson({
+          ...subject.toJson(),
+          'x': st.x,
+          'z': st.z,
+          'facing': st.facing,
+        });
       }
       final frame = _frameFor(
         kind,
@@ -435,9 +517,9 @@ class Director {
     switch (how) {
       case 'push':
         return (
-          x: f.x + (f.tx - f.x) * 0.35,
-          y: f.y + (f.ty - f.y) * 0.2,
-          z: f.z + (f.tz - f.z) * 0.35,
+          x: f.x + (f.tx - f.x) * 0.5,
+          y: f.y + (f.ty - f.y) * 0.3,
+          z: f.z + (f.tz - f.z) * 0.5,
           tx: f.tx,
           ty: f.ty,
           tz: f.tz,
@@ -446,7 +528,7 @@ class Director {
       case 'crane':
         return (
           x: f.x,
-          y: f.y + 1.6,
+          y: f.y + 2.2,
           z: f.z,
           tx: f.tx,
           ty: f.ty,
@@ -455,7 +537,7 @@ class Director {
         );
       default: // orbit / spin: round the subject
         final turn =
-            (how == 'spin' ? 70 : 30) *
+            (how == 'spin' ? 100 : 50) *
             (_r.nextBool() ? 1 : -1) *
             math.pi /
             180;

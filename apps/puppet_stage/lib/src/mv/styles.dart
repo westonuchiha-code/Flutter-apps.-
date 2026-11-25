@@ -65,6 +65,9 @@ class MvStyle {
     this.drift = 0.6,
     this.drifts = const {'push': 2, 'orbit': 1, 'crane': 1},
     this.symmetric = false,
+    this.dances = const [],
+    this.roam = 0.3,
+    this.spins = 0,
   });
 
   final String id, name, inspiredBy, about;
@@ -94,6 +97,15 @@ class MvStyle {
 
   /// Dead-centre framing (no angled shots).
   final bool symmetric;
+
+  /// Dances anyone (not the DJ) may mix into their moves.
+  final List<String> dances;
+
+  /// Chance someone walks somewhere new when a section starts.
+  final double roam;
+
+  /// Chance per bar of a spin (scaled by the bar's energy).
+  final double spins;
 }
 
 Look _lk(
@@ -127,6 +139,8 @@ final styles = <MvStyle>[
   // ---- Dead Prez: street, red/black/green, fists up. ----
   MvStyle(
     id: 'liberation',
+    dances: ['fistPump', 'stomp', 'lean'],
+    roam: 0.35,
     name: 'Liberation',
     inspiredBy: 'Dead Prez',
     about: 'Night street, hard contrast, red, black and green; raised fists, slow pushes in.',
@@ -249,6 +263,9 @@ final styles = <MvStyle>[
   // ---- Hieroglyphics: a crew cipher, fisheye, VHS. ----
   MvStyle(
     id: 'cipher',
+    dances: ['twoStep', 'shimmy', 'armWave', 'clapHigh', 'lean'],
+    roam: 0.5,
+    spins: 0.06,
     name: 'Cipher',
     inspiredBy: 'Hieroglyphics',
     about: 'The crew in a circle in the park, fisheye from below, VHS colour, quick cuts.',
@@ -351,6 +368,9 @@ final styles = <MvStyle>[
   // ---- People Under the Stairs: a backyard party, warm 70s film. ----
   MvStyle(
     id: 'backyard',
+    dances: ['twoStep', 'sway', 'shimmy', 'lean', 'clapHigh'],
+    roam: 0.6,
+    spins: 0.03,
     name: 'Backyard',
     inspiredBy: 'People Under the Stairs',
     about: 'A sunny backyard party: records, turntables, a dog; warm 70s film, easy drifting shots.',
@@ -461,6 +481,8 @@ final styles = <MvStyle>[
   // ---- Tool: dim, uneasy, stop motion. ----
   MvStyle(
     id: 'undertow',
+    dances: ['robot', 'sway', 'headbang'],
+    roam: 0.3,
     name: 'Undertow',
     inspiredBy: 'Tool',
     about: 'A dim green-brown hall and a dead desert at night; stop-motion jerks, flicker, slow uneasy moves.',
@@ -565,6 +587,8 @@ final styles = <MvStyle>[
   // ---- Cake: deadpan, flat, still. ----
   MvStyle(
     id: 'deadpan',
+    dances: ['sway', 'robot'],
+    roam: 0.15,
     name: 'Deadpan',
     inspiredBy: 'Cake',
     about: 'Flat bright colours, people in a row staring at the camera, still dead-centre framing, rare cuts.',
@@ -636,6 +660,9 @@ final styles = <MvStyle>[
   // ---- Parliament: space funk. ----
   MvStyle(
     id: 'mothership',
+    dances: ['shimmy', 'armWave', 'clapHigh', 'twoStep', 'robot'],
+    roam: 0.6,
+    spins: 0.12,
     name: 'Mothership',
     inspiredBy: 'Parliament',
     about: 'Space funk on the moon and a stage in coloured lights; glitter colours that cycle, spinning cameras, everyone dancing.',

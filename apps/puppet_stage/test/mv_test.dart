@@ -64,7 +64,7 @@ void main() {
       }
       // Everyone's actions cover the song.
       for (final a in m.actors.where((a) => a.prop == null)) {
-        final len = a.actions.fold<double>(0, (t, x) => t + x.seconds);
+        final len = plan(a).last.end;
         expect(
           len,
           closeTo(map.seconds, 0.01),
