@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:album/album.dart';
+import 'package:album/beeps.dart';
 import 'package:album/dsp.dart';
 import 'package:album/rap.dart';
 import 'package:album/song.dart';
@@ -59,10 +60,13 @@ void main(List<String> args) {
     switch (k) {
       case 'flow':
         flow = v;
+        if (v == 'beep') beepChorus = liquidChorus;
       case 'lift':
         pitchLift = double.parse(v);
       case 'level':
         vocalLevel = double.parse(v);
+      case 'beeps':
+        beepLevel = double.parse(v);
       case 'chain':
         vocalChain = v;
       case 'take':

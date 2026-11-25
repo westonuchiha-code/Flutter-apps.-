@@ -5,6 +5,7 @@ library;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'beeps.dart';
 import 'dsp.dart';
 import 'instruments.dart';
 import 'rap.dart';
@@ -315,6 +316,7 @@ Float32List renderSong(
       switch (sec.part) {
         case Part.verse:
           if (vocals &&
+              flow != 'beep' &&
               stems.contains('vocals') &&
               sec.mc != null &&
               i < sec.lines.length) {
@@ -367,7 +369,23 @@ Float32List renderSong(
               ? ''
               : sec.lines[(i ~/ 2) % sec.lines.length];
           if (i.isEven) {
-            if (vocals && stems.contains('vocals')) {
+            final chorus = beepChorus;
+            if (flow == 'beep') {
+              // The chorus in beeps: one robot calls, all three answer.
+              if (vocals && stems.contains('vocals') && chorus != null) {
+                final li = (i ~/ 2) % chorus.length;
+                final who = li == 0 ? [0] : [0, 1, 2];
+                for (final k in who) {
+                  final v = beepLine(chorus[li], beepVoices[k], song.bpm);
+                  mix.add(
+                    _beepChain(v),
+                    t + k * 0.008,
+                    beepLevel * (li == 0 ? 1 : 0.75),
+                    (k - 1) * 0.35,
+                  );
+                }
+              }
+            } else if (vocals && stems.contains('vocals')) {
               for (final (k, mc) in sec.mcs.indexed) {
                 final v = buf(bar + 1);
                 if (flow == 'line') {
@@ -477,6 +495,20 @@ Float32List renderSong(
 
 /// Vocal level for the 'line' flow (the first render used 1.5).
 var vocalLevel = 2.2;
+
+/// The chorus for flow 'beep' (null: none).
+List<List<Syl>>? beepChorus;
+var beepLevel = 1.0;
+
+/// Beeps through the sampler: a little low end off, a small room.
+Float32List _beepChain(Float32List v) {
+  final hp = Biquad.highPass(90);
+  for (var i = 0; i < v.length; i++) {
+    v[i] = hp.run(v[i]);
+  }
+  compress(v, threshold: 0.3, ratio: 3, makeup: 1.2);
+  return room(v, size: 0.25, mix: 0.12);
+}
 
 /// 'clean' or 'record' (the voice as a dusty vocal sample).
 var vocalChain = 'clean';

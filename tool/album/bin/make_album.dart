@@ -27,15 +27,13 @@ Future<void> main(List<String> args) async {
     jobs.add(Isolate.run(() => _render(out, n, title, !vocals)));
   }
   await Future.wait(jobs);
-
 }
 
 void _render(String out, int n, String title, bool instrumental) {
   final t = tracks(vocals: !instrumental)[n - 1];
   final watch = Stopwatch()..start();
   final audio = t.$2();
-  final base =
-      '${n.toString().padLeft(2, '0')} - $title';
+  final base = '${n.toString().padLeft(2, '0')} - $title';
   final name = '$base.wav';
   final wav = encodeWav16(audio, sr.round());
   File('$out/$name').writeAsBytesSync(wav);
