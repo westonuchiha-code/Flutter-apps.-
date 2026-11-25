@@ -223,3 +223,43 @@ void makeConsoleFolders(String romsDir) {
         .createSync(recursive: true);
   }
 }
+
+/// The menu's own ROMs folder: `XMB Frontend/ROMs` in the device's main
+/// storage (shared storage, so the emulators can read the games and files
+/// can be dropped in over USB or with a file manager).
+String defaultRomsDir(String storageRoot) =>
+    p.join(storageRoot, 'XMB Frontend', 'ROMs');
+
+/// Name of the guide file written into the ROMs folder.
+const guideFile = 'HOW TO ADD GAMES.txt';
+
+/// The guide: which folder takes which files.
+String romsGuide() {
+  final b = StringBuffer()
+    ..writeln('XMB Frontend: put each game in its console\'s folder.')
+    ..writeln(
+      'Only these file types are picked up in each folder (as on the PC):',
+    )
+    ..writeln();
+  for (final s in systems) {
+    b.writeln('${s.folder.padRight(18)} .${s.exts.join('  .')}');
+  }
+  b
+    ..writeln()
+    ..writeln('Demo Discs/<console>  demo discs, kept apart from your games.')
+    ..writeln()
+    ..writeln('Multi-disc games: keep the discs together with a .m3u playlist.')
+    ..writeln('Discs with a .cue / .gdi: keep the track files beside it.')
+    ..writeln('Box art: a picture with the same name as the game (Game.png).')
+    ..writeln()
+    ..writeln(
+      'Use the same ROM file names as on the PC: saves are matched by name.',
+    );
+  return b.toString();
+}
+
+/// Makes the console folders and the guide in [romsDir].
+void prepareRomsFolder(String romsDir) {
+  makeConsoleFolders(romsDir);
+  File(p.join(romsDir, guideFile)).writeAsStringSync(romsGuide());
+}

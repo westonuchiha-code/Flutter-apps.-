@@ -63,8 +63,30 @@ class _HomePageState extends State<HomePage> {
     unawaited(_applyScreen().catchError((_) {}));
     await _checkDevice();
     _loaded = true;
-    if (_s.romsDir != null && _s.games.isEmpty) await _scan();
     _bump();
+    if (_s.romsDir == null) {
+      await _setupDefaultFolder();
+    } else {
+      // The cached list shows at once; look for new games behind it.
+      await _scan(quiet: _s.games.isNotEmpty);
+    }
+    _bump();
+  }
+
+  /// Makes the menu's own ROMs folder (with a folder per console) and uses
+  /// it. Needs storage access; tried again when it is allowed.
+  Future<void> _setupDefaultFolder() async {
+    if (!_allFiles || !_a.available) return;
+    try {
+      final roots = await _a.storageRoots();
+      final dir = defaultRomsDir(roots.first);
+      prepareRomsFolder(dir);
+      _s.romsDir = dir;
+      _s.changed();
+      await _scan(quiet: true);
+    } catch (e) {
+      _xmb.currentState?.toast('Could not make the ROMs folder: $e');
+    }
   }
 
   /// Applies the Screen setting ('auto' locks nothing).
@@ -86,9 +108,13 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _resumed() async {
     _s.returned(DateTime.now().millisecondsSinceEpoch);
-    final had = _allFiles;
     await _checkDevice();
-    if (!had && _allFiles && _s.romsDir != null) await _scan();
+    if (_s.romsDir == null) {
+      await _setupDefaultFolder();
+    } else if (_allFiles) {
+      // Games may have been copied in while the menu was away.
+      await _scan(quiet: true);
+    }
     _bump();
   }
 
@@ -108,18 +134,22 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() => _revision++);
   }
 
-  Future<void> _scan() async {
+  /// Reads the ROMs folder. [quiet]: only say something when the number of
+  /// games changed.
+  Future<void> _scan({bool quiet = false}) async {
     final dir = _s.romsDir;
     if (dir == null || _scanning) return;
     setState(() => _scanning = true);
     try {
+      final before = _s.games.length;
       final list = await runInBackground(scanLibraryJson, dir);
       _s.games = [for (final g in list) Game.fromJson(g)];
       _s.scanned = DateTime.now();
       _s.changed();
-      _xmb.currentState?.toast(
-        'Found ${_s.games.length} game${_s.games.length == 1 ? '' : 's'}',
-      );
+      final n = _s.games.length;
+      if (!quiet || n != before) {
+        _xmb.currentState?.toast('$n game${n == 1 ? '' : 's'} in the library');
+      }
     } catch (e) {
       _xmb.currentState?.toast('Could not read the ROMs folder: $e');
     } finally {
@@ -272,15 +302,26 @@ class _HomePageState extends State<HomePage> {
       );
     }
     if (_s.romsDir == null) {
+      if (_allFiles) {
+        out.add(
+          XItem(
+            title: 'Setting Up the ROMs Folder…',
+            icon: Icons.hourglass_empty,
+            onPress: _setupDefaultFolder,
+          ),
+        );
+      }
+      return out;
+    }
+    if (_s.games.isEmpty) {
       out.add(
         XItem(
-          title: 'Choose Your ROMs Folder',
-          subtitle: 'The folder with one folder per console (NES, SNES, PS1…)',
-          icon: Icons.create_new_folder_outlined,
-          children: () => _rootsCache ?? _browse(null),
+          title: 'How to Add Games',
+          subtitle: 'Copy them into ${_shortPath(_s.romsDir!)}/<console>',
+          icon: Icons.lightbulb_outline,
+          onPress: _howToAdd,
         ),
       );
-      return out;
     }
     for (final g in _s.front()) {
       out.add(_gameItem(g, showPinned: true));
@@ -456,6 +497,28 @@ class _HomePageState extends State<HomePage> {
     ];
   }
 
+  /// "XMB Frontend/ROMs" for the built-in folder, else the full path.
+  String _shortPath(String dir) {
+    final i = dir.indexOf('XMB Frontend');
+    return i >= 0 ? dir.substring(i) : dir;
+  }
+
+  void _howToAdd() => _xmb.currentState?.showPanel(
+    XPanel(
+      title: 'How to Add Games',
+      lines: [
+        'Copy each game into its console\'s folder in',
+        _s.romsDir ?? '',
+        'with a file manager, or over USB from a PC. The menu finds them '
+            'when you come back to it.',
+        '',
+        for (final s in systems) '${s.folder}:  .${s.exts.join('  .')}',
+        '',
+        'Use the same ROM file names as on the PC: saves are matched by name.',
+      ],
+    ),
+  );
+
   void _useRoms(String dir) {
     _s.romsDir = dir;
     _s.games = [];
@@ -474,9 +537,39 @@ class _HomePageState extends State<HomePage> {
     return [
       XItem(
         title: 'ROMs Folder',
-        subtitle: _s.romsDir ?? 'Not chosen yet',
+        subtitle: _s.romsDir == null
+            ? 'Made when storage access is allowed'
+            : _s.romsDir!.contains('XMB Frontend')
+            ? '${_shortPath(_s.romsDir!)} (built in)'
+            : _s.romsDir!,
         icon: Icons.folder_special_outlined,
-        children: () => _rootsCache ?? _browse(null),
+        children: () => [
+          XItem(
+            title: 'How to Add Games',
+            subtitle: 'Which folder takes which files',
+            icon: Icons.lightbulb_outline,
+            onPress: _howToAdd,
+          ),
+          XItem(
+            title: 'Use the Built-in Folder',
+            subtitle: 'XMB Frontend/ROMs, set up with a folder per console',
+            icon: Icons.folder_special_outlined,
+            onPress: () async {
+              final roots = await _a.storageRoots();
+              final dir = defaultRomsDir(roots.first);
+              try {
+                prepareRomsFolder(dir);
+              } catch (_) {}
+              _useRoms(dir);
+            },
+          ),
+          XItem(
+            title: 'Choose Another Folder',
+            subtitle: 'An existing ROMs folder, on this device or an SD card',
+            icon: Icons.drive_folder_upload_outlined,
+            children: () => _rootsCache ?? _browse(null),
+          ),
+        ],
       ),
       if (_s.romsDir != null)
         XItem(

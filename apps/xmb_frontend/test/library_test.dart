@@ -111,6 +111,21 @@ void main() {
     );
   });
 
+  test('the built-in ROMs folder comes ready, with a guide', () {
+    final dir = defaultRomsDir(root.path);
+    expect(dir, endsWith(p.join('XMB Frontend', 'ROMs')));
+    prepareRomsFolder(dir);
+    for (final s in systems) {
+      expect(Directory(p.join(dir, s.folder)).existsSync(), isTrue);
+    }
+    final guide = File(p.join(dir, guideFile)).readAsStringSync();
+    expect(guide, contains('Game Boy Advance'));
+    expect(guide, contains('.gba'));
+    // The guide itself is never taken for a game.
+    expect(scanLibrary(dir), isEmpty);
+    prepareRomsFolder(dir); // again: no harm
+  });
+
   test('emulator choice follows what is installed', () {
     final ps1 = systemById('ps1')!;
     expect(chooseRunner(ps1, {}), isNull);

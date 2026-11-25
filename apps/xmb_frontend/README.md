@@ -42,6 +42,11 @@ over (cross saves come in part 3, through the `Cross-Save` GitHub repo).
   not for the Play Store) so ROMs can be anywhere and their paths handed to
   the emulators. The ROMs folder is picked with an XMB folder browser
   (internal storage and SD cards).
+  By default the menu makes and uses its own folder, `XMB Frontend/ROMs`
+  in the device's main storage, with a folder per console and a
+  `HOW TO ADD GAMES.txt` guide: drop games in (file manager or USB) and
+  they show up when the menu comes back to the front. "Choose Another
+  Folder" in Settings > ROMs Folder points it elsewhere.
 
 The intents follow each emulator's documented extras but must be tried on
 the device: paths differ between Play Store and sideloaded builds.
