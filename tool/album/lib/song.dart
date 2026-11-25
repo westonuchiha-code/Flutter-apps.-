@@ -318,8 +318,13 @@ Float32List renderSong(
               sec.mc != null &&
               i < sec.lines.length) {
             final v = buf(bar + 1);
-            rapBar(v, sec.lines[i], sec.mc!, 0, song.bpm);
-            mix.add(_voice(v), t, 1.5);
+            if (flow == 'line') {
+              rapLine(v, sec.lines[i], sec.mc!, 0, song.bpm);
+              mix.add(_cleanVoice(v), t, vocalLevel);
+            } else {
+              rapBar(v, sec.lines[i], sec.mc!, 0, song.bpm);
+              mix.add(_voice(v), t, 1.5);
+            }
           }
           // The DJ marks the end of a verse.
           if (i == sec.bars - 1) {
@@ -339,8 +344,18 @@ Float32List renderSong(
             if (vocals && stems.contains('vocals')) {
               for (final (k, mc) in sec.mcs.indexed) {
                 final v = buf(bar + 1);
-                rapBar(v, line, mc, 0, song.bpm);
-                mix.add(_voice(v), t + k * 0.012, 1.15, (k - 1) * 0.3);
+                if (flow == 'line') {
+                  rapLine(v, line, mc, 0, song.bpm);
+                  mix.add(
+                    _cleanVoice(v),
+                    t + k * 0.012,
+                    vocalLevel * 0.75,
+                    (k - 1) * 0.3,
+                  );
+                } else {
+                  rapBar(v, line, mc, 0, song.bpm);
+                  mix.add(_voice(v), t + k * 0.012, 1.15, (k - 1) * 0.3);
+                }
               }
             }
           } else if (stems.contains('dj')) {
@@ -432,6 +447,21 @@ Float32List renderSong(
     return out;
   }
   return master(mix, seconds: end + 0.5);
+}
+
+/// Vocal level for the 'line' flow (the first render used 1.5).
+var vocalLevel = 2.2;
+
+/// A clearer vocal chain: no drive, presence for the consonants, gentle
+/// compression, almost dry.
+Float32List _cleanVoice(Float32List v) {
+  final hp = Biquad.highPass(140);
+  final pres = Biquad.peak(3200, 4, 1.0);
+  for (var i = 0; i < v.length; i++) {
+    v[i] = pres.run(hp.run(v[i]));
+  }
+  compress(v, threshold: 0.3, ratio: 3, makeup: 1.3);
+  return room(v, size: 0.15, mix: 0.06);
 }
 
 /// The vocal chain: a touch of drive, presence, compression and a small

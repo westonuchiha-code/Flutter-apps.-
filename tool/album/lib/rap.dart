@@ -105,3 +105,39 @@ Float32List phrase(String text, Mc mc, {double speed = 1}) {
   );
   return trim(renderSpeech(textToSpeech(text), s, rate: sr), 0.004);
 }
+
+/// How verses are delivered: 'word' (each word on the 16th grid, the first
+/// album render) or 'line' (each line spoken whole, so the chip runs the
+/// words together like speech, fitted to the bar).
+var flow = 'word';
+
+/// Pitch multiplier for every MC (1: as set).
+var pitchLift = 1.0;
+
+/// One bar, spoken as one phrase: the chip's own word joins and a falling
+/// statement contour, sped up only as much as the bar needs.
+void rapLine(
+  Float32List dst,
+  String line,
+  Mc mc,
+  double at,
+  double bpm, {
+  double gain = 1,
+}) {
+  final words = textToSpeech(line);
+  if (words.isEmpty) return;
+  SpeechSettings s(double speed) => SpeechSettings(
+    chip: mc.chip,
+    pitch: mc.pitch * pitchLift,
+    speed: speed,
+    contour: Contour.statement,
+  );
+  final beat = 60 / bpm;
+  final room = beat * 3.6;
+  var out = trim(renderSpeech(words, s(1), rate: sr), 0.004);
+  final speed = (out.length / sr / room).clamp(0.85, 1.7);
+  if ((speed - 1).abs() > 0.03) {
+    out = trim(renderSpeech(words, s(speed), rate: sr), 0.004);
+  }
+  mixInto(dst, out, at + beat * 0.05, gain * mc.gain);
+}
