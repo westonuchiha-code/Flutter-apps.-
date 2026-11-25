@@ -49,6 +49,10 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   `AssetType.picture`; videos and Chip Cam clips as `AssetType.video`.
 - Video files: `packages/video_encoder` (`openVideoWriter`). Its MP4 path is
   native and only compiled by CI; check new uses with the app's "Test export".
+- 3D: use `packages/engine3d`. The PS1 look (`RenderOptions()`) is the
+  default (owner's choice); offer `RenderOptions.clean` as a setting. No
+  depth buffer: put floors/terrain on `Node.layer = -1`. 3D models go to
+  the Locker as `AssetType.model` (.glb preferred).
 - Background work: use `runInBackground(topLevelFunction, arg)` from
   `app_shell`, never `Isolate.run(() => ...)` inside a widget or controller
   (the closure can drag the State and its ports along: "object is
@@ -138,6 +142,8 @@ apps/        # one folder per Flutter application
              #                      photos), selections, tile maps, PNG/sheet/GIF; all to the Locker
              #   chip_cam         - camera through 19 old video hardware/signal emulations, CRT
              #                      view, snapshots/GIFs (Pictures), video+sound clips (Videos)
+             #   lab3d            - 3D Lab: engine3d test ground (walk/orbit a courtyard, PS1 look,
+             #                      load glTF/OBJ, Locker pictures as textures, fps)
              #   lofi_video       - Lo-Fi Video Maker: storyboard of clips/pictures/sprites/titles
              #                      through video_kit effects + music -> MP4 (60 s max, 4:3)
              #   photo_quilt      - photo -> patchwork quilt (classic blocks, palette, seams,
@@ -172,6 +178,9 @@ packages/    # shared Dart/Flutter packages
              #   video_encoder - video files with sound: MP4 (H.264+AAC) via Android
              #                   MediaCodec / Windows Media Foundation (Mp4Writer); pure-Dart
              #                   MJPEG AVI everywhere (AviWriter); openVideoWriter picks
+             #   engine3d      - lightweight 3D: scene graph, meshes/terrain, glTF/OBJ loaders, orbit/
+             #                   walk cameras, sorted-triangle renderer (PS1 look by default,
+             #                   RenderOptions.clean), Viewport3D widget
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,
              #                   band-limited morphing wavetables (Wavetable; set
              #                   PolySynth.wavetable to play drawn waves), speech chips

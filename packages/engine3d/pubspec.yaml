@@ -1,0 +1,19 @@
+name: engine3d
+description: "Lightweight 3D for Flutter apps: scenes, cameras, glTF/OBJ models, vertex lighting and fog, drawn as sorted textured triangles with a PS1 look by default."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.14.0
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  material_ui: ^1.11.1
+  vector_math: ^2.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

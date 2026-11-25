@@ -110,9 +110,11 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
 
 ## Phase 3 · 3D
 
-15. ⬜ **3D Engine.** Shared lightweight 3D foundation: rendering, camera,
-    models, textures, simple lighting, walking around. Everything below runs
-    on it.
+15. ✅ **3D Engine.** `packages/engine3d`: scene graph, meshes and terrain,
+    glTF/OBJ models, orbit and walk cameras with collisions, vertex lighting,
+    fog, triangles sorted far to near and drawn on the GPU; PS1 look by
+    default (owner's choice), clean look optional. Test app: 3D Lab.
+    Not yet: skinned/animated characters (comes with #19).
 16. ⬜ **Desktop Aquarium.** PS1-style low-poly fish wearing real fish photo
     textures (made with Texture Capture), swimming in a tank on the home
     screen or desktop. The smallest 3D app, so it tests the engine first.
