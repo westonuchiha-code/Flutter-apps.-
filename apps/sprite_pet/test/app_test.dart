@@ -17,7 +17,7 @@ void main() {
     'the pet is saved and treats come from new Asset Locker items',
     () async {
       final dir = Directory.systemTemp.createTempSync('pet_store');
-      addTearDown(() => dir.deleteSync(recursive: true));
+      addTearDown(() => _remove(dir));
       var items = <String, (String, String)>{'a': ('Sprite', 'Old')};
       final c = PetController(
         store: PetStore(dir),
@@ -56,7 +56,7 @@ void main() {
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
     final dir = Directory.systemTemp.createTempSync('pet_ui');
-    addTearDown(() => dir.deleteSync(recursive: true));
+    addTearDown(() => _remove(dir));
     final services = (await tester.runAsync(
       () => ShellServices.create(appConfig, root: dir),
     ))!;
@@ -78,6 +78,21 @@ void main() {
     await tester.pump();
     expect(c.data.pet.log, isNotEmpty);
     expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
     c.dispose();
+    // Let any save still in flight finish before the folder goes.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 200)),
+    );
   });
+}
+
+/// Windows can't delete a folder while a file in it is still open; a leftover
+/// temp folder is harmless.
+void _remove(Directory dir) {
+  try {
+    dir.deleteSync(recursive: true);
+  } on FileSystemException {
+    // Still in use: the OS cleans temp folders.
+  }
 }
