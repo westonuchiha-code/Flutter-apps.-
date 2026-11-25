@@ -13,6 +13,9 @@ env:
   # Keep in sync with the Flutter version used for local development.
   FLUTTER_VERSION: "3.50.1"
   FLUTTER_CHANNEL: stable
+  # What Flutter's Android builds download (cached between runs).
+  ANDROID_NDK_VERSION: "28.2.13676358"
+  ANDROID_CMAKE_VERSION: "3.22.1"
 
 jobs:
   # Finds every Flutter app under apps/ so each one is checked and built.
@@ -109,6 +112,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Fewer jobs downloading at once: Maven Central answers bursts with
+      # "429 Too Many Requests".
+      max-parallel: 8
       matrix:
         app: ${{ fromJson(needs.discover.outputs.android_apps) }}
     defaults:
@@ -128,8 +134,25 @@ jobs:
           cache: true
       - name: Use the shared signing key (updates install over old builds)
         run: mkdir -p ~/.android && cp "$GITHUB_WORKSPACE/.github/android/debug.keystore" ~/.android/debug.keystore
+      # The NDK (~1 GB) and CMake used to be downloaded by every job, and a
+      # corrupted download failed the build.
+      - name: Cache Android NDK and CMake
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/lib/android/sdk/ndk/${{ env.ANDROID_NDK_VERSION }}
+            /usr/local/lib/android/sdk/cmake/${{ env.ANDROID_CMAKE_VERSION }}
+          key: android-ndk-${{ env.ANDROID_NDK_VERSION }}-cmake-${{ env.ANDROID_CMAKE_VERSION }}
       - run: flutter pub get
-      - run: flutter build apk --release
+      - name: "Build APK (retried: downloads sometimes fail)"
+        run: |
+          for attempt in 1 2 3; do
+            if flutter build apk --release; then exit 0; fi
+            [ "$attempt" = 3 ] && break
+            echo "::warning::Build attempt $attempt failed (often a download hiccup); retrying in $((attempt * 60)) s"
+            sleep $((attempt * 60))
+          done
+          exit 1
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.app }}-android-apk

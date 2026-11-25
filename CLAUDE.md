@@ -114,6 +114,11 @@ Runs on every push and pull request, for every app found in `apps/*/pubspec.yaml
 
 (Platform jobs only include apps that have that platform's folder.)
 
+Android jobs run at most 8 at a time, cache Gradle plus the NDK/CMake
+(`ANDROID_NDK_VERSION`/`ANDROID_CMAKE_VERSION` in `ci.yml`; update them if
+Flutter's defaults change), and retry `flutter build apk` twice: Maven
+Central's 429s and corrupted SDK downloads used to fail runs.
+
 New apps are picked up automatically — no workflow edits needed. An app with a
 `.ci-skip` file is left out (work in progress, nothing published).
 
