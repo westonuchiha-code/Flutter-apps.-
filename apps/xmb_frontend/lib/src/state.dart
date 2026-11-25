@@ -39,6 +39,12 @@ class MenuState extends ChangeNotifier {
   /// Swap A and B (for Nintendo-style button layouts).
   bool swapAB = false;
 
+  /// Which way the menu is drawn. 'auto' follows the device: the Retroid
+  /// Pocket Classic's screen (1240×1080) is wider than tall, so Android
+  /// calls it landscape even though the device is held upright; forcing
+  /// "portrait" there turns everything sideways.
+  String screen = 'auto';
+
   /// RetroArch build to use (null: the first one installed).
   String? retroArchPackage;
 
@@ -170,6 +176,7 @@ class MenuState extends ChangeNotifier {
     'showHidden': showHidden,
     'sortBy': sortBy.name,
     'swapAB': swapAB,
+    'screen': screen,
     'retroArchPackage': retroArchPackage,
     'cores': cores,
     'preferRetroArch': preferRetroArch.toList(),
@@ -203,6 +210,9 @@ class MenuState extends ChangeNotifier {
         SortBy.values.where((v) => v.name == j['sortBy']).firstOrNull ??
         SortBy.title;
     swapAB = j['swapAB'] == true;
+    screen = screenChoices.containsKey(j['screen'])
+        ? j['screen'] as String
+        : 'auto';
     retroArchPackage = j['retroArchPackage'] as String?;
     cores
       ..clear()
@@ -219,6 +229,15 @@ class MenuState extends ChangeNotifier {
     runningSince = (j['runningSince'] as num?)?.toInt() ?? 0;
   }
 }
+
+/// Screen orientation choices (value → label).
+const screenChoices = {
+  'auto': 'Follow the Device',
+  'wide': 'Wide',
+  'wideFlipped': 'Wide, Upside Down',
+  'tall': 'Tall',
+  'tallFlipped': 'Tall, Upside Down',
+};
 
 /// "380 MB", "1.2 GB".
 String formatSize(int bytes) {

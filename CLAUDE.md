@@ -35,6 +35,13 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   `/` or `\` separators or absolute paths.
 - Design UI to be responsive: it must work on a phone (touch, small screen,
   portrait/landscape) and on desktop (mouse, keyboard, resizable window).
+- **Retroid Pocket Classic** (the owner's handheld): the device is held
+  upright, but its screen is 1240×1080, *wider than tall*, so Android calls
+  it landscape. Never lock an app to portrait because "it's a vertical
+  device": that turns it sideways. Leave orientation unlocked
+  (`android:screenOrientation="fullUser"`, no `setPreferredOrientations`)
+  or lock to landscape; at density ~2.75 it is only ~450×390 dp, so check
+  layouts at that size (see `apps/xmb_frontend/tool/shot_test.dart`).
 - Platform channels / native code: implement for Windows and Android;
   Linux implementation is best-effort.
 - Keep `flutter analyze` clean, code formatted with `dart format`, and add

@@ -128,6 +128,27 @@ void main() {
       ],
     ),
     ('xmb_phone', const Size(1080, 2340), 2.625, <LogicalKeyboardKey>[]),
+    // The Retroid Pocket Classic: 1240×1080, wider than tall, at the
+    // densities Android may use for it.
+    ('xmb_classic_x2', const Size(1240, 1080), 2.0, <LogicalKeyboardKey>[]),
+    ('xmb_classic_x275', const Size(1240, 1080), 2.75, <LogicalKeyboardKey>[]),
+    (
+      'xmb_classic_options',
+      const Size(1240, 1080),
+      2.75,
+      [LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.gameButtonY],
+    ),
+    (
+      'xmb_classic_folder',
+      const Size(1240, 1080),
+      2.75,
+      [
+        LogicalKeyboardKey.arrowDown,
+        LogicalKeyboardKey.arrowDown,
+        LogicalKeyboardKey.arrowDown,
+        LogicalKeyboardKey.gameButtonA,
+      ],
+    ),
   ]) {
     testWidgets(name, (tester) async {
       tester.view.physicalSize = size;

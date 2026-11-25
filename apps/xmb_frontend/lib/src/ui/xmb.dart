@@ -560,7 +560,12 @@ class XmbViewState extends State<XmbView> with SingleTickerProviderStateMixin {
       final above = d < -0.5;
       final box = g.itemH * (0.7 + 0.55 * sel);
       final boxW = box * 1.6;
-      final alpha = (above ? 0.55 : 0.85 + 0.15 * sel) * (it.dim ? 0.5 : 1);
+      // Fade out before the button hints at the bottom.
+      final clear = g.size.height - g.font * 2.4;
+      final fade = ((clear - (y + box / 2)) / (g.itemH * 0.6)).clamp(0.0, 1.0);
+      if (fade <= 0) continue;
+      final alpha =
+          (above ? 0.55 : 0.85 + 0.15 * sel) * (it.dim ? 0.5 : 1) * fade;
       out.add(
         Positioned(
           left: g.listX - boxW - g.font,

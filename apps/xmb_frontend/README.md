@@ -32,6 +32,12 @@ over (cross saves come in part 3, through the `Cross-Save` GitHub repo).
   Cores match the PC (Gambatte, mGBA, …) because RetroArch keeps saves in a
   folder per core. Settings > Emulators shows what each console uses, lets
   you pick a core and has "Test Launch".
+- **Screen orientation**: never locked by default (`fullUser`). The Retroid
+  Pocket Classic is held upright but its 1240×1080 screen is wider than
+  tall, so Android treats it as landscape; apps locked to portrait show up
+  sideways there. Settings > Screen can force Wide / Tall (and upside down)
+  if a device ever needs it. Layouts are checked at 1240×1080 at densities
+  2.0 and 2.75 (about 450×390 dp).
 - **Storage**: "All files access" (MANAGE_EXTERNAL_STORAGE; a personal app,
   not for the Play Store) so ROMs can be anywhere and their paths handed to
   the emulators. The ROMs folder is picked with an XMB folder browser

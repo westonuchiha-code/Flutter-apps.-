@@ -59,11 +59,23 @@ class _HomePageState extends State<HomePage> {
     if (widget.state == null) {
       _s.load(await Shell.of(context).storage.readJson('menu.json'));
     }
+    // Not awaited: the menu must never wait on the system for this.
+    unawaited(_applyScreen().catchError((_) {}));
     await _checkDevice();
     _loaded = true;
     if (_s.romsDir != null && _s.games.isEmpty) await _scan();
     _bump();
   }
+
+  /// Applies the Screen setting ('auto' locks nothing).
+  Future<void> _applyScreen() =>
+      SystemChrome.setPreferredOrientations(switch (_s.screen) {
+        'wide' => [DeviceOrientation.landscapeLeft],
+        'wideFlipped' => [DeviceOrientation.landscapeRight],
+        'tall' => [DeviceOrientation.portraitUp],
+        'tallFlipped' => [DeviceOrientation.portraitDown],
+        _ => <DeviceOrientation>[],
+      });
 
   Future<void> _checkDevice() async {
     try {
@@ -521,6 +533,30 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
+      XItem(
+        title: 'Screen',
+        subtitle: _s.screen == 'auto'
+            ? 'Follow the Device (right for the Retroid Pocket Classic)'
+            : screenChoices[_s.screen],
+        icon: Icons.screen_rotation_outlined,
+        onPress: () => _xmb.currentState?.showPanel(
+          XPanel(
+            title: 'Screen',
+            lines: const [
+              'Follow the Device is right for the Retroid Pocket Classic and '
+                  'phones. Only change it if the menu shows up sideways.',
+            ],
+            options: [
+              for (final e in screenChoices.entries)
+                XOption('${_s.screen == e.key ? '● ' : ''}${e.value}', () {
+                  _s.screen = e.key;
+                  _s.changed();
+                  unawaited(_applyScreen());
+                }),
+            ],
+          ),
+        ),
+      ),
       XItem(
         title: 'Swap A and B',
         subtitle: _s.swapAB
