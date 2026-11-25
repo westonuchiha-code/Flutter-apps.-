@@ -1,12 +1,17 @@
 name: Album
 
 # Renders "Twelve-Bit Science" (tool/album) and publishes it as the
-# album-latest pre-release: the songs, the instrumentals and the lyrics.
+# album-latest pre-release: the songs and instrumentals as MP3 (our own
+# mp3_kit encoder) and WAV, the lyrics, and the "Liquid Logic" music video
+# as MP4 (made in Puppet Stage on Windows, where video_encoder writes MP4).
 on:
   push:
     paths:
       - "tool/album/**"
       - "packages/chip_synth/**"
+      - "packages/mp3_kit/**"
+      - "apps/puppet_stage/tool/liquid_logic.dart"
+      - "apps/puppet_stage/integration_test/**"
       - ".github/workflows/album.yml"
   workflow_dispatch:
 
@@ -32,30 +37,85 @@ jobs:
           dart pub get
           dart run bin/make_album.dart out
           dart run bin/check.dart out
+      - name: Keep the Liquid Logic WAV for the video
+        uses: actions/upload-artifact@v4
+        with:
+          name: liquid-logic-wav
+          path: tool/album/out/06 - Liquid Logic.wav
+          retention-days: 3
       - name: Package
         working-directory: tool/album/out
         run: |
-          mkdir -p "../pack/Twelve-Bit Science" "../pack/Twelve-Bit Science (Instrumentals)"
-          for f in *.wav; do
+          mkdir -p "../pack/Twelve-Bit Science" "../pack/Twelve-Bit Science (Instrumentals)" \
+            "../pack/mp3/Twelve-Bit Science" "../pack/mp3/Twelve-Bit Science (Instrumentals)" ../songs
+          for f in *.wav *.mp3; do
             case "$f" in
-              *"(Instrumental)"*) mv "$f" "../pack/Twelve-Bit Science (Instrumentals)/" ;;
-              *) mv "$f" "../pack/Twelve-Bit Science/" ;;
+              *.mp3) dir="../pack/mp3/" ;;
+              *) dir="../pack/" ;;
             esac
+            case "$f" in
+              *"(Instrumental)"*) dir="${dir}Twelve-Bit Science (Instrumentals)/" ;;
+              *) dir="${dir}Twelve-Bit Science/"
+                 case "$f" in *.mp3) cp "$f" ../songs/ ;; esac ;;
+            esac
+            mv "$f" "$dir"
           done
           cp Lyrics.txt "../pack/Twelve-Bit Science/"
+          cp Lyrics.txt "../pack/mp3/Twelve-Bit Science/"
           cp Lyrics.txt ../pack/Lyrics.txt
           cd ../pack
           zip -qr ../Twelve-Bit-Science.zip "Twelve-Bit Science"
           zip -qr ../Twelve-Bit-Science-Instrumentals.zip "Twelve-Bit Science (Instrumentals)"
-          ls -l ..
+          cd mp3
+          zip -qr ../../Twelve-Bit-Science-MP3.zip "Twelve-Bit Science"
+          zip -qr ../../Twelve-Bit-Science-Instrumentals-MP3.zip "Twelve-Bit Science (Instrumentals)"
+          ls -l ../.. ../../songs
       - name: Replace the album-latest pre-release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           gh release delete album-latest --cleanup-tag --yes || true
-          gh release create album-latest tool/album/Twelve-Bit-Science.zip \
+          gh release create album-latest tool/album/Twelve-Bit-Science-MP3.zip \
+            tool/album/Twelve-Bit-Science-Instrumentals-MP3.zip \
+            tool/album/songs/*.mp3 \
+            tool/album/Twelve-Bit-Science.zip \
             tool/album/Twelve-Bit-Science-Instrumentals.zip tool/album/pack/Lyrics.txt \
             --target "$GITHUB_SHA" --prerelease \
             --title "Twelve-Bit Science - The Allophones (latest render)" \
-            --notes "Rendered by tool/album from ${GITHUB_SHA::7}: 12 tracks (WAV), the 8 instrumentals, and the lyrics."
+            --notes "Rendered by tool/album from ${GITHUB_SHA::7}: 12 tracks and 8 instrumentals as MP3 (320 kbps, each song also on its own below) and WAV, the lyrics, and the Liquid Logic music video (MP4, added by the next job)."
+
+  music-video:
+    # Puppet Stage renders the video inside the real app on Windows, where
+    # video_encoder writes H.264 + AAC MP4 with Media Foundation.
+    needs: album
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.50.1"
+          channel: stable
+          cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: liquid-logic-wav
+          path: music
+      - name: Render the video
+        shell: bash
+        working-directory: apps/puppet_stage
+        run: |
+          flutter pub get
+          mkdir -p ../../video
+          flutter test integration_test/liquid_logic_video_test.dart -d windows \
+            "--dart-define=WAV=${{ github.workspace }}/music/06 - Liquid Logic.wav" \
+            "--dart-define=OUT=${{ github.workspace }}/video"
+          ls -l ../../video
+      - name: Add it to album-latest
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload album-latest video/Liquid-Logic.mp4 --clobber

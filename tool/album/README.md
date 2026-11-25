@@ -9,7 +9,7 @@ synthesized turntable scratches (baby, chirp, transformer, flare, tear,
 scribble, stab). Original words and music, inspired by Artifacts and
 Hieroglyphics.
 
-    dart run bin/make_album.dart out          # all tracks + instrumentals + Lyrics.txt
+    dart run bin/make_album.dart out          # all tracks + instrumentals (WAV + 320 kbps MP3) + Lyrics.txt
     dart run bin/make_album.dart out 6        # one track
     dart run bin/check.dart out               # levels, clipping, gaps
     dart run bin/stems.dart out 3             # a song's beat / vocals / DJ stems

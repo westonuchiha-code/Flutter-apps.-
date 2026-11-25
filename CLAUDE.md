@@ -225,6 +225,8 @@ packages/    # shared Dart/Flutter packages
              #   video_encoder - video files with sound: MP4 (H.264+AAC) via Android
              #                   MediaCodec / Windows Media Foundation (Mp4Writer); pure-Dart
              #                   MJPEG AVI everywhere (AviWriter); openVideoWriter picks
+             #   mp3_kit       - pure-Dart MP3 encoder (Layer III CBR, ID3 tags); filters probed from
+             #                   the dr_mp3 decoder flutter_soloud plays with
              #   landscape     - Vista's landscapes (terrain, erosion, sky, VistaWorld scene),
              #                   shared by Vista and Puppet Stage
              #   engine3d      - lightweight 3D: scene graph, meshes/terrain, glTF/OBJ loaders, orbit/
@@ -237,7 +239,8 @@ packages/    # shared Dart/Flutter packages
              #                   (used by optical_theremin, touch_synth, waveform_painter)
 tool/        # developer scripts (setup_linux_dev.sh, new_app.sh, icons/ = every app's pixel icon)
              #   album/ = "Twelve-Bit Science", a boom bap album rendered by our own code (chip-voice
-             #   raps, synthesized loops/drums/scratches); CI publishes it as album-latest
+             #   raps, synthesized loops/drums/scratches); CI (album.yml) publishes it as album-latest
+             #   (MP3 + WAV) with the Liquid Logic music video, made as MP4 by Puppet Stage on Windows
 ROADMAP.md   # agreed app ideas and build order - keep it updated
 ```
 

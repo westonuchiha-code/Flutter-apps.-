@@ -6,3 +6,5 @@ environment:
 dependencies:
   chip_synth:
     path: ../../packages/chip_synth
+  mp3_kit:
+    path: ../../packages/mp3_kit
