@@ -125,8 +125,12 @@ Future<File?> exportMovie({
   required void Function(double p) progress,
   required bool Function() cancelled,
   bool preferMp4 = true,
+  double from = 0,
+  double? to,
 }) async {
-  final frames = math.max(2, (movie.duration * fps).ceil());
+  // [from]..[to]: only that part of the movie (music included).
+  final end = math.min(to ?? movie.duration, movie.duration);
+  final frames = math.max(2, ((end - from) * fps).ceil());
   final spec = VideoSpec(
     width: width,
     height: height,
@@ -136,14 +140,14 @@ Future<File?> exportMovie({
   final writer = await openVideoWriter(basePath, spec, preferMp4: preferMp4);
   final renderer = Renderer();
   final cam = Camera();
-  var audioAt = ((movie.music?.start ?? 0) * 44100).round() * 2;
+  var audioAt = (((movie.music?.start ?? 0) + from) * 44100).round() * 2;
   try {
     for (var i = 0; i < frames; i++) {
       if (cancelled()) {
         await writer.cancel();
         return null;
       }
-      final t = i / fps;
+      final t = from + i / fps;
       pose(t);
       final shot = cameraAt(movie, t, cam);
       if (shot == null) {
@@ -184,6 +188,12 @@ Future<File?> exportMovie({
         for (var k = 0; k < n; k++) {
           final j = audioAt + k;
           if (j >= 0 && j < m.length) chunk[k] = m[j];
+        }
+        // A short fade in when starting mid-song.
+        if (from > 0 && i < fps ~/ 3) {
+          for (var k = 0; k < n; k++) {
+            chunk[k] = (chunk[k] * (i * n + k) / (n * (fps ~/ 3))).round();
+          }
         }
         // Fade the last second.
         final left = frames - i;

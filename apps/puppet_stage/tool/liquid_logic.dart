@@ -42,7 +42,10 @@ class _Line {
   /// Raps from bar [from] to [until], changing flow every two bars.
   void rap(num from, num until, {String rest = 'bounce'}) {
     to(from, rest);
-    const flows = ['rapMic', 'rap', 'rap2', 'rapMic'];
+    // The instrumental cut: the MCs ride the beat instead.
+    final flows = _rapping
+        ? const ['rapMic', 'rap', 'rap2', 'rapMic']
+        : const ['bounce', 'bounce', 'stance', 'bounce'];
     var k = 0;
     for (var b = from; b < until; b += 2) {
       to(math.min(b + 2, until), flows[k++ % flows.length]);
@@ -56,7 +59,11 @@ class _Line {
 
 FilmLook _look(String name) => FilmLook.presets[name]!;
 
-Movie liquidLogic({MusicRef? music}) {
+var _rapping = true;
+
+/// [rapping]: false for the instrumental (nobody mouths words).
+Movie liquidLogic({MusicRef? music, bool rapping = true}) {
+  _rapping = rapping;
   final mountains = presets['alps']!.$2.copyWith(
     seed: 86,
     time: 17.3,

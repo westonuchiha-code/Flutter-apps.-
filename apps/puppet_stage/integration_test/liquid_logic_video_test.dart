@@ -19,12 +19,16 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   const wav = String.fromEnvironment('WAV');
   const out = String.fromEnvironment('OUT', defaultValue: '.');
+  // Bars of the song to film (TO_BAR 0: to the end).
+  const fromBar = int.fromEnvironment('FROM_BAR');
+  const toBar = int.fromEnvironment('TO_BAR');
 
   testWidgets('Liquid Logic music video', (tester) async {
     await tester.runAsync(() async {
       Int16List? music;
       if (wav.isNotEmpty) music = decodeWav(File(wav).readAsBytesSync());
       final movie = liquidLogic(
+        rapping: false,
         music: MusicRef(
           'liquid-logic',
           'wav',
@@ -39,7 +43,9 @@ void main() {
         places: s.places,
         pose: s.pose,
         fallbackCamera: Camera(),
-        basePath: '$out${Platform.pathSeparator}Liquid-Logic',
+        basePath: toBar > 0
+            ? '$out${Platform.pathSeparator}Liquid-Logic-$fromBar-$toBar'
+            : '$out${Platform.pathSeparator}Liquid-Logic',
         width: 960,
         height: 720,
         fps: 30,
@@ -53,6 +59,8 @@ void main() {
           }
         },
         cancelled: () => false,
+        from: at(fromBar),
+        to: toBar > 0 ? at(toBar) : null,
       );
       // ignore: avoid_print
       print('wrote ${file?.path} ${file?.lengthSync()}');

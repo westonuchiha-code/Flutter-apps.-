@@ -21,12 +21,13 @@ Future<void> main(List<String> args) async {
     final n = i + 1;
     if (only.isNotEmpty && !only.contains(n)) continue;
     final title = list[i].$1;
-    final isSong = songs.any((s) => s.title == title);
-    jobs.add(Isolate.run(() => _render(out, n, title, false)));
-    if (isSong) jobs.add(Isolate.run(() => _render(out, n, title, true)));
+    // Instrumental only (owner's choice: the chip raps are out; the beats,
+    // loops and the DJ's scratches stay). VOCALS=1 renders the old way.
+    final vocals = Platform.environment['VOCALS'] == '1';
+    jobs.add(Isolate.run(() => _render(out, n, title, !vocals)));
   }
   await Future.wait(jobs);
-  if (only.isEmpty) File('$out/Lyrics.txt').writeAsStringSync(lyricSheet());
+
 }
 
 void _render(String out, int n, String title, bool instrumental) {
@@ -34,18 +35,16 @@ void _render(String out, int n, String title, bool instrumental) {
   final watch = Stopwatch()..start();
   final audio = t.$2();
   final base =
-      '${n.toString().padLeft(2, '0')} - $title${instrumental ? ' (Instrumental)' : ''}';
+      '${n.toString().padLeft(2, '0')} - $title';
   final name = '$base.wav';
   final wav = encodeWav16(audio, sr.round());
   File('$out/$name').writeAsBytesSync(wav);
   final mp3 = encodeMp3(
     Int16List.sublistView(wav, 44),
     tags: Mp3Tags(
-      title: instrumental ? '$title (Instrumental)' : title,
+      title: title,
       artist: 'The Allophones',
-      album: instrumental
-          ? 'Twelve-Bit Science (Instrumentals)'
-          : 'Twelve-Bit Science',
+      album: 'Twelve-Bit Science',
       track: '$n',
       year: '2026',
     ),

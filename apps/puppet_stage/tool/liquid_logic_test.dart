@@ -62,6 +62,9 @@ Future<void> _png(Uint32List px, int w, int h, String path) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const out = String.fromEnvironment('OUT', defaultValue: '.');
+  // Bars of the song to film (TO_BAR 0: to the end).
+  const fromBar = int.fromEnvironment('FROM_BAR');
+  const toBar = int.fromEnvironment('TO_BAR');
   const wav = String.fromEnvironment('WAV');
   const video = bool.fromEnvironment('VIDEO');
   const from = int.fromEnvironment('FROM');
@@ -71,6 +74,7 @@ void main() {
     Int16List? music;
     if (wav.isNotEmpty) music = decodeWav(File(wav).readAsBytesSync());
     final movie = liquidLogic(
+      rapping: false,
       music: MusicRef(
         'liquid-logic',
         'wav',
@@ -129,6 +133,8 @@ void main() {
       },
       cancelled: () => false,
       preferMp4: false,
+      from: at(fromBar),
+      to: toBar > 0 ? at(toBar) : null,
     );
     stdout.writeln('wrote ${file?.path} ${file?.lengthSync()}');
   }, timeout: const Timeout(Duration(hours: 2)));
