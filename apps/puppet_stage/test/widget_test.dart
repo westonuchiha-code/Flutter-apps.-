@@ -9,6 +9,7 @@ import 'package:puppet_stage/src/cast.dart';
 import 'package:puppet_stage/src/export.dart';
 import 'package:puppet_stage/src/movie.dart';
 import 'package:puppet_stage/src/moves.dart';
+import 'package:puppet_stage/src/places.dart';
 import 'package:puppet_stage/src/sets.dart';
 import 'package:puppet_stage/src/ui/home.dart';
 
@@ -29,7 +30,8 @@ void main() {
           ),
         ],
       );
-      final scene = await buildSet(movie.set);
+      final place = BuiltPlace(await buildSet(movie.set));
+      final scene = place.scene;
       final c = buildCharacter(Kind.girl, defaultLooks[Kind.girl]!);
       final clips = clipsFor(c);
       scene.root.add(c.root);
@@ -37,7 +39,7 @@ void main() {
       var last = 0.0;
       final file = await exportMovie(
         movie: movie,
-        scene: scene,
+        places: [place],
         pose: (t) => applyState(c, clips, stateAt(movie.actors.first, t)),
         fallbackCamera: Camera(),
         basePath: '${dir.path}${Platform.pathSeparator}m',

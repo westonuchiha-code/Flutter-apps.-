@@ -5,7 +5,9 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:app_shell/app_shell.dart';
+import 'package:audio_kit/audio_kit.dart' show ClipPlayer;
 import 'package:engine3d/engine3d.dart';
+import 'package:landscape/landscape.dart' as land;
 import 'package:file_selector/file_selector.dart';
 import 'package:material_ui/material_ui.dart' hide Action;
 import 'package:path_provider/path_provider.dart';
@@ -14,9 +16,12 @@ import '../animals.dart';
 import '../cast.dart';
 import '../export.dart';
 import '../figure.dart';
+import '../look.dart';
 import '../movie.dart';
 import '../props.dart';
 import '../moves.dart';
+import '../places.dart';
+import '../staging.dart';
 import '../sets.dart';
 
 const _palette = [
@@ -85,7 +90,13 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late Movie _movie = widget.movie ?? _starter();
-  Scene? _scene;
+  final _places = <int, BuiltPlace>{};
+  final _placeKeys = <int, String>{};
+
+  /// The place shown while editing (shots pick their own when playing).
+  int _view = 0;
+  ClipPlayer? _player;
+  String? _musicLoaded;
   final _actors = <String, Figure>{};
 
   /// What each figure was built from (rebuilt only when that changes).
@@ -132,6 +143,22 @@ class _HomePageState extends State<HomePage> {
     ],
   );
 
+  Shot? get _shotNow =>
+      _useShots && (_playing || _tab == 2) ? _movie.shotAt(_t) : null;
+
+  int get _shownPlace =>
+      (_shotNow?.place ?? _view).clamp(0, _movie.placeCount - 1);
+
+  Scene? get _scene => _places[_shownPlace]?.scene;
+
+  FilmLook get _lookNow => _shotNow?.look ?? _movie.look;
+
+  @override
+  void dispose() {
+    _player?.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -147,7 +174,25 @@ class _HomePageState extends State<HomePage> {
 
   /// Rebuilds the set and the cast's figures.
   Future<void> _rebuild() async {
-    final scene = await buildSet(_movie.set);
+    final count = _movie.placeCount;
+    for (var i = 0; i < count; i++) {
+      final place = _movie.placeAt(i);
+      final key = jsonEncode(place.toJson());
+      if (_placeKeys[i] != key || _places[i] == null) {
+        if (place.land != null) setState(() => _busy = true);
+        try {
+          _places[i] = await buildPlace(place);
+        } catch (e) {
+          _places[i] = BuiltPlace(await buildSet(StageSet.studio));
+          if (mounted) _snack('Could not build ${place.label}: $e');
+        }
+        _placeKeys[i] = key;
+        if (mounted) setState(() => _busy = false);
+      }
+    }
+    _places.removeWhere((i, _) => i >= count);
+    _placeKeys.removeWhere((i, _) => i >= count);
+    final oldRoots = {for (final f in _actors.values) f.root};
     final ids = {for (final a in _movie.actors) a.id};
     _actors.removeWhere((id, _) => !ids.contains(id));
     for (final a in _movie.actors) {
@@ -168,12 +213,19 @@ class _HomePageState extends State<HomePage> {
         _actors[a.id] = await _figureFor(a);
         _built[a.id] = key;
       }
-      scene.root.add(_actors[a.id]!.root);
+      _actors[a.id]!.hold(a.holds);
+    }
+    final roots = {...oldRoots, for (final f in _actors.values) f.root};
+    for (final pl in _places.values) {
+      pl.scene.root.children.removeWhere(roots.contains);
+    }
+    for (final a in _movie.actors) {
+      _places[a.place.clamp(0, count - 1)]?.scene.root.add(_actors[a.id]!.root);
     }
     if (!mounted) {
       return;
     }
-    setState(() => _scene = scene);
+    setState(() {});
     _poseAll(_t);
   }
 
@@ -225,22 +277,7 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     }
-    final Figure fig;
-    final animal = a.animal, prop = a.prop;
-    if (prop != null) {
-      fig = PropFigure(buildProp(prop, a.look), scale: a.scale);
-    } else if (animal != null) {
-      fig = BuiltFigure(
-        buildAnimal(animal, a.look),
-        labels: {'call': animal.call},
-      );
-    } else {
-      fig = BuiltFigure(
-        buildCharacter(a.kind, a.look, body: a.body, extras: a.extras),
-      );
-    }
-    fig.root.scale = Vector3.all(a.scale);
-    return fig;
+    return builtFigure(a);
   }
 
   /// The name of a move for [a]'s figure.
@@ -259,11 +296,21 @@ class _HomePageState extends State<HomePage> {
       }
       final st = stateAt(a, t);
       final p = _pose;
+      final ground =
+          _places[a.place.clamp(0, _movie.placeCount - 1)]?.ground(
+            st.x,
+            st.z,
+          ) ??
+          0;
       if (p != null && a.id == _selected && !_playing) {
         // Show the pose being edited.
-        fig.apply(ActorState(st.x, st.z, st.facing, 'idle', 0, pose: p));
+        fig.show(
+          ActorState(st.x, st.z, st.facing, 'idle', 0, pose: p),
+          groundY: ground,
+          now: t,
+        );
       } else {
-        fig.apply(st);
+        fig.show(st, groundY: ground, now: t);
       }
     }
   }
@@ -274,22 +321,111 @@ class _HomePageState extends State<HomePage> {
       if (_t >= _movie.duration) {
         _t = _movie.duration;
         _playing = false;
+        unawaited(_player?.stop());
       }
       setState(() {});
     }
     _poseAll(_t);
-    final shot = _useShots && (_playing || _tab == 2)
-        ? _movie.shotAt(_t)
-        : null;
-    if (shot != null) {
-      applyShot(_shotRig.camera, shot);
+    if (_shotNow != null) {
+      cameraAt(_movie, _t, _shotRig.camera);
+    }
+    _places[_shownPlace]?.follow(_rig.camera);
+  }
+
+  /// Starts or stops playback (with the music).
+  Future<void> _playPause() async {
+    final d = _movie.duration;
+    setState(() {
+      if (!_playing && _t >= d - 0.01) {
+        _t = 0;
+      }
+      _pose = null;
+      _playing = !_playing;
+    });
+    final m = _movie.music;
+    if (!_playing || m == null) {
+      await _player?.stop();
+      return;
+    }
+    try {
+      final player = _player ??= ClipPlayer();
+      if (_musicLoaded != m.id) {
+        final bytes = await _readMusic(m);
+        if (bytes == null) return;
+        final dir = await getTemporaryDirectory();
+        final f = File(
+          '${dir.path}${Platform.pathSeparator}puppet_music.${m.extension}',
+        );
+        await f.writeAsBytes(bytes, flush: true);
+        await player.load(f);
+        _musicLoaded = m.id;
+      }
+      if (_playing) await player.play(from: m.start + _t);
+    } catch (_) {
+      // The picture still plays without sound.
     }
   }
 
-  CameraRig get _rig =>
-      _useShots && (_playing || _tab == 2) && _movie.shotAt(_t) != null
-      ? _shotRig
-      : _orbit;
+  Future<Uint8List?> _readMusic(MusicRef m) async {
+    final locker = Shell.of(context).locker;
+    if (!locker.ready && !await locker.connect()) return null;
+    for (final type in const [
+      AssetType.sample,
+      AssetType.recording,
+      AssetType.other,
+    ]) {
+      try {
+        final b = await locker.read(
+          AssetInfo(
+            id: m.id,
+            type: type,
+            name: m.name,
+            extension: m.extension,
+            app: '',
+            created: DateTime(2000),
+          ),
+        );
+        if (b != null) return b;
+      } catch (_) {}
+    }
+    if (mounted) _snack('"${m.name}" is not in the Asset Locker any more');
+    return null;
+  }
+
+  Future<void> _pickMusic() async {
+    final locker = Shell.of(context).locker;
+    if (!locker.ready && !await locker.connect()) return;
+    if (!mounted) return;
+    final info = await pickFromLocker(
+      context,
+      locker,
+      types: const [AssetType.sample, AssetType.recording, AssetType.other],
+    );
+    if (info == null) return;
+    if (info.extension.toLowerCase() != 'wav') {
+      _snack('Music must be a WAV file');
+      return;
+    }
+    final bytes = await locker.read(info);
+    final pcm = bytes == null ? null : decodeWav(bytes);
+    if (pcm == null) {
+      _snack('Could not read "${info.name}"');
+      return;
+    }
+    await _player?.stop();
+    setState(() {
+      _playing = false;
+      _movie.music = MusicRef(
+        info.id,
+        info.extension,
+        info.name,
+        seconds: pcm.length / 2 / 44100,
+      );
+      _musicLoaded = null;
+    });
+  }
+
+  CameraRig get _rig => _shotNow != null ? _shotRig : _orbit;
 
   void _onTap(Offset p, Size size) {
     final cam = _rig.camera;
@@ -408,8 +544,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _export() async {
-    final scene = _scene;
-    if (scene == null) {
+    if (_places.length < _movie.placeCount) {
       return;
     }
     final shell = Shell.of(context);
@@ -445,11 +580,19 @@ class _HomePageState extends State<HomePage> {
     String? error;
     try {
       final dir = await getTemporaryDirectory();
+      final m = _movie.music;
+      Int16List? music;
+      if (m != null) {
+        final b = await _readMusic(m);
+        music = b == null ? null : decodeWav(b);
+      }
       file = await exportMovie(
         movie: _movie,
-        scene: scene,
+        places: [for (var i = 0; i < _movie.placeCount; i++) _places[i]!],
         pose: _poseAll,
         fallbackCamera: _orbit.camera,
+        fallbackPlace: _view,
+        music: music,
         options: _clean ? RenderOptions.clean : const RenderOptions(),
         basePath: '${dir.path}${Platform.pathSeparator}puppet_movie',
         progress: (p) {
@@ -532,15 +675,69 @@ class _HomePageState extends State<HomePage> {
         : Stack(
             children: [
               Positioned.fill(
-                child: Viewport3D(
-                  scene: scene,
-                  rig: _rig,
-                  options: _clean ? RenderOptions.clean : const RenderOptions(),
-                  onFrame: _frameTick,
-                  onTap: _onTap,
-                  joystick: false,
-                ),
+                child: _lookNow.isNone
+                    ? _viewport(scene)
+                    : ColorFiltered(
+                        colorFilter: ColorFilter.matrix(
+                          previewMatrix(_lookNow),
+                        ),
+                        child: _viewport(scene),
+                      ),
               ),
+              if (_lookNow.vignette > 0)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          radius: 0.85,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(
+                              alpha: 0.75 * _lookNow.vignette,
+                            ),
+                          ],
+                          stops: const [0.55, 1],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_lookNow.letterbox)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: LayoutBuilder(
+                      builder: (context, box) {
+                        final bar = math.max(
+                          0.0,
+                          (box.maxHeight - box.maxWidth / 2.35) / 2,
+                        );
+                        return Column(
+                          children: [
+                            Container(height: bar, color: Colors.black),
+                            const Spacer(),
+                            Container(height: bar, color: Colors.black),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              if (_movie.placeCount > 1)
+                Positioned(
+                  left: 8,
+                  bottom: 6,
+                  child: IgnorePointer(
+                    child: Text(
+                      _movie.placeAt(_shownPlace).label,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        shadows: [Shadow(blurRadius: 3)],
+                      ),
+                    ),
+                  ),
+                ),
               if (_pending != null)
                 Positioned(
                   left: 12,
@@ -584,22 +781,19 @@ class _HomePageState extends State<HomePage> {
         IconButton(
           tooltip: _playing ? 'Pause' : 'Play',
           icon: Icon(_playing ? Icons.pause : Icons.play_arrow),
-          onPressed: () => setState(() {
-            if (!_playing && _t >= d - 0.01) {
-              _t = 0;
-            }
-            _pose = null;
-            _playing = !_playing;
-          }),
+          onPressed: _playPause,
         ),
         Expanded(
           child: Slider(
             value: _t.clamp(0, d),
             max: d,
-            onChanged: (v) => setState(() {
-              _playing = false;
-              _t = v;
-            }),
+            onChanged: (v) {
+              if (_playing) unawaited(_player?.stop());
+              setState(() {
+                _playing = false;
+                _t = v;
+              });
+            },
           ),
         ),
         Text('${_t.toStringAsFixed(1)} / ${d.toStringAsFixed(1)} s'),
@@ -743,6 +937,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _viewport(Scene scene) => Viewport3D(
+    scene: scene,
+    rig: _rig,
+    options: _clean ? RenderOptions.clean : const RenderOptions(),
+    onFrame: _frameTick,
+    onTap: _onTap,
+    joystick: false,
+  );
+
   Widget _castTab() {
     final a = _actor;
     return ListView(
@@ -829,9 +1032,59 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+          if (_movie.placeCount > 1)
+            Row(
+              children: [
+                const SizedBox(width: 70, child: Text('In')),
+                Expanded(
+                  child: DropdownButton<int>(
+                    isExpanded: true,
+                    value: a.place.clamp(0, _movie.placeCount - 1),
+                    items: [
+                      for (var i = 0; i < _movie.placeCount; i++)
+                        DropdownMenuItem(
+                          value: i,
+                          child: Text(_movie.placeAt(i).label),
+                        ),
+                    ],
+                    onChanged: (v) {
+                      setState(() {
+                        a.place = v ?? 0;
+                        _view = a.place;
+                      });
+                      unawaited(_rebuild());
+                    },
+                  ),
+                ),
+              ],
+            ),
           if (a.model != null) ..._modelControls(a),
-          if (a.model == null && a.animal == null && a.prop == null)
+          if (a.model == null && a.animal == null && a.prop == null) ...[
+            Row(
+              children: [
+                const SizedBox(width: 70, child: Text('Holds')),
+                Expanded(
+                  child: DropdownButton<Prop?>(
+                    isExpanded: true,
+                    value: a.holds,
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('Nothing'),
+                      ),
+                      for (final p in _holdable)
+                        DropdownMenuItem(value: p, child: Text(p.label)),
+                    ],
+                    onChanged: (v) {
+                      setState(() => a.holds = v);
+                      _actors[a.id]?.hold(v);
+                    },
+                  ),
+                ),
+              ],
+            ),
             ..._personControls(a),
+          ],
           if (a.animal != null || a.prop != null)
             Row(
               children: [
@@ -1540,9 +1793,203 @@ class _HomePageState extends State<HomePage> {
     ),
   );
 
+  static const _holdable = [
+    Prop.mic,
+    Prop.sword,
+    Prop.candle,
+    Prop.lantern,
+    Prop.cup,
+    Prop.ball,
+    Prop.boombox,
+  ];
+
+  static String _lookName(FilmLook l) {
+    final j = jsonEncode(l.toJson());
+    for (final e in FilmLook.presets.entries) {
+      if (jsonEncode(e.value.toJson()) == j) return e.key;
+    }
+    return 'Custom';
+  }
+
+  Widget _lookMenu(
+    FilmLook? value,
+    void Function(FilmLook?) onSet, {
+    String? inherit,
+  }) {
+    final name = value == null ? (inherit ?? 'Clean') : _lookName(value);
+    return PopupMenuButton<String>(
+      tooltip: 'Film look',
+      onSelected: (k) => onSet(k == '' ? null : FilmLook.presets[k]),
+      itemBuilder: (context) => [
+        if (inherit != null)
+          CheckedPopupMenuItem(
+            value: '',
+            checked: value == null,
+            child: Text('Movie look ($inherit)'),
+          ),
+        for (final k in FilmLook.presets.keys)
+          CheckedPopupMenuItem(
+            value: k,
+            checked: value != null && name == k,
+            child: Text(k),
+          ),
+      ],
+      child: Chip(
+        avatar: const Icon(Icons.filter_vintage_outlined, size: 18),
+        label: Text(name),
+      ),
+    );
+  }
+
+  Future<void> _addPlace() async {
+    final choice = await showDialog<Place>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Add a place'),
+        children: [
+          for (final st in StageSet.values)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, Place(set: st)),
+              child: Text(st.label),
+            ),
+          const Divider(),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 4, 24, 4),
+            child: Text('Vista landscapes'),
+          ),
+          for (final e in land.presets.entries)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(
+                context,
+                Place(land: e.value.$2, name: e.value.$1),
+              ),
+              child: Text(e.value.$1),
+            ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, const Place(name: '?')),
+            child: const Text('A Vista landscape from the Locker…'),
+          ),
+        ],
+      ),
+    );
+    if (choice == null || !mounted) return;
+    var place = choice;
+    if (choice.name == '?' && choice.set == null && choice.land == null) {
+      final locker = Shell.of(context).locker;
+      if (!locker.ready && !await locker.connect()) return;
+      if (!mounted) return;
+      final info = await pickFromLocker(
+        context,
+        locker,
+        types: const [AssetType.preset],
+      );
+      if (info == null) return;
+      try {
+        final j = jsonDecode(utf8.decode((await locker.read(info))!));
+        place = Place(
+          land: land.LandSettings.fromJson(j as Map),
+          name: info.name,
+        );
+      } catch (e) {
+        _snack('Not a Vista landscape: $e');
+        return;
+      }
+    }
+    setState(() {
+      _movie.places.add(place);
+      _view = _movie.placeCount - 1;
+    });
+    await _rebuild();
+  }
+
+  void _addShot() {
+    final c = _orbit.camera;
+    setState(() {
+      _movie.shots.removeWhere((s) => (s.time - _t).abs() < 0.05);
+      _movie.shots.add(
+        Shot(
+          _t,
+          c.position.x,
+          c.position.y,
+          c.position.z,
+          c.yaw,
+          c.pitch,
+          fov: c.fov,
+          place: _view,
+        ),
+      );
+      _movie.shots.sort((a, b) => a.time.compareTo(b.time));
+    });
+  }
+
   Widget _cameraTab() => ListView(
     padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
     children: [
+      Text('Places', style: Theme.of(context).textTheme.titleSmall),
+      Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (var i = 0; i < _movie.placeCount; i++)
+            InputChip(
+              label: Text(_movie.placeAt(i).label),
+              selected: _view == i,
+              onPressed: () => setState(() => _view = i),
+              onDeleted: i == 0
+                  ? null
+                  : () {
+                      setState(() {
+                        _movie.places.removeAt(i - 1);
+                        for (final a in _movie.actors) {
+                          if (a.place == i) a.place = 0;
+                          if (a.place > i) a.place--;
+                        }
+                        for (final s in _movie.shots) {
+                          if (s.place == i) s.place = 0;
+                          if (s.place > i) s.place--;
+                        }
+                        _view = 0;
+                        _places.clear();
+                        _placeKeys.clear();
+                      });
+                      unawaited(_rebuild());
+                    },
+            ),
+          ActionChip(
+            avatar: const Icon(Icons.add, size: 18),
+            label: const Text('Place'),
+            onPressed: _busy ? null : _addPlace,
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          _lookMenu(
+            _movie.look,
+            (l) => setState(() => _movie.look = l ?? FilmLook.none),
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.music_note_outlined, size: 18),
+            label: Text(_movie.music?.name ?? 'Music…'),
+            onPressed: _pickMusic,
+          ),
+          if (_movie.music != null)
+            IconButton(
+              tooltip: 'No music',
+              icon: const Icon(Icons.music_off_outlined),
+              onPressed: () => setState(() {
+                unawaited(_player?.stop());
+                _movie.music = null;
+                _musicLoaded = null;
+              }),
+            ),
+        ],
+      ),
+      const Divider(),
       const Text(
         'Move the camera (drag to turn, pinch to zoom), then save the angle as a shot at the current time. Playback cuts between shots.',
       ),
@@ -1553,39 +2000,67 @@ class _HomePageState extends State<HomePage> {
         onChanged: (v) => setState(() => _useShots = v),
       ),
       FilledButton.tonalIcon(
-        onPressed: () {
-          final c = _orbit.camera;
-          setState(() {
-            _movie.shots.removeWhere((s) => (s.time - _t).abs() < 0.05);
-            _movie.shots.add(
-              Shot(
-                _t,
-                c.position.x,
-                c.position.y,
-                c.position.z,
-                c.yaw,
-                c.pitch,
-                fov: c.fov,
-              ),
-            );
-            _movie.shots.sort((a, b) => a.time.compareTo(b.time));
-          });
-        },
+        onPressed: _addShot,
         icon: const Icon(Icons.videocam_outlined),
         label: Text('Shot at ${_t.toStringAsFixed(1)} s'),
       ),
-      for (final s in _movie.shots)
+      for (final s in _movie.shots) ...[
         ListTile(
           dense: true,
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.videocam_outlined),
-          title: Text('From ${s.time.toStringAsFixed(1)} s'),
-          onTap: () => setState(() => _t = s.time),
+          title: Text(
+            'From ${s.time.toStringAsFixed(1)} s'
+            '${_movie.placeCount > 1 ? ' · ${_movie.placeAt(s.place).label}' : ''}'
+            '${s.end != null ? ' · drifts' : ''}',
+          ),
+          onTap: () => setState(() {
+            _t = s.time;
+            _view = s.place.clamp(0, _movie.placeCount - 1);
+          }),
           trailing: IconButton(
             icon: const Icon(Icons.close, size: 18),
             onPressed: () => setState(() => _movie.shots.remove(s)),
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.only(left: 40),
+          child: Wrap(
+            spacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _lookMenu(
+                s.look,
+                (l) => setState(() => s.look = l),
+                inherit: _lookName(_movie.look),
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.open_with, size: 18),
+                label: Text(
+                  s.end == null ? 'Drift to this view' : 'New drift end',
+                ),
+                onPressed: () {
+                  final c = _orbit.camera;
+                  setState(
+                    () => s.end = [
+                      c.position.x,
+                      c.position.y,
+                      c.position.z,
+                      c.yaw,
+                      c.pitch,
+                    ],
+                  );
+                },
+              ),
+              if (s.end != null)
+                TextButton(
+                  onPressed: () => setState(() => s.end = null),
+                  child: const Text('No drift'),
+                ),
+            ],
+          ),
+        ),
+      ],
     ],
   );
 

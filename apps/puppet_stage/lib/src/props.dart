@@ -27,7 +27,18 @@ enum Prop {
   box('Box', 'Small things'),
   ball('Ball', 'Small things'),
   cup('Cup', 'Small things'),
-  sign('Sign', 'Small things');
+  sign('Sign', 'Small things'),
+  turntables('Turntables', 'Music'),
+  speakers('Speaker stack', 'Music'),
+  micStand('Mic stand', 'Music'),
+  boombox('Boombox', 'Music'),
+  mic('Microphone', 'Music'),
+  sword('Katana', 'Dojo'),
+  candle('Candle', 'Dojo'),
+  lantern('Lantern', 'Dojo'),
+  chessKing('Chess king', 'Dojo'),
+  chessKnight('Chess knight', 'Dojo'),
+  chessRook('Chess rook', 'Dojo');
 
   const Prop(this.label, this.group);
   final String label, group;
@@ -166,6 +177,72 @@ const propLooks = {
     bottom: 0xFF7A5232,
     hair: 0xFF2A2420,
     skin: 0xFF6A4428,
+  ),
+  Prop.turntables: Look(
+    top: 0xFF2A2A30,
+    bottom: 0xFF111114,
+    hair: 0xFFC0C4CC,
+    skin: 0xFFE04A4A,
+  ),
+  Prop.speakers: Look(
+    top: 0xFF1E1E22,
+    bottom: 0xFF3A3A42,
+    hair: 0xFF8A8A92,
+    skin: 0xFF101012,
+  ),
+  Prop.micStand: Look(
+    top: 0xFF2A2A30,
+    bottom: 0xFF1A1A1E,
+    hair: 0xFFB8BCC8,
+    skin: 0xFF101012,
+  ),
+  Prop.boombox: Look(
+    top: 0xFFB8BCC8,
+    bottom: 0xFF2A2A30,
+    hair: 0xFFE04A4A,
+    skin: 0xFF4A9AE0,
+  ),
+  Prop.mic: Look(
+    top: 0xFF2A2A30,
+    bottom: 0xFF1A1A1E,
+    hair: 0xFFB8BCC8,
+    skin: 0xFF4A4A52,
+  ),
+  Prop.sword: Look(
+    top: 0xFFD8DCE4,
+    bottom: 0xFF1A1414,
+    hair: 0xFFC0A040,
+    skin: 0xFF8A1A1A,
+  ),
+  Prop.candle: Look(
+    top: 0xFFF0E8D0,
+    bottom: 0xFF6A4A30,
+    hair: 0xFFFFC040,
+    skin: 0xFFFF7020,
+  ),
+  Prop.lantern: Look(
+    top: 0xFFE05A30,
+    bottom: 0xFF2A1A14,
+    hair: 0xFFFFD080,
+    skin: 0xFF2A1A14,
+  ),
+  Prop.chessKing: Look(
+    top: 0xFF1E1A18,
+    bottom: 0xFF0E0C0A,
+    hair: 0xFFC0A040,
+    skin: 0xFF2E2A26,
+  ),
+  Prop.chessKnight: Look(
+    top: 0xFFE8E0D0,
+    bottom: 0xFFC8C0B0,
+    hair: 0xFF2A2420,
+    skin: 0xFFD8D0C0,
+  ),
+  Prop.chessRook: Look(
+    top: 0xFF1E1A18,
+    bottom: 0xFF0E0C0A,
+    hair: 0xFF2E2A26,
+    skin: 0xFF2E2A26,
   ),
 };
 
@@ -463,6 +540,124 @@ Node buildProp(Prop p, Look l) {
       for (var k = 0; k < 3; k++) {
         root.add(
           _p(_b(0.6 - k * 0.12, 0.05, 0.01), accent, 0, 1.38 - k * 0.12, 0.09),
+        );
+      }
+    case Prop.turntables:
+      // A DJ table: two decks with spinning records and a mixer.
+      root.add(_p(_b(1.5, 0.08, 0.6), top, 0, 0.9, 0));
+      for (final x in [-0.7, 0.7]) {
+        root.add(_p(_b(0.06, 0.9, 0.55), second, x, 0.45, 0));
+      }
+      for (final x in [-0.45, 0.45]) {
+        root.add(_p(_b(0.5, 0.06, 0.42), second, x, 0.97, 0));
+        final spin = root.add(
+          Node(name: 'deck', position: Vector3(x, 1.01, 0)),
+        );
+        spin.add(
+          _p(cylinderMesh(0.18, 0.012, segments: 12), 0xFF0C0C0E, 0, 0, 0),
+        );
+        spin.add(_p(cylinderMesh(0.05, 0.014, segments: 8), detail, 0, 0, 0));
+        spin.add(_p(_b(0.02, 0.016, 0.16), 0xFF3A3A40, 0.08, 0, 0));
+        root.add(_p(_b(0.03, 0.03, 0.22), accent, x + 0.2, 1.03, -0.05));
+      }
+      root.add(_p(_b(0.22, 0.08, 0.36), 0xFF3A3A42, 0, 0.98, 0));
+      root.add(_p(_b(0.04, 0.02, 0.1), accent, 0, 1.03, 0.08));
+    case Prop.speakers:
+      for (var k = 0; k < 3; k++) {
+        final y = 0.35 + k * 0.7;
+        root.add(_p(_b(0.8, 0.68, 0.55), top, 0, y, 0));
+        root.add(
+          _p(cylinderMesh(0.24, 0.02, segments: 12), detail, 0, y, 0.28)
+            ..rotation = Quaternion.axisAngle(Vector3(1, 0, 0), math.pi / 2),
+        );
+        root.add(
+          _p(cylinderMesh(0.1, 0.03, segments: 10), second, 0, y, 0.29)
+            ..rotation = Quaternion.axisAngle(Vector3(1, 0, 0), math.pi / 2),
+        );
+      }
+    case Prop.micStand:
+      root.add(_p(cylinderMesh(0.18, 0.03, segments: 8), second, 0, 0, 0));
+      root.add(_p(cylinderMesh(0.015, 1.4, segments: 6), accent, 0, 0, 0));
+      root.add(_p(_b(0.06, 0.06, 0.18), top, 0, 1.45, 0.06));
+      root.add(
+        _p(sphereMesh(0.045, segments: 8, rings: 5), accent, 0, 1.48, 0.17),
+      );
+    case Prop.boombox:
+      root.add(_p(_b(0.7, 0.36, 0.18), top, 0, 0.18, 0));
+      for (final x in [-0.2, 0.2]) {
+        root.add(
+          _p(cylinderMesh(0.11, 0.02, segments: 10), second, x, 0.17, 0.09)
+            ..rotation = Quaternion.axisAngle(Vector3(1, 0, 0), math.pi / 2),
+        );
+      }
+      root.add(_p(_b(0.16, 0.08, 0.01), 0xFF101014, 0, 0.27, 0.095));
+      root.add(_p(_b(0.6, 0.03, 0.03), second, 0, 0.42, 0));
+      root.add(_p(_b(0.03, 0.08, 0.03), second, -0.28, 0.38, 0));
+      root.add(_p(_b(0.03, 0.08, 0.03), second, 0.28, 0.38, 0));
+    case Prop.mic:
+      // Hand-held: the handle's end is at the origin, the head along +Y.
+      root.add(_p(cylinderMesh(0.022, 0.16, segments: 8), top, 0, 0, 0));
+      root.add(_p(cylinderMesh(0.03, 0.03, segments: 8), second, 0, 0.16, 0));
+      root.add(
+        _p(sphereMesh(0.045, segments: 8, rings: 5), accent, 0, 0.22, 0),
+      );
+    case Prop.sword:
+      // A katana standing on its tip... no: lying on a stand. In a hand
+      // it's held by the grip (the grip is at the origin).
+      root.add(_p(_b(0.035, 0.22, 0.035), second, 0, 0.11, 0));
+      root.add(_p(_b(0.09, 0.02, 0.09), accent, 0, 0.23, 0));
+      root.add(_p(_b(0.025, 0.75, 0.01), top, 0, 0.62, 0));
+      root.add(_p(_b(0.012, 0.06, 0.012), top, 0, 1.0, 0));
+    case Prop.candle:
+      root.add(_p(cylinderMesh(0.05, 0.25, segments: 8), top, 0, 0, 0));
+      root.add(_p(cylinderMesh(0.08, 0.02, segments: 8), second, 0, 0, 0));
+      root.add(
+        Node(
+          name: 'part',
+          mesh: _b(0.03, 0.06, 0.03),
+          material: Surface(color: accent, lit: false),
+          position: Vector3(0, 0.29, 0),
+        ),
+      );
+    case Prop.lantern:
+      root.add(_p(_b(0.04, 1.6, 0.04), second, 0, 0.8, 0));
+      root.add(
+        Node(
+          name: 'part',
+          mesh: sphereMesh(0.22, segments: 8, rings: 6),
+          material: Surface(color: top, lit: false),
+          position: Vector3(0, 1.75, 0),
+        ),
+      );
+      root.add(_p(_b(0.1, 0.04, 0.1), second, 0, 1.98, 0));
+    case Prop.chessKing:
+      root.add(_p(cylinderMesh(0.35, 0.15, segments: 10), second, 0, 0, 0));
+      root.add(_p(cylinderMesh(0.22, 1.2, segments: 10), top, 0, 0.15, 0));
+      root.add(_p(cylinderMesh(0.3, 0.12, segments: 10), top, 0, 1.3, 0));
+      root.add(_p(_b(0.1, 0.35, 0.1), accent, 0, 1.6, 0));
+      root.add(_p(_b(0.28, 0.08, 0.1), accent, 0, 1.65, 0));
+    case Prop.chessKnight:
+      root.add(_p(cylinderMesh(0.35, 0.15, segments: 10), second, 0, 0, 0));
+      root.add(_p(cylinderMesh(0.22, 0.5, segments: 10), top, 0, 0.15, 0));
+      root.add(_p(_b(0.3, 0.7, 0.45), top, 0, 0.95, -0.05));
+      root.add(_p(_b(0.26, 0.28, 0.42), top, 0, 1.2, 0.22));
+      root.add(_p(_b(0.06, 0.18, 0.06), top, 0.08, 1.38, -0.1));
+      root.add(_p(_b(0.06, 0.18, 0.06), top, -0.08, 1.38, -0.1));
+      root.add(_p(_b(0.04, 0.5, 0.12), accent, 0, 1.05, -0.3));
+    case Prop.chessRook:
+      root.add(_p(cylinderMesh(0.35, 0.15, segments: 10), second, 0, 0, 0));
+      root.add(_p(cylinderMesh(0.26, 0.9, segments: 10), top, 0, 0.15, 0));
+      root.add(_p(cylinderMesh(0.32, 0.2, segments: 10), top, 0, 1.05, 0));
+      for (var k = 0; k < 4; k++) {
+        final a = k * math.pi / 2;
+        root.add(
+          _p(
+            _b(0.14, 0.14, 0.14),
+            top,
+            math.cos(a) * 0.22,
+            1.32,
+            math.sin(a) * 0.22,
+          ),
         );
       }
   }

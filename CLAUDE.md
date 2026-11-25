@@ -189,11 +189,11 @@ apps/        # one folder per Flutter application
              #                      home-screen widget (home_widget), desktop mini window
              #   vista            - fractal landscapes: terrain + erosion, sky/time of day, fly/walk,
              #                      ray-traced stills (all cores), flyover MP4s
-             #   puppet_stage     - little 3D movies: sets, 6 kinds of people, 18 moves, walk/run
-             #                      to tapped spots, camera shots, stop-motion posing -> MP4;
-             #                      imports rigged models (moves retargeted onto their skeleton),
-             #                      animals (4-legged + birds, own moves), plants and props,
-             #                      person templates (body sliders, extras)
+             #   puppet_stage     - little 3D movies: sets, 10 kinds of people, 27 moves, walk/run
+             #                      to tapped spots, camera shots (with drift), stop-motion posing,
+             #                      places (sets + Vista landscapes), film looks, music -> MP4;
+             #                      imports rigged models, animals, plants and props, held props,
+             #                      person templates; tool/liquid_logic.dart = a music video
              #   xmb_frontend     - PS3-style game menu for Android (Retroid / phone): the PC
              #                      XMB Frontend's companion; starts RetroArch / PPSSPP /
              #                      DuckStation / Dolphin; cross saves, comics, save manager,
@@ -225,6 +225,8 @@ packages/    # shared Dart/Flutter packages
              #   video_encoder - video files with sound: MP4 (H.264+AAC) via Android
              #                   MediaCodec / Windows Media Foundation (Mp4Writer); pure-Dart
              #                   MJPEG AVI everywhere (AviWriter); openVideoWriter picks
+             #   landscape     - Vista's landscapes (terrain, erosion, sky, VistaWorld scene),
+             #                   shared by Vista and Puppet Stage
              #   engine3d      - lightweight 3D: scene graph, meshes/terrain, glTF/OBJ loaders, orbit/
              #                   walk cameras, sorted-triangle renderer (PS1 look by default,
              #                   RenderOptions.clean), Viewport3D widget

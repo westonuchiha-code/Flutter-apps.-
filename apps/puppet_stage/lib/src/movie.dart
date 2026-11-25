@@ -3,7 +3,11 @@ import 'dart:math' as math;
 import 'package:engine3d/engine3d.dart';
 
 import 'animals.dart';
+
+import 'package:landscape/landscape.dart';
+
 import 'cast.dart';
+import 'look.dart';
 import 'props.dart';
 import 'moves.dart';
 import 'sets.dart';
@@ -123,6 +127,8 @@ class Actor {
     this.size = 1.75,
     this.turn = 0,
     this.ownWalk = true,
+    this.place = 0,
+    this.holds,
     List<Action>? actions,
   }) : id = id ?? DateTime.now().microsecondsSinceEpoch.toRadixString(36),
        look =
@@ -167,6 +173,12 @@ class Actor {
   /// A model plays its own walk / run / idle when it has them.
   bool ownWalk;
 
+  /// Which of the movie's places this actor is in (0: the main set).
+  int place;
+
+  /// A prop in the right hand (a katana, a microphone…).
+  Prop? holds;
+
   /// What it is, for lists.
   String get what => model?.name ?? prop?.label ?? animal?.label ?? kind.label;
 
@@ -184,6 +196,8 @@ class Actor {
     'z': z,
     'facing': facing,
     'actions': [for (final a in actions) a.toJson()],
+    if (place != 0) 'place': place,
+    if (holds != null) 'holds': holds!.name,
     if (model != null) ...{
       'model': model!.toJson(),
       'size': size,
@@ -227,6 +241,8 @@ class Actor {
       size: ((j['size'] as num?) ?? 1.75).toDouble(),
       turn: ((j['turn'] as num?) ?? 0).toDouble(),
       ownWalk: j['ownWalk'] != false,
+      place: ((j['place'] as num?) ?? 0).toInt(),
+      holds: Prop.values.where((p) => p.name == j['holds']).firstOrNull,
       actions: [
         for (final a in (j['actions'] as List?) ?? const [])
           Action.fromJson(a as Map),
@@ -269,16 +285,33 @@ class Shot {
     this.yaw,
     this.pitch, {
     this.fov = 55,
+    this.place = 0,
+    this.look,
+    this.end,
   });
   double time;
   final double x, y, z, yaw, pitch, fov;
 
+  /// Which place the camera is in.
+  int place;
+
+  /// This shot's film look (null: the movie's).
+  FilmLook? look;
+
+  /// Where the camera drifts to by the next cut (x, y, z, yaw, pitch):
+  /// push-ins, dollies, slow pans. Null: it stays still.
+  List<double>? end;
+
   Map<String, Object?> toJson() => {
     't': time,
     'p': [x, y, z, yaw, pitch, fov],
+    if (place != 0) 'place': place,
+    if (look != null) 'look': look!.toJson(),
+    if (end != null) 'end': end,
   };
   factory Shot.fromJson(Map j) {
     final p = [for (final v in j['p'] as List) (v as num).toDouble()];
+    final e = j['end'];
     return Shot(
       ((j['t'] as num?) ?? 0).toDouble(),
       p[0],
@@ -287,8 +320,81 @@ class Shot {
       p[3],
       p[4],
       fov: p.length > 5 ? p[5] : 55,
+      place: ((j['place'] as num?) ?? 0).toInt(),
+      look: j['look'] is Map ? FilmLook.fromJson(j['look']) : null,
+      end: e is List && e.length == 5
+          ? [for (final v in e) (v as num).toDouble()]
+          : null,
     );
   }
+}
+
+/// One more place a movie happens in: a built-in set or a Vista landscape.
+class Place {
+  const Place({this.set, this.land, this.name = ''});
+
+  final StageSet? set;
+
+  /// A Vista landscape (its settings, as Vista saves them).
+  final LandSettings? land;
+  final String name;
+
+  String get label => name.isNotEmpty
+      ? name
+      : set?.label ?? (land == null ? 'Place' : 'Landscape: ${land!.preset}');
+
+  Map<String, Object?> toJson() => {
+    if (set != null) 'set': set!.name,
+    if (land != null) 'land': land!.toJson(),
+    if (name.isNotEmpty) 'name': name,
+  };
+  factory Place.fromJson(Object? j) {
+    if (j is! Map) return const Place(set: StageSet.studio);
+    final land = j['land'];
+    LandSettings? ls;
+    if (land is Map) {
+      try {
+        ls = LandSettings.fromJson(land);
+      } catch (_) {}
+    }
+    return Place(
+      set: StageSet.values.where((s) => s.name == j['set']).firstOrNull,
+      land: ls,
+      name: '${j['name'] ?? ''}',
+    );
+  }
+}
+
+/// A music track from the Asset Locker that plays under the movie.
+class MusicRef {
+  const MusicRef(
+    this.id,
+    this.extension,
+    this.name, {
+    this.seconds = 0,
+    this.start = 0,
+  });
+  final String id, extension, name;
+
+  /// The track's length, and where in it the movie starts.
+  final double seconds, start;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'ext': extension,
+    'name': name,
+    'seconds': seconds,
+    if (start != 0) 'start': start,
+  };
+  static MusicRef? fromJson(Object? j) => j is Map && j['id'] is String
+      ? MusicRef(
+          j['id'] as String,
+          '${j['ext'] ?? 'wav'}',
+          '${j['name'] ?? 'Music'}',
+          seconds: ((j['seconds'] as num?) ?? 0).toDouble(),
+          start: ((j['start'] as num?) ?? 0).toDouble(),
+        )
+      : null;
 }
 
 /// The whole movie.
@@ -298,16 +404,35 @@ class Movie {
     this.set = StageSet.studio,
     List<Actor>? actors,
     List<Shot>? shots,
+    List<Place>? places,
+    this.music,
+    this.look = FilmLook.none,
   }) : actors = actors ?? [],
-       shots = shots ?? [];
+       shots = shots ?? [],
+       places = places ?? [];
 
   static const kind = 'puppet_movie';
   static const walkSpeed = 1.3, runSpeed = 3.6;
 
   String name;
+
+  /// The main set (place 0).
   StageSet set;
   final List<Actor> actors;
   final List<Shot> shots;
+
+  /// More places (1, 2, …): shots cut between them, actors stand in one.
+  final List<Place> places;
+
+  /// Plays under the movie (and goes into the video).
+  MusicRef? music;
+
+  /// The movie's film look (shots can have their own).
+  FilmLook look;
+
+  int get placeCount => 1 + places.length;
+  Place placeAt(int i) =>
+      i <= 0 || i > places.length ? Place(set: set) : places[i - 1];
 
   double get duration {
     var d = 0.0;
@@ -317,6 +442,8 @@ class Movie {
     for (final s in shots) {
       d = math.max(d, s.time + 1);
     }
+    final m = music;
+    if (m != null && m.seconds > 0) d = math.max(d, m.seconds - m.start);
     return math.max(d, 1);
   }
 
@@ -327,6 +454,9 @@ class Movie {
     'set': set.name,
     'actors': [for (final a in actors) a.toJson()],
     'shots': [for (final s in shots) s.toJson()],
+    if (places.isNotEmpty) 'places': [for (final p in places) p.toJson()],
+    if (music != null) 'music': music!.toJson(),
+    if (!look.isNone) 'look': look.toJson(),
   };
 
   factory Movie.fromJson(Object? j) {
@@ -347,6 +477,11 @@ class Movie {
         for (final s in (j['shots'] as List?) ?? const [])
           Shot.fromJson(s as Map),
       ],
+      places: [
+        for (final p in (j['places'] as List?) ?? const []) Place.fromJson(p),
+      ],
+      music: MusicRef.fromJson(j['music']),
+      look: FilmLook.fromJson(j['look']),
     );
   }
 

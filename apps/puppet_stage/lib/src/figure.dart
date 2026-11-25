@@ -6,6 +6,7 @@ import 'package:engine3d/engine3d.dart';
 
 import 'cast.dart';
 import 'movie.dart';
+import 'props.dart';
 import 'moves.dart';
 import 'retarget.dart';
 
@@ -29,6 +30,48 @@ abstract class Figure {
 
   /// Places and poses the figure for [st].
   void apply(ActorState st);
+
+  /// [apply], standing on ground at [groundY], with the movie's clock at
+  /// [now] (records spin, flames flicker).
+  void show(ActorState st, {double groundY = 0, double now = 0}) {
+    apply(st);
+    root.position.y += groundY;
+    for (final d in _decks) {
+      // 33⅓ rpm.
+      d.rotation = Quaternion.axisAngle(Vector3(0, 1, 0), now * 3.49);
+    }
+  }
+
+  late final List<Node> _decks = [
+    for (final n in _all(root))
+      if (n.name == 'deck') n,
+  ];
+
+  Node? _held, _hand;
+  Prop? _heldProp;
+
+  /// Puts [prop] in the right hand (null: empty hands). Figures without a
+  /// hand ignore it.
+  void hold(Prop? prop, [Look? look]) {
+    if (prop == _heldProp) return;
+    _hand?.children.remove(_held);
+    _held = _hand = null;
+    _heldProp = prop;
+    final hand = rig?.joints['handR'];
+    if (prop == null || hand == null) return;
+    final grip = Node(
+      name: 'held',
+      position: Vector3(0, -0.08, 0.02),
+      // Grips run along +Y: turn them to point forward out of the fist.
+      rotation: Quaternion.axisAngle(Vector3(1, 0, 0), math.pi / 2),
+    )..add(buildProp(prop, look ?? propLooks[prop]!));
+    for (final n in _all(grip)) {
+      n.depthBias = math.max(n.depthBias, 0.02);
+    }
+    hand.add(grip);
+    _held = grip;
+    _hand = hand;
+  }
 
   void _place(ActorState st) => root
     ..position = Vector3(st.x, 0, st.z)

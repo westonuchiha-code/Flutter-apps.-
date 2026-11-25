@@ -39,6 +39,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.13.1"
+  audio_kit:
+    dependency: "direct main"
+    description:
+      path: "../../packages/audio_kit"
+      relative: true
+    source: path
+    version: "0.1.0"
   boolean_selector:
     dependency: transitive
     description:
@@ -240,6 +247,22 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_recorder:
+    dependency: transitive
+    description:
+      name: flutter_recorder
+      sha256: "520b5236a6dc5a5327251592a37c072375c8a1d11ea6f4d1d59c5666d04f7efd"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.8"
+  flutter_soloud:
+    dependency: transitive
+    description:
+      name: flutter_soloud
+      sha256: a6790d87ba46c7b5ee9f121810e2c442346698a0ef13403d450d734d60086208
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.3.2"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -250,6 +273,21 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  fx_kit:
+    dependency: transitive
+    description:
+      path: "../../packages/fx_kit"
+      relative: true
+    source: path
+    version: "0.1.0"
+  glob:
+    dependency: transitive
+    description:
+      name: glob
+      sha256: "218aeb56050c714f62a3182775320dfa04602b55074873e24e31bbd39bda96fb"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.0"
   hooks:
     dependency: transitive
     description:
@@ -314,6 +352,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0"
+  landscape:
+    dependency: "direct main"
+    description:
+      path: "../../packages/landscape"
+      relative: true
+    source: path
+    version: "0.1.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -402,6 +447,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.0"
+  native_toolchain_c:
+    dependency: transitive
+    description:
+      name: native_toolchain_c
+      sha256: "120b6fc66acd8a5ddeaeb1e59b78836bb3ec9919bd9d9dfb1e2401985710c2c0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.19.6"
   objective_c:
     dependency: transitive
     description:
@@ -498,6 +551,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.5.4"
+  process:
+    dependency: transitive
+    description:
+      name: process
+      sha256: "4242ba3508d37e01808bdf71ad1d5bb93a8d671bf2e7450e6b1b353fb0808891"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.6"
   pub_semver:
     dependency: transitive
     description:
@@ -688,4 +749,4 @@ packages:
     version: "3.1.4"
 sdks:
   dart: ">=3.14.0 <4.0.0"
-  flutter: ">=3.47.0"
+  flutter: ">=3.50.0"
