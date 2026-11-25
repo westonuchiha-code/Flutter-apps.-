@@ -587,3 +587,34 @@ double _clip(double x) {
   final e = math.exp(2 * (a - 0.8) / 0.2);
   return s * (0.8 + 0.2 * (e - 1) / (e + 1));
 }
+
+/// The song's map for the music video director (Puppet Stage's
+/// `SongMap`): tempo, and per bar its section, energy, whether the chorus
+/// is sung and whether the DJ cuts.
+Map<String, Object?> songMapJson(Song song) {
+  final bars = <Map<String, Object?>>[];
+  for (final sec in song.sections) {
+    for (var i = 0; i < sec.bars; i++) {
+      final (name, energy) = switch (sec.part) {
+        Part.intro => ('intro', 0.35),
+        Part.verse => ('verse', 0.55),
+        Part.hook => ('hook', 0.9),
+        Part.breakdown => ('break', 0.8),
+        Part.outro => ('outro', 0.3),
+      };
+      final vocal = sec.part == Part.hook && i.isEven && song.chorus != null;
+      final dj =
+          (sec.part == Part.hook && i.isOdd) ||
+          sec.part == Part.breakdown ||
+          (sec.part == Part.intro && i >= sec.bars - 2) ||
+          (sec.part == Part.verse && i == sec.bars - 1);
+      bars.add({
+        's': name,
+        'e': energy,
+        if (vocal) 'v': true,
+        if (dj) 'dj': true,
+      });
+    }
+  }
+  return {'kind': 'song_map', 'bpm': song.bpm, 'bars': bars};
+}

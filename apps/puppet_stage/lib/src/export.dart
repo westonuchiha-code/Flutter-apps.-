@@ -147,7 +147,11 @@ Future<File?> exportMovie({
         await writer.cancel();
         return null;
       }
-      final t = from + i / fps;
+      final look = movie.shotAt(from + i / fps)?.look ?? movie.look;
+      // Stop motion: the picture (and the pose) only changes every few
+      // frames.
+      final step = look.hold + 1;
+      final t = from + (i - i % step) / fps;
       pose(t);
       final shot = cameraAt(movie, t, cam);
       if (shot == null) {

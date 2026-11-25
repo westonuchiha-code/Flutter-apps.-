@@ -66,3 +66,43 @@ as JSON, renders a contact sheet of its shots, or the whole video.
 
 Local checks with real models (not in CI): `tool/model_check_test.dart`
 and `tool/import_shot_test.dart` (`--dart-define=MODELS=<folder of .glb>`).
+
+## Music video pipeline (`lib/src/mv/`)
+
+Lessons from the Liquid Logic video (see the bottom of this file), turned
+into a pipeline:
+
+1. **Music first.** Songs are approved as short takes before any video.
+2. **A song map** (`song_map.dart`): tempo, where bar 1 starts and what each
+   bar is (intro/verse/hook/break/outro, energy, sung, DJ). The album
+   renderer writes exact ones (`<song>.songmap.json`); for any WAV it is
+   worked out from loudness, with the tempo typed or tapped.
+3. **Styles** (`styles.dart`): places (sets or Vista landscapes, with a
+   `Mood`: night, golden hour, coloured lamps), cast with roles (lead,
+   crew, dj, feature, pet), props, moves per role and section, film looks,
+   bars per shot and kinds of shots. Six so far, each after a band's
+   general feel: Liberation (Dead Prez), Cipher (Hieroglyphics), Backyard
+   (People Under the Stairs), Undertow (Tool), Deadpan (Cake), Mothership
+   (Parliament).
+4. **The director** (`director.dart`) places people by formation (line,
+   circle, row, scatter), gives them moves bar by bar (leads mouth sung
+   bars, the DJ cuts DJ bars) and cuts on the bar with shots described in
+   words (wide, medium, close, low fisheye, overhead, profile, insert,
+   landscape) that are placed round the subject, kept off people and props
+   and out of the walls, and drift (push, orbit, crane, spin).
+5. **Checks** (`check.dart`): every shot is drawn small through its look;
+   too-dark ones get more exposure.
+6. **Takes**: a contact sheet first (`tool/mv_test.dart`), then MP4s from
+   CI (`.github/workflows/mv.yml` → `mv-takes-latest`).
+
+In the app: menu → **Auto music video…** (a WAV from the Locker, its
+tempo, a style, "another take") makes the movie and opens it in the
+editor. New film looks for it: 70s Film, Bile, Red & Black, Flat Bright,
+Cosmic (colours cycle), Stop Motion (pictures held, like animation).
+
+What the Liquid Logic video taught: approve the music before building on
+it (the rapped vocals were thrown away after a whole album was made);
+placing cameras by hand by coordinates kept putting them inside mountains
+and behind props; sets plus dark looks came out black; contact sheets of
+every shot caught all of that in minutes; cutting on the bar from a
+written script is what made it feel like a music video.

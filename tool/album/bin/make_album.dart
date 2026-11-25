@@ -2,12 +2,14 @@
 // mp3_kit encoder) files in OUT (default: ./out):
 //   <n> - <title>.wav/.mp3 and, for songs, "<n> - <title> (Instrumental)".
 //   dart run bin/make_album.dart [out] [track numbers...]
+import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:album/album.dart';
 import 'package:album/dsp.dart';
+import 'package:album/song.dart';
 import 'package:chip_synth/chip_synth.dart';
 import 'package:mp3_kit/mp3_kit.dart';
 
@@ -48,6 +50,13 @@ void _render(String out, int n, String title, bool instrumental) {
     ),
   );
   File('$out/$base.mp3').writeAsBytesSync(mp3);
+  // The song's map, for the music video director.
+  final song = songs.where((s) => s.title == title).firstOrNull;
+  if (song != null) {
+    File(
+      '$out/$base.songmap.json',
+    ).writeAsStringSync(jsonEncode(songMapJson(song)));
+  }
   stdout.writeln(
     '$name  ${(audio.length / 2 / sr).toStringAsFixed(1)} s  (${watch.elapsed.inSeconds} s)',
   );

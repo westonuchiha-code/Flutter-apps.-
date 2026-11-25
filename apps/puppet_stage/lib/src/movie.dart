@@ -331,9 +331,13 @@ class Shot {
 
 /// One more place a movie happens in: a built-in set or a Vista landscape.
 class Place {
-  const Place({this.set, this.land, this.name = ''});
+  const Place({this.set, this.land, this.name = '', this.mood});
 
   final StageSet? set;
+
+  /// Light and colour changes on top of the set or landscape (night,
+  /// golden hour, coloured lamps).
+  final Mood? mood;
 
   /// A Vista landscape (its settings, as Vista saves them).
   final LandSettings? land;
@@ -347,6 +351,7 @@ class Place {
     if (set != null) 'set': set!.name,
     if (land != null) 'land': land!.toJson(),
     if (name.isNotEmpty) 'name': name,
+    if (mood != null) 'mood': mood!.toJson(),
   };
   factory Place.fromJson(Object? j) {
     if (j is! Map) return const Place(set: StageSet.studio);
@@ -361,6 +366,83 @@ class Place {
       set: StageSet.values.where((s) => s.name == j['set']).firstOrNull,
       land: ls,
       name: '${j['name'] ?? ''}',
+      mood: j['mood'] is Map ? Mood.fromJson(j['mood'] as Map) : null,
+    );
+  }
+}
+
+/// A lamp a [Mood] adds: position, colour, reach and strength.
+typedef Lamp = ({
+  double x,
+  double y,
+  double z,
+  int color,
+  double range,
+  double power,
+});
+
+/// Light changes for a place (null fields: as built).
+class Mood {
+  const Mood({
+    this.sky,
+    this.horizon,
+    this.ambient,
+    this.sun,
+    this.sunDir,
+    this.fog,
+    this.fogNear,
+    this.fogFar,
+    this.lamps = const [],
+  });
+  final int? sky, horizon, ambient, sun, fog;
+
+  /// Where the sunlight points (x, y, z).
+  final List<double>? sunDir;
+  final double? fogNear, fogFar;
+  final List<Lamp> lamps;
+
+  Map<String, Object?> toJson() => {
+    if (sky != null) 'sky': sky,
+    if (horizon != null) 'horizon': horizon,
+    if (ambient != null) 'ambient': ambient,
+    if (sun != null) 'sun': sun,
+    if (sunDir != null) 'sunDir': sunDir,
+    if (fog != null) 'fog': fog,
+    if (fogNear != null) 'fogNear': fogNear,
+    if (fogFar != null) 'fogFar': fogFar,
+    if (lamps.isNotEmpty)
+      'lamps': [
+        for (final l in lamps) [l.x, l.y, l.z, l.color, l.range, l.power],
+      ],
+  };
+
+  factory Mood.fromJson(Map j) {
+    int? c(String k) => (j[k] as num?)?.toInt();
+    double? d(String k) => (j[k] as num?)?.toDouble();
+    final dir = j['sunDir'];
+    return Mood(
+      sky: c('sky'),
+      horizon: c('horizon'),
+      ambient: c('ambient'),
+      sun: c('sun'),
+      fog: c('fog'),
+      fogNear: d('fogNear'),
+      fogFar: d('fogFar'),
+      sunDir: dir is List && dir.length == 3
+          ? [for (final v in dir) (v as num).toDouble()]
+          : null,
+      lamps: [
+        for (final l in (j['lamps'] as List?) ?? const [])
+          if (l is List && l.length == 6)
+            (
+              x: (l[0] as num).toDouble(),
+              y: (l[1] as num).toDouble(),
+              z: (l[2] as num).toDouble(),
+              color: (l[3] as num).toInt(),
+              range: (l[4] as num).toDouble(),
+              power: (l[5] as num).toDouble(),
+            ),
+      ],
     );
   }
 }
@@ -407,6 +489,7 @@ class Movie {
     List<Place>? places,
     this.music,
     this.look = FilmLook.none,
+    this.mood,
   }) : actors = actors ?? [],
        shots = shots ?? [],
        places = places ?? [];
@@ -430,9 +513,12 @@ class Movie {
   /// The movie's film look (shots can have their own).
   FilmLook look;
 
+  /// Light changes on the main set.
+  Mood? mood;
+
   int get placeCount => 1 + places.length;
   Place placeAt(int i) =>
-      i <= 0 || i > places.length ? Place(set: set) : places[i - 1];
+      i <= 0 || i > places.length ? Place(set: set, mood: mood) : places[i - 1];
 
   double get duration {
     var d = 0.0;
@@ -457,6 +543,7 @@ class Movie {
     if (places.isNotEmpty) 'places': [for (final p in places) p.toJson()],
     if (music != null) 'music': music!.toJson(),
     if (!look.isNone) 'look': look.toJson(),
+    if (mood != null) 'mood': mood!.toJson(),
   };
 
   factory Movie.fromJson(Object? j) {
@@ -482,6 +569,7 @@ class Movie {
       ],
       music: MusicRef.fromJson(j['music']),
       look: FilmLook.fromJson(j['look']),
+      mood: j['mood'] is Map ? Mood.fromJson(j['mood'] as Map) : null,
     );
   }
 

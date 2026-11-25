@@ -200,7 +200,10 @@ apps/        # one folder per Flutter application
              #                      to tapped spots, camera shots (with drift), stop-motion posing,
              #                      places (sets + Vista landscapes), film looks, music -> MP4;
              #                      imports rigged models, animals, plants and props, held props,
-             #                      person templates; tool/liquid_logic.dart = a music video
+             #                      person templates; tool/liquid_logic.dart = a music video;
+             #                      lib/src/mv = music video pipeline (song map, 6 styles,
+             #                      director, dark-shot check; "Auto music video…" in the app,
+             #                      tool/mv_test.dart sheets, mv.yml → mv-takes-latest MP4s)
              #   xmb_frontend     - PS3-style game menu for Android (Retroid / phone): the PC
              #                      XMB Frontend's companion; starts RetroArch / PPSSPP /
              #                      DuckStation / Dolphin; cross saves, comics, save manager,

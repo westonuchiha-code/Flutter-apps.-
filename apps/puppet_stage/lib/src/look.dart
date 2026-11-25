@@ -16,12 +16,17 @@ class FilmLook {
     this.vignette = 0,
     this.letterbox = false,
     this.fisheye = 0,
+    this.saturation = 0,
+    this.exposure = 0,
+    this.hueSpin = 0,
+    this.hold = 0,
   });
 
   /// Black and white.
   final bool mono;
 
-  /// 0 none, 1 sepia, 2 cold blue, 3 green night (on mono or colour).
+  /// 0 none, 1 sepia, 2 cold blue, 3 green night, 4 warm 70s film,
+  /// 5 bile (sick green-brown), 6 red and black (on mono or colour).
   final int tint;
 
   /// 0..1: how hard the blacks and whites are pushed.
@@ -33,6 +38,18 @@ class FilmLook {
 
   /// 0..1: barrel distortion, like a fisheye lens.
   final double fisheye;
+
+  /// -1..1: washed out to vivid.
+  final double saturation;
+
+  /// -1..1: darker to brighter (stops / 2).
+  final double exposure;
+
+  /// 0..1: colours cycle round the hue wheel (psychedelic).
+  final double hueSpin;
+
+  /// Stop motion: each picture held for this many more frames (0..4).
+  final int hold;
 
   static const none = FilmLook();
 
@@ -69,6 +86,39 @@ class FilmLook {
       vignette: 0.45,
       fisheye: 0.8,
     ),
+    '70s Film': FilmLook(
+      tint: 4,
+      contrast: 0.2,
+      grain: 0.35,
+      vignette: 0.35,
+      saturation: 0.25,
+      exposure: 0.2,
+    ),
+    'Bile': FilmLook(
+      tint: 5,
+      contrast: 0.55,
+      grain: 0.5,
+      flicker: 0.6,
+      vignette: 0.7,
+      saturation: -0.6,
+      hold: 2,
+    ),
+    'Red & Black': FilmLook(
+      mono: true,
+      tint: 6,
+      contrast: 0.7,
+      grain: 0.3,
+      vignette: 0.5,
+    ),
+    'Flat Bright': FilmLook(saturation: 0.6, exposure: 0.35, contrast: 0.1),
+    'Cosmic': FilmLook(
+      saturation: 0.9,
+      contrast: 0.3,
+      vignette: 0.4,
+      hueSpin: 0.5,
+      fisheye: 0.35,
+    ),
+    'Stop Motion': FilmLook(contrast: 0.3, grain: 0.3, flicker: 0.4, hold: 2),
   };
 
   bool get isNone =>
@@ -79,7 +129,11 @@ class FilmLook {
       flicker == 0 &&
       vignette == 0 &&
       !letterbox &&
-      fisheye == 0;
+      fisheye == 0 &&
+      saturation == 0 &&
+      exposure == 0 &&
+      hueSpin == 0 &&
+      hold == 0;
 
   FilmLook copyWith({
     bool? mono,
@@ -90,6 +144,10 @@ class FilmLook {
     double? vignette,
     bool? letterbox,
     double? fisheye,
+    double? saturation,
+    double? exposure,
+    double? hueSpin,
+    int? hold,
   }) => FilmLook(
     mono: mono ?? this.mono,
     tint: tint ?? this.tint,
@@ -99,6 +157,10 @@ class FilmLook {
     vignette: vignette ?? this.vignette,
     letterbox: letterbox ?? this.letterbox,
     fisheye: fisheye ?? this.fisheye,
+    saturation: saturation ?? this.saturation,
+    exposure: exposure ?? this.exposure,
+    hueSpin: hueSpin ?? this.hueSpin,
+    hold: hold ?? this.hold,
   );
 
   Map<String, Object?> toJson() => {
@@ -110,6 +172,10 @@ class FilmLook {
     if (vignette != 0) 'vignette': vignette,
     if (letterbox) 'letterbox': true,
     if (fisheye != 0) 'fisheye': fisheye,
+    if (saturation != 0) 'saturation': saturation,
+    if (exposure != 0) 'exposure': exposure,
+    if (hueSpin != 0) 'hueSpin': hueSpin,
+    if (hold != 0) 'hold': hold,
   };
 
   factory FilmLook.fromJson(Object? j) {
@@ -117,13 +183,17 @@ class FilmLook {
     double d(String k) => ((j[k] as num?) ?? 0).toDouble().clamp(0, 1);
     return FilmLook(
       mono: j['mono'] == true,
-      tint: ((j['tint'] as num?) ?? 0).toInt().clamp(0, 3),
+      tint: ((j['tint'] as num?) ?? 0).toInt().clamp(0, 6),
       contrast: d('contrast'),
       grain: d('grain'),
       flicker: d('flicker'),
       vignette: d('vignette'),
       letterbox: j['letterbox'] == true,
       fisheye: d('fisheye'),
+      saturation: ((j['saturation'] as num?) ?? 0).toDouble().clamp(-1, 1),
+      exposure: ((j['exposure'] as num?) ?? 0).toDouble().clamp(-1, 1),
+      hueSpin: d('hueSpin'),
+      hold: ((j['hold'] as num?) ?? 0).toInt().clamp(0, 4),
     );
   }
 }
@@ -142,6 +212,14 @@ Uint32List applyLook(Uint32List px, int w, int h, FilmLook look, int frame) {
   final cx = w / 2, cy = h / 2;
   final maxR = math.sqrt(cx * cx + cy * cy);
   final k = 1 + look.contrast * 1.6;
+  final sat = 1 + look.saturation;
+  final expo = math.pow(2, look.exposure * 0.5).toDouble();
+  // Hue rotation (a matrix round the grey axis).
+  final ang = frame * look.hueSpin * 0.08;
+  final ca = math.cos(ang), sa = math.sin(ang);
+  const t3 = 1 / 3, s3 = 0.57735026919;
+  final h00 = ca + (1 - ca) * t3, h01 = t3 * (1 - ca) - s3 * sa;
+  final h02 = t3 * (1 - ca) + s3 * sa;
   for (var y = 0; y < h; y++) {
     if (y < barH || y >= h - barH) {
       out.fillRange(y * w, (y + 1) * w, 0xFF000000);
@@ -155,7 +233,23 @@ Uint32List applyLook(Uint32List px, int w, int h, FilmLook look, int frame) {
       if (look.mono) {
         final l = 0.299 * r + 0.587 * g + 0.114 * b;
         r = g = b = l;
+      } else if (sat != 1) {
+        final l = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = l + (r - l) * sat;
+        g = l + (g - l) * sat;
+        b = l + (b - l) * sat;
       }
+      if (look.hueSpin > 0) {
+        final nr = r * h00 + g * h01 + b * h02;
+        final ng = r * h02 + g * h00 + b * h01;
+        final nb = r * h01 + g * h02 + b * h00;
+        r = nr;
+        g = ng;
+        b = nb;
+      }
+      r *= expo;
+      g *= expo;
+      b *= expo;
       // Contrast around the middle grey (an S-ish curve).
       r = ((r - 0.5) * k + 0.5);
       g = ((g - 0.5) * k + 0.5);
@@ -174,6 +268,20 @@ Uint32List applyLook(Uint32List px, int w, int h, FilmLook look, int frame) {
           r *= 0.7;
           g = g * 1.1 + 0.02;
           b *= 0.75;
+        case 4: // warm 70s film: lifted blacks, orange skin, faded blue
+          r = r * 1.06 + 0.04;
+          g = g * 0.98 + 0.03;
+          b = b * 0.78 + 0.05;
+        case 5: // bile
+          final l = (r + g + b) / 3;
+          r = l * 0.85 + r * 0.15;
+          g = l * 0.95 + 0.02;
+          b = l * 0.55;
+        case 6: // red and black: shadows black, mids blood red
+          final l = (r + g + b) / 3;
+          r = l * 1.25;
+          g = l * l * 0.55;
+          b = l * l * 0.45;
       }
       var m = flick;
       if (look.vignette > 0) {
@@ -235,6 +343,9 @@ List<double> previewMatrix(FilmLook look) {
     1 => (1.08, 0.92, 0.72),
     2 => (0.8, 0.95, 1.1),
     3 => (0.7, 1.1, 0.75),
+    4 => (1.06, 0.98, 0.78),
+    5 => (0.9, 0.95, 0.55),
+    6 => (1.25, 0.45, 0.4),
     _ => (1.0, 1.0, 1.0),
   };
   for (var i = 0; i < 5; i++) {

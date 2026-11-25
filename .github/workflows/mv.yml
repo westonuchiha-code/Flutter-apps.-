@@ -1,0 +1,117 @@
+name: Music video takes
+
+# The music video pipeline (Puppet Stage's lib/src/mv): renders a short
+# take of Liquid Logic in every style as MP4 (Windows, where video_encoder
+# writes MP4) and publishes them as the mv-takes-latest pre-release.
+on:
+  push:
+    paths:
+      - "apps/puppet_stage/lib/src/mv/**"
+      - "apps/puppet_stage/integration_test/mv_video_test.dart"
+      - ".github/workflows/mv.yml"
+  workflow_dispatch:
+    inputs:
+      from_bar:
+        description: "First bar"
+        default: "28"
+      to_bar:
+        description: "Bar to stop at"
+        default: "39"
+      seed:
+        description: "Take (seed)"
+        default: "1"
+
+concurrency:
+  group: mv-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FROM_BAR: ${{ github.event.inputs.from_bar || '28' }}
+  TO_BAR: ${{ github.event.inputs.to_bar || '39' }}
+  SEED: ${{ github.event.inputs.seed || '1' }}
+
+jobs:
+  song:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.50.1"
+          channel: stable
+          cache: true
+      - name: Render Liquid Logic and its song map
+        working-directory: tool/album
+        run: |
+          dart pub get
+          dart run bin/make_album.dart out 6
+      - uses: actions/upload-artifact@v4
+        with:
+          name: song
+          path: |
+            tool/album/out/06 - Liquid Logic.wav
+            tool/album/out/06 - Liquid Logic.songmap.json
+          retention-days: 3
+
+  take:
+    needs: song
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        style: [liberation, cipher, backyard, undertow, deadpan, mothership]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.50.1"
+          channel: stable
+          cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: song
+          path: song
+      - name: Render the take
+        shell: bash
+        working-directory: apps/puppet_stage
+        run: |
+          flutter pub get
+          mkdir -p ../../video
+          flutter test integration_test/mv_video_test.dart -d windows \
+            "--dart-define=STYLE=${{ matrix.style }}" \
+            "--dart-define=WAV=${{ github.workspace }}/song/06 - Liquid Logic.wav" \
+            "--dart-define=MAP=${{ github.workspace }}/song/06 - Liquid Logic.songmap.json" \
+            "--dart-define=OUT=${{ github.workspace }}/video" \
+            --dart-define=FROM_BAR=$FROM_BAR --dart-define=TO_BAR=$TO_BAR \
+            --dart-define=SEED=$SEED
+          ls -l ../../video
+      - uses: actions/upload-artifact@v4
+        with:
+          name: take-${{ matrix.style }}
+          path: video/*
+          retention-days: 7
+
+  publish:
+    needs: take
+    if: always() && needs.take.result != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: take-*
+          merge-multiple: true
+          path: takes
+      - name: Replace the mv-takes-latest pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls -l takes
+          gh release delete mv-takes-latest --cleanup-tag --yes || true
+          gh release create mv-takes-latest takes/*.mp4 takes/*.json \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "Music video takes (latest)" \
+            --notes "Liquid Logic, bars $FROM_BAR-$TO_BAR (take $SEED), in each music video style from Puppet Stage's pipeline. The .puppet_movie.json files open in Puppet Stage."

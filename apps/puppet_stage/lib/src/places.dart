@@ -43,6 +43,36 @@ HeightField _generate(LandSettings s) => generate(s, n: 129);
 /// Builds [p]. A landscape is generated (in the background) and the action
 /// moved to a high, fairly flat spot near its middle, above any water.
 Future<BuiltPlace> buildPlace(Place p) async {
+  final built = await _buildPlace(p);
+  final m = p.mood;
+  if (m != null) {
+    final sc = built.scene;
+    if (m.sky != null) sc.sky = m.sky!;
+    if (m.horizon != null) sc.skyHorizon = m.horizon;
+    if (m.ambient != null) sc.ambient = m.ambient!;
+    if (m.sun != null) sc.sunColor = m.sun!;
+    if (m.sunDir != null) {
+      sc.sunDirection = Vector3(m.sunDir![0], m.sunDir![1], m.sunDir![2])
+        ..normalize();
+    }
+    if (m.fog != null) sc.fogColor = m.fog!;
+    if (m.fogNear != null) sc.fogNear = m.fogNear!;
+    if (m.fogFar != null) sc.fogFar = m.fogFar!;
+    for (final l in m.lamps) {
+      sc.lights.add(
+        PointLight(
+          position: Vector3(l.x, l.y + built.ground(l.x, l.z), l.z),
+          color: l.color,
+          range: l.range,
+          intensity: l.power,
+        ),
+      );
+    }
+  }
+  return built;
+}
+
+Future<BuiltPlace> _buildPlace(Place p) async {
   final land = p.land;
   if (land == null) return BuiltPlace(await buildSet(p.set ?? StageSet.studio));
   final field = await runInBackground(_generate, land);

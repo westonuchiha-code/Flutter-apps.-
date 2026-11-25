@@ -22,6 +22,7 @@ import '../props.dart';
 import '../moves.dart';
 import '../places.dart';
 import '../staging.dart';
+import 'auto_video.dart';
 import '../sets.dart';
 
 const _palette = [
@@ -392,37 +393,73 @@ class _HomePageState extends State<HomePage> {
     return null;
   }
 
-  Future<void> _pickMusic() async {
+  /// A WAV from the Locker: its reference and its sound.
+  Future<(MusicRef, Int16List)?> _chooseMusic() async {
     final locker = Shell.of(context).locker;
-    if (!locker.ready && !await locker.connect()) return;
-    if (!mounted) return;
+    if (!locker.ready && !await locker.connect()) return null;
+    if (!mounted) return null;
     final info = await pickFromLocker(
       context,
       locker,
       types: const [AssetType.sample, AssetType.recording, AssetType.other],
     );
-    if (info == null) return;
+    if (info == null) return null;
     if (info.extension.toLowerCase() != 'wav') {
       _snack('Music must be a WAV file');
-      return;
+      return null;
     }
     final bytes = await locker.read(info);
     final pcm = bytes == null ? null : decodeWav(bytes);
     if (pcm == null) {
       _snack('Could not read "${info.name}"');
-      return;
+      return null;
     }
-    await _player?.stop();
-    setState(() {
-      _playing = false;
-      _movie.music = MusicRef(
+    return (
+      MusicRef(
         info.id,
         info.extension,
         info.name,
         seconds: pcm.length / 2 / 44100,
-      );
+      ),
+      pcm,
+    );
+  }
+
+  Future<void> _pickMusic() async {
+    final got = await _chooseMusic();
+    if (got == null) return;
+    await _player?.stop();
+    setState(() {
+      _playing = false;
+      _movie.music = got.$1;
       _musicLoaded = null;
     });
+  }
+
+  Future<void> _autoVideo() async {
+    await _player?.stop();
+    if (!mounted) return;
+    final m = await Navigator.of(context).push<Movie>(
+      MaterialPageRoute(
+        builder: (_) => AutoVideoPage(chooseMusic: _chooseMusic),
+      ),
+    );
+    if (m == null || !mounted) return;
+    setState(() {
+      _playing = false;
+      _movie = m;
+      _t = 0;
+      _view = 0;
+      _selected = m.actors.isEmpty ? null : m.actors.first.id;
+      _pose = null;
+      _musicLoaded = null;
+      _places.clear();
+      _placeKeys.clear();
+    });
+    await _rebuild();
+    _snack(
+      '${m.name}: ${m.shots.length} shots. Play it, change anything, then make the video.',
+    );
   }
 
   CameraRig get _rig => _shotNow != null ? _shotRig : _orbit;
@@ -874,6 +911,8 @@ class _HomePageState extends State<HomePage> {
                   await _open();
                 case 'clean':
                   setState(() => _clean = !_clean);
+                case 'auto':
+                  await _autoVideo();
                 case 'new':
                   setState(() {
                     _movie = Movie();
@@ -893,6 +932,10 @@ class _HomePageState extends State<HomePage> {
               const PopupMenuItem(value: 'save', child: Text('Save movie')),
               const PopupMenuItem(value: 'open', child: Text('Open movie')),
               const PopupMenuItem(value: 'new', child: Text('New movie')),
+              const PopupMenuItem(
+                value: 'auto',
+                child: Text('Auto music video…'),
+              ),
             ],
           ),
           ...shellActions(context),
