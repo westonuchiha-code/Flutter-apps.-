@@ -111,6 +111,13 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   pitch (don't "fix" hardware tuning), real volume steps, frame-rate effects,
   machine output filters; no clicks or clipping the hardware never had.
 
+- **Vocals must earn their place** (owner's rule, songs): a vocal either
+  adds to the rhythm or says something substantive. Anywhere it doesn't
+  enhance the music it takes away from it, so leave it out: space, the
+  beat and the DJ are fine on their own. Vocal changes are tried as short
+  takes (`tool/album/bin/sample.dart`) one at a time, and nothing is built
+  on them until the owner approves one.
+
 - **Creative work uses only this repo's tools** (owner's rule): music,
   voices, pictures and video are made with our packages and apps (chip_synth,
   fx_kit, pixel_kit, engine3d, video_kit, video_encoder, Puppet Stage, Vista,

@@ -241,6 +241,7 @@ Float32List renderSong(
 
   var at = 0.0;
   var barNo = 0;
+  (String, Mc)? lastLine;
   for (final sec in song.sections) {
     for (var i = 0; i < sec.bars; i++, barNo++) {
       final t = at + i * bar;
@@ -319,8 +320,29 @@ Float32List renderSong(
               i < sec.lines.length) {
             final v = buf(bar + 1);
             if (flow == 'line') {
-              rapLine(v, sec.lines[i], sec.mc!, 0, song.bpm);
-              mix.add(_cleanVoice(v), t, vocalLevel);
+              final line = sec.lines[i];
+              if (line.isNotEmpty) {
+                rapLine(v, line, sec.mc!, 0, song.bpm);
+                mix.add(_cleanVoice(v), t, vocalLevel);
+                lastLine = (line, sec.mc!);
+              } else if (lastLine != null && stems.contains('dj')) {
+                // A bar left to the DJ: he cuts up what was just said.
+                final cut = Float32List.fromList(
+                  phrase(lastLine.$1, lastLine.$2, speed: 1.1),
+                );
+                normalize(cut, 0.95);
+                mix.add(
+                  routine(
+                    cut,
+                    const ['forward', 'chirp', 'baby', 'stab'],
+                    song.bpm,
+                    seed: barNo,
+                  ),
+                  t,
+                  0.6,
+                  i.isEven ? -0.3 : 0.3,
+                );
+              }
             } else {
               rapBar(v, sec.lines[i], sec.mc!, 0, song.bpm);
               mix.add(_voice(v), t, 1.5);

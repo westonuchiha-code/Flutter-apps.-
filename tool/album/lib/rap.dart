@@ -123,9 +123,11 @@ void rapLine(
   double at,
   double bpm, {
   double gain = 1,
+  double? beats,
 }) {
   final words = textToSpeech(line);
   if (words.isEmpty) return;
+  final syl = words.fold<int>(0, (a, w) => a + syllables(w.phonemes));
   SpeechSettings s(double speed) => SpeechSettings(
     chip: mc.chip,
     pitch: mc.pitch * pitchLift,
@@ -133,7 +135,8 @@ void rapLine(
     contour: Contour.statement,
   );
   final beat = 60 / bpm;
-  final room = beat * 3.6;
+  // Short phrases are punched into the first half of the bar.
+  final room = beat * (beats ?? (syl <= 7 ? 2.2 : 3.6));
   var out = trim(renderSpeech(words, s(1), rate: sr), 0.004);
   final speed = (out.length / sr / room).clamp(0.85, 1.7);
   if ((speed - 1).abs() > 0.03) {
