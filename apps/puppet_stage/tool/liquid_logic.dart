@@ -52,6 +52,23 @@ class _Line {
     }
   }
 
+  /// A hook: when nobody raps, the robots mouth the beeped chorus (one
+  /// calls on the first line, all answer on the second; the DJ fills the
+  /// bars between).
+  void hook(num from, num until, {required bool caller}) {
+    if (_rapping) {
+      rap(from, until);
+      return;
+    }
+    to(from, 'bounce');
+    for (var b = from; b < until; b++) {
+      final k = (b - from).round();
+      final line = (k ~/ 2) % 2;
+      final sings = k.isEven && (line == 1 || caller);
+      to(b + 1, sings ? 'rapMic' : 'bounce');
+    }
+  }
+
   void walk(double x, double z) {
     actor.actions.add(Action(ActionType.walk, x: x, z: z));
   }
@@ -127,22 +144,22 @@ Movie liquidLogic({MusicRef? music, bool rapping = true}) {
   lexicon
     ..to(4, 'stance')
     ..rap(4, 12)
-    ..rap(12, 20)
+    ..hook(12, 20, caller: true)
     ..to(28, 'bounce')
-    ..rap(28, 36)
+    ..hook(28, 36, caller: true)
     ..to(52, 'bounce')
-    ..rap(52, 60)
+    ..hook(52, 60, caller: true)
     ..to(61, 'bow')
     ..to(64, 'stance');
   for (final l in [vox, sputnik]) {
     l
       ..to(4, 'stance')
       ..to(12, 'bounce')
-      ..rap(12, 20)
+      ..hook(12, 20, caller: false)
       ..to(28, 'bounce')
-      ..rap(28, 36)
+      ..hook(28, 36, caller: false)
       ..to(52, 'bounce')
-      ..rap(52, 60)
+      ..hook(52, 60, caller: false)
       ..to(61, 'bow')
       ..to(64, 'stance');
   }
@@ -525,15 +542,16 @@ Movie liquidLogic({MusicRef? music, bool rapping = true}) {
     fov: 75,
   );
   shot(31, spot, (1.0, 0.45, 1.5), (1.4, 1.6, -0.5), look: 'Fisheye', fov: 75);
+  // Bar 32: Lexicon calls the chorus again (close, from below).
+  shot(32, spot, (0.3, 0.5, 1.7), (0, 1.55, 0.3), look: 'Fisheye', fov: 75);
   shot(
-    32,
+    33,
     dojo,
     (0.3, 2.5, 4.5),
     (0, 0.6, 0),
     driftFrom: (-0.3, 2.0, 3.6),
     look: 'Sepia Film',
   );
-  shot(33, spot, (-4.0, 1.2, 3.0), (0, 1.2, -0.2), driftFrom: (-2.0, 1.2, 4.2));
   shot(34, spot, (0, 1.55, 2.4), (0, 1.5, 0.3), driftFrom: (0, 1.55, 1.5));
   shot(
     35,

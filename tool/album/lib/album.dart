@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:chip_synth/chip_synth.dart';
 
+import 'beeps.dart';
 import 'dsp.dart';
 import 'instruments.dart';
 import 'rap.dart';
@@ -250,6 +251,7 @@ final songs = <Song>[
   ),
   Song(
     title: 'Liquid Logic',
+    chorus: liquidChorus,
     bpm: 86,
     seed: 404,
     chords: const [

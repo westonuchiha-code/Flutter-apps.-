@@ -47,6 +47,7 @@ class Song {
     this.swing = 0.57,
     this.cuts = const ['chirp', 'baby', 'transform', 'stab'],
     this.loopHz = 5200,
+    this.chorus,
   });
 
   final String title;
@@ -71,6 +72,10 @@ class Song {
 
   /// The "sampler" low pass on the loop.
   final double loopHz;
+
+  /// A beeped chorus for the hooks (the robots' only words; kept in the
+  /// instrumental render).
+  final List<List<Syl>>? chorus;
 
   int get bars => sections.fold(0, (a, s) => a + s.bars);
   double get barSeconds => 4 * 60 / bpm;
@@ -369,10 +374,10 @@ Float32List renderSong(
               ? ''
               : sec.lines[(i ~/ 2) % sec.lines.length];
           if (i.isEven) {
-            final chorus = beepChorus;
-            if (flow == 'beep') {
+            final chorus = song.chorus ?? (flow == 'beep' ? beepChorus : null);
+            if (chorus != null) {
               // The chorus in beeps: one robot calls, all three answer.
-              if (vocals && stems.contains('vocals') && chorus != null) {
+              if (stems.contains('vocals')) {
                 final li = (i ~/ 2) % chorus.length;
                 final who = li == 0 ? [0] : [0, 1, 2];
                 for (final k in who) {
