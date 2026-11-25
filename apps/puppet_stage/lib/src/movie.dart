@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:engine3d/engine3d.dart';
 
+import 'animals.dart';
 import 'cast.dart';
 import 'moves.dart';
 import 'sets.dart';
@@ -74,9 +75,10 @@ class Action {
 
   Action copy() => Action.fromJson(toJson());
 
-  String describe() => switch (type) {
+  /// [label]: the move's name for this figure (animals' moves differ).
+  String describe([String? label]) => switch (type) {
     ActionType.move =>
-      '${moveById(move)?.label ?? move.replaceFirst('own:', '')} '
+      '${label ?? moveById(move)?.label ?? move.replaceFirst('own:', '')} '
           '${seconds.toStringAsFixed(1)} s',
     ActionType.walk => 'Walk',
     ActionType.run => 'Run',
@@ -111,13 +113,16 @@ class Actor {
     this.x = 0,
     this.z = 0,
     this.facing = 0,
+    this.animal,
     this.model,
     this.size = 1.75,
     this.turn = 0,
     this.ownWalk = true,
     List<Action>? actions,
   }) : id = id ?? DateTime.now().microsecondsSinceEpoch.toRadixString(36),
-       look = look ?? defaultLooks[kind]!,
+       look =
+           look ??
+           (animal != null ? animalLooks[animal]! : defaultLooks[kind]!),
        actions = actions ?? [];
 
   final String id;
@@ -128,6 +133,9 @@ class Actor {
   /// Starting spot and direction (degrees; 0 faces the camera, +Z).
   double x, z, facing;
   final List<Action> actions;
+
+  /// An animal instead of a person.
+  final Animal? animal;
 
   /// An imported model instead of a built-in figure.
   ModelRef? model;
@@ -140,13 +148,14 @@ class Actor {
   bool ownWalk;
 
   /// What it is, for lists.
-  String get what => model?.name ?? kind.label;
+  String get what => model?.name ?? animal?.label ?? kind.label;
 
   Map<String, Object?> toJson() => {
     'id': id,
     'kind': kind.name,
     'name': name,
     'look': look.toJson(),
+    if (animal != null) 'animal': animal!.name,
     'x': x,
     'z': z,
     'facing': facing,
@@ -164,13 +173,16 @@ class Actor {
       (k) => k.name == j['kind'],
       orElse: () => Kind.man,
     );
+    final animal = Animal.values
+        .where((a) => a.name == j['animal'])
+        .firstOrNull;
+    final look = animal != null ? animalLooks[animal]! : defaultLooks[kind]!;
     return Actor(
       id: j['id'] as String?,
       kind: kind,
-      name: (j['name'] as String?) ?? kind.label,
-      look: j['look'] is Map
-          ? Look.fromJson(j['look'] as Map, defaultLooks[kind]!)
-          : defaultLooks[kind]!,
+      animal: animal,
+      name: (j['name'] as String?) ?? animal?.label ?? kind.label,
+      look: j['look'] is Map ? Look.fromJson(j['look'] as Map, look) : look,
       x: ((j['x'] as num?) ?? 0).toDouble(),
       z: ((j['z'] as num?) ?? 0).toDouble(),
       facing: ((j['facing'] as num?) ?? 0).toDouble(),

@@ -43,18 +43,26 @@ List<MoveChoice> _humanMoves() => [
     if (m.id != 'walk' && m.id != 'run') (id: m.id, label: m.label),
 ];
 
-/// One of the blocky people.
+/// One of the blocky people or animals.
 class BuiltFigure extends Figure {
-  BuiltFigure(this.character) : clips = clipsFor(character);
+  BuiltFigure(this.character, {this.labels = const {}})
+    : clips = clipsFor(character);
   final Character character;
   final Map<String, AnimationClip> clips;
+
+  /// Move names for this figure (e.g. 'call' → 'Bark').
+  final Map<String, String> labels;
 
   @override
   Node get root => character.root;
   @override
   Character get rig => character;
   @override
-  List<MoveChoice> get moves => _humanMoves();
+  List<MoveChoice> get moves => [
+    for (final m in movesFor(character.rig))
+      if (m.id != 'walk' && m.id != 'run')
+        (id: m.id, label: labels[m.id] ?? m.label),
+  ];
   @override
   void apply(ActorState st) => applyState(character, clips, st);
 }

@@ -1,17 +1,31 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:engine3d/engine3d.dart';
 
+import 'animals.dart';
 import 'cast.dart';
 
-/// Joint angles in degrees (x: bend, y: twist, z: side). The special key
-/// 'lift' moves the hips up/down in metres (adult size).
+/// Joint angles in degrees (x: bend, y: twist, z: side). Special keys:
+/// 'lift' moves the hips up/down in metres (scaled to the figure's size),
+/// 'rise' in plain metres (flying), and 'sit' (0..1, four legs) drops the
+/// rump to the ground and tilts the body so the front legs still reach it.
 typedef Pose = Map<String, (double, double, double)>;
 
 /// A move written as keyframes.
 class Move {
-  const Move(this.id, this.label, this.duration, this.keys, {this.loop = true});
+  const Move(
+    this.id,
+    this.label,
+    this.duration,
+    this.keys, {
+    this.loop = true,
+    this.rig = 'human',
+  });
   final String id, label;
+
+  /// The skeleton it is written for ('human', 'quad', 'bird').
+  final String rig;
   final double duration;
   final bool loop;
   final List<(double, Pose)> keys;
@@ -698,8 +712,15 @@ const moves = <Move>[
   ]),
 ];
 
-Move? moveById(String id) {
-  for (final m in moves) {
+/// Moves for a skeleton kind.
+List<Move> movesFor(String rig) => switch (rig) {
+  'quad' => quadMoves,
+  'bird' => birdMoves,
+  _ => moves,
+};
+
+Move? moveById(String id, [String rig = 'human']) {
+  for (final m in movesFor(rig)) {
     if (m.id == id) return m;
   }
   return null;
@@ -707,28 +728,61 @@ Move? moveById(String id) {
 
 /// Builds the clip of [m] for [c] (its joints, rest pose and size).
 AnimationClip buildClip(Move m, Character c) {
-  final names = <String>{for (final k in m.keys) ...k.$2.keys}..remove('lift');
+  // 'sit' turns into a body tilt, straight front legs and folded back legs
+  // for this animal's proportions.
+  final tilt = c.span > 0
+      ? math.asin(math.min(0.95, c.clearance / c.span)) * 180 / math.pi
+      : 0.0;
+  Pose expand(Pose k) {
+    final s = k['sit']?.$1;
+    if (s == null || s == 0) return k;
+    final out = Map.of(k);
+    void add(String j, double x) {
+      final e = out[j] ?? (0.0, 0.0, 0.0);
+      out[j] = (e.$1 + x * s, e.$2, e.$3);
+    }
+
+    add('hips', -tilt);
+    add('legFL', tilt);
+    add('legFR', tilt);
+    add('legBL', tilt - 80);
+    add('legBR', tilt - 80);
+    add('shinBL', 150);
+    add('shinBR', 150);
+    add('neck', -tilt * 0.7);
+    add('head', tilt * 0.3);
+    return out;
+  }
+
+  final keys = [for (final k in m.keys) (k.$1, expand(k.$2))];
+  const special = {'lift', 'rise', 'sit'};
+  final names = <String>{for (final k in keys) ...k.$2.keys}
+    ..removeAll(special);
   final hips = c.joints['hips']!;
   final restHips = Vector3(0, c.hipsY, 0);
-  final size = c.hipsY / 0.95;
+  final size = c.hipsY / c.liftRef;
   final channels = <Channel>[];
-  final times = Float32List.fromList([for (final k in m.keys) k.$1]);
+  final times = Float32List.fromList([for (final k in keys) k.$1]);
   for (final name in names) {
     final node = c.joints[name];
     if (node == null) continue;
     final rest = c.rest[name] ?? (0.0, 0.0, 0.0);
-    final values = Float32List(m.keys.length * 4);
-    for (var i = 0; i < m.keys.length; i++) {
-      final e = m.keys[i].$2[name] ?? (0.0, 0.0, 0.0);
+    final values = Float32List(keys.length * 4);
+    for (var i = 0; i < keys.length; i++) {
+      final e = keys[i].$2[name] ?? (0.0, 0.0, 0.0);
       final q = euler(rest.$1 + e.$1, rest.$2 + e.$2, rest.$3 + e.$3);
       values.setAll(i * 4, [q.x, q.y, q.z, q.w]);
     }
     channels.add(Channel(node, AnimPath.rotation, times, values));
   }
-  if (m.keys.any((k) => k.$2.containsKey('lift'))) {
-    final values = Float32List(m.keys.length * 3);
-    for (var i = 0; i < m.keys.length; i++) {
-      final lift = (m.keys[i].$2['lift']?.$1 ?? 0) * size;
+  if (keys.any((k) => k.$2.keys.any(special.contains))) {
+    final values = Float32List(keys.length * 3);
+    for (var i = 0; i < keys.length; i++) {
+      final k = keys[i].$2;
+      final lift =
+          (k['lift']?.$1 ?? 0) * size +
+          (k['rise']?.$1 ?? 0) -
+          (k['sit']?.$1 ?? 0) * c.clearance;
       values.setAll(i * 3, [restHips.x, restHips.y + lift, restHips.z]);
     }
     channels.add(Channel(hips, AnimPath.translation, times, values));
@@ -738,7 +792,7 @@ AnimationClip buildClip(Move m, Character c) {
 
 /// Every move for [c].
 Map<String, AnimationClip> clipsFor(Character c) => {
-  for (final m in moves) m.id: buildClip(m, c),
+  for (final m in movesFor(c.rig)) m.id: buildClip(m, c),
 };
 
 /// Puts every joint back to its resting pose.

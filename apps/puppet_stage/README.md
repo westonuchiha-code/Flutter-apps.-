@@ -6,6 +6,11 @@ Windows, Android, Linux. Little 3D movies without skill (roadmap #19,
 - **Cast:** man, woman, boy, girl, old man, old woman: PS1-style segmented
   figures made in code (17 joints), with skin / hair / top / bottom
   colours, names, place and facing.
+- **Animals** (`animals.dart`): dog, cat, cow, horse, pig (four legs) and
+  chicken, bird, in the same blocky style, each with its own moves: stand,
+  walk, run, sit, lie down, sleep, eat, jump, look around, wag, shake off
+  and its call (bark, meow, moo, neigh, oink); birds peck, flap, hop, sit,
+  fly and cluck/tweet. Sitting is worked out from each body's shape.
 - **Actions:** each person has a list: 18 moves (wave, dance, jump, sit,
   clap, bow, point, cheer, kick, fall over, think, talk, shrug, nod, shake
   head, punch, crouch, stand), walk to / run to (tap the floor), turn,

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:engine3d/engine3d.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:puppet_stage/src/animals.dart';
 import 'package:puppet_stage/src/cast.dart';
 import 'package:puppet_stage/src/movie.dart';
 import 'package:puppet_stage/src/moves.dart';
@@ -35,6 +36,52 @@ void main() {
         reason: kind.name,
       );
     }
+  });
+
+  test('every animal does its moves without sinking or floating off', () {
+    for (final an in Animal.values) {
+      final c = buildAnimal(an, animalLooks[an]!);
+      final clips = clipsFor(c);
+      expect(clips.keys, containsAll(['idle', 'walk', 'run', 'call']));
+      restPose(c);
+      final rest = boundsOf(c.root)!;
+      // Feet on the floor at rest.
+      expect(rest[1], closeTo(0, 0.03), reason: '${an.name} rest');
+      final h = rest[4] - rest[1];
+      for (final m in movesFor(an.rig)) {
+        for (final t in [0.0, 0.3, 0.6, 1.0]) {
+          restPose(c);
+          clips[m.id]!.apply(m.duration * t);
+          final b = boundsOf(c.root)!;
+          expect(
+            b[1],
+            greaterThan(-h * 0.25),
+            reason: '${an.name} ${m.id} at $t sinks into the floor',
+          );
+          if (m.id != 'fly' && m.id != 'jump' && m.id != 'hop') {
+            expect(
+              b[1],
+              lessThan(h * 0.2 + 0.03),
+              reason: '${an.name} ${m.id} at $t floats',
+            );
+          }
+        }
+      }
+      if (an.rig == 'bird') {
+        restPose(c);
+        clips['fly']!.apply(0.1);
+        expect(boundsOf(c.root)![1], greaterThan(1.0), reason: an.name);
+      }
+    }
+    // Sizes: a cat is small, a horse is big.
+    double height(Animal a) {
+      final c = buildAnimal(a, animalLooks[a]!);
+      final b = boundsOf(c.root)!;
+      return b[4] - b[1];
+    }
+
+    expect(height(Animal.cat), lessThan(0.65)); // tail up
+    expect(height(Animal.horse), greaterThan(1.4));
   });
 
   test('actions laid out in time: walking takes distance / speed', () {

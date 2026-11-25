@@ -102,8 +102,26 @@ const jointNames = [
 
 /// A built character: its root (on the ground) and its joints.
 class Character {
-  Character(this.kind, this.root, this.joints, this.rest, this.hipsY);
-  final Kind kind;
+  Character(
+    this.rig,
+    this.root,
+    this.joints,
+    this.rest,
+    this.hipsY, {
+    this.liftRef = 0.95,
+    this.span = 0,
+    this.clearance = 0,
+  });
+
+  /// Four legs: hips-to-chest distance and the gap under the belly (for
+  /// sitting, see the 'sit' pose key).
+  final double span, clearance;
+
+  /// Which moves fit: 'human', 'quad' (four legs) or 'bird'.
+  final String rig;
+
+  /// Hips height the rig's moves were written for (their lifts scale).
+  final double liftRef;
   final Node root;
   final Map<String, Node> joints;
 
@@ -396,7 +414,8 @@ Character buildCharacter(Kind kind, Look look) {
     rest['chest'] = (8, 0, 0);
     rest['head'] = (-12, 0, 0);
   }
-  final joints = root.byName();
+  final all = root.byName();
+  final joints = {for (final n in jointNames) n: all[n]!};
   rest.forEach((name, e) => joints[name]!.rotation = euler(e.$1, e.$2, e.$3));
-  return Character(kind, root, joints, rest, 0.95 * s);
+  return Character('human', root, joints, rest, 0.95 * s);
 }

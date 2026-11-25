@@ -75,11 +75,25 @@ void main() {
       await tester.pump(const Duration(milliseconds: 16));
     }
     expect(find.byType(Viewport3D), findsOneWidget);
-    expect(find.text('Ann'), findsOneWidget);
+    expect(find.text('Ann'), findsWidgets);
+    // Add a dog: its own moves show up (with its call).
+    await tester.tap(find.text('Add'));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.tap(find.text('Dog'));
+    for (var i = 0; i < 10; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(find.text('Dog 3'), findsWidgets);
     await tester.tap(find.text('Actions'));
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
+    expect(find.text('Bark'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Jump'),
       150,

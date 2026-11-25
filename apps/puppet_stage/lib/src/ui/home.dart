@@ -10,6 +10,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:material_ui/material_ui.dart' hide Action;
 import 'package:path_provider/path_provider.dart';
 
+import '../animals.dart';
 import '../cast.dart';
 import '../export.dart';
 import '../figure.dart';
@@ -21,6 +22,8 @@ const _palette = [
   0xFFF0C8A8, 0xFFE0B090, 0xFFC89070, 0xFFA06A48, 0xFF7A4A30, 0xFF4A2E20, //
   0xFF1E1612, 0xFF7A3A22, 0xFFE0B040, 0xFFD8D8D8, 0xFFC0485A, 0xFF3E6AB0,
   0xFF4EA05A, 0xFFE07AB0, 0xFF6A4AA0, 0xFF2E3440, 0xFFE8E0D0, 0xFFE8A030,
+  0xFFF2F0EA, 0xFFF0AAB4, 0xFFC08A50, 0xFF8A5432, 0xFF8A8A92, 0xFF2A2420,
+  0xFFD83A30, 0xFFE8B030, 0xFF4A7AC8,
 ];
 
 const _jointLabels = {
@@ -41,6 +44,20 @@ const _jointLabels = {
   'upperLegR': 'R thigh',
   'lowerLegR': 'R shin',
   'footR': 'R foot',
+  // Animals.
+  'tail': 'Tail',
+  'legFL': 'Front L leg',
+  'shinFL': 'Front L shin',
+  'legFR': 'Front R leg',
+  'shinFR': 'Front R shin',
+  'legBL': 'Back L leg',
+  'shinBL': 'Back L shin',
+  'legBR': 'Back R leg',
+  'shinBR': 'Back R shin',
+  'wingL': 'L wing',
+  'wingR': 'R wing',
+  'legL': 'L leg',
+  'legR': 'R leg',
 };
 
 /// Plays camera shots.
@@ -135,6 +152,7 @@ class _HomePageState extends State<HomePage> {
     for (final a in _movie.actors) {
       final key = jsonEncode([
         a.kind.name,
+        a.animal?.name,
         a.look.toJson(),
         a.model?.toJson(),
         a.size,
@@ -202,7 +220,22 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     }
+    final animal = a.animal;
+    if (animal != null) {
+      return BuiltFigure(
+        buildAnimal(animal, a.look),
+        labels: {'call': animal.call},
+      );
+    }
     return BuiltFigure(buildCharacter(a.kind, a.look));
+  }
+
+  /// The name of a move for [a]'s figure.
+  String? _moveLabel(Actor a, String id) {
+    for (final m in _actors[a.id]?.moves ?? const <MoveChoice>[]) {
+      if (m.id == id) return m.label;
+    }
+    return null;
   }
 
   void _poseAll(double t) {
@@ -703,32 +736,18 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       children: [
         Wrap(
-          spacing: 6,
+          spacing: 8,
           runSpacing: 6,
           children: [
-            for (final k in Kind.values)
-              ActionChip(
-                avatar: const Icon(Icons.add, size: 16),
-                label: Text(k.label),
-                onPressed: () async {
-                  final n = _movie.actors.length;
-                  final actor = Actor(
-                    kind: k,
-                    name: '${k.label} ${n + 1}',
-                    x: (n % 4 - 1.5) * 1.2,
-                    z: n ~/ 4 * -1.2,
-                  );
-                  setState(() {
-                    _movie.actors.add(actor);
-                    _selected = actor.id;
-                  });
-                  await _rebuild();
-                },
-              ),
-            ActionChip(
-              avatar: const Icon(Icons.view_in_ar_outlined, size: 16),
-              label: const Text('Import 3D model'),
+            FilledButton.tonalIcon(
+              onPressed: _addSheet,
+              icon: const Icon(Icons.add),
+              label: const Text('Add'),
+            ),
+            OutlinedButton.icon(
               onPressed: _import,
+              icon: const Icon(Icons.view_in_ar_outlined, size: 18),
+              label: const Text('Import 3D model'),
             ),
           ],
         ),
@@ -801,18 +820,22 @@ class _HomePageState extends State<HomePage> {
           if (a.model == null)
             for (final (label, get, set) in [
               (
-                'Skin',
+                a.animal == null ? 'Skin' : 'Nose',
                 (Look l) => l.skin,
                 (Look l, int c) => l.copyWith(skin: c),
               ),
               (
-                'Hair',
+                a.animal == null ? 'Hair' : 'Mane',
                 (Look l) => l.hair,
                 (Look l, int c) => l.copyWith(hair: c),
               ),
-              ('Top', (Look l) => l.top, (Look l, int c) => l.copyWith(top: c)),
               (
-                'Bottom',
+                a.animal == null ? 'Top' : 'Coat',
+                (Look l) => l.top,
+                (Look l, int c) => l.copyWith(top: c),
+              ),
+              (
+                a.animal == null ? 'Bottom' : 'Patches',
                 (Look l) => l.bottom,
                 (Look l, int c) => l.copyWith(bottom: c),
               ),
@@ -858,6 +881,89 @@ class _HomePageState extends State<HomePage> {
         ],
       ],
     );
+  }
+
+  Future<void> _addActor(Actor actor) async {
+    setState(() {
+      _movie.actors.add(actor);
+      _selected = actor.id;
+    });
+    await _rebuild();
+  }
+
+  /// Where the next one stands.
+  (double, double) get _nextSpot {
+    final n = _movie.actors.length;
+    return ((n % 4 - 1.5) * 1.2, n ~/ 4 * -1.2);
+  }
+
+  /// Picks something to add: people, animals (and more).
+  Future<void> _addSheet() async {
+    final pick = await showModalBottomSheet<Actor>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        final (x, z) = _nextSpot;
+        final n = _movie.actors.length + 1;
+        Widget section(String title, List<(IconData, String, Actor)> items) =>
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final (icon, label, actor) in items)
+                        ActionChip(
+                          avatar: Icon(icon, size: 16),
+                          label: Text(label),
+                          onPressed: () => Navigator.pop(context, actor),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                section('People', [
+                  for (final k in Kind.values)
+                    (
+                      Icons.person_outline,
+                      k.label,
+                      Actor(kind: k, name: '${k.label} $n', x: x, z: z),
+                    ),
+                ]),
+                section('Animals', [
+                  for (final an in Animal.values)
+                    (
+                      Icons.pets,
+                      an.label,
+                      Actor(
+                        kind: Kind.man,
+                        animal: an,
+                        name: '${an.label} $n',
+                        x: x,
+                        z: z,
+                      ),
+                    ),
+                ]),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (pick != null) await _addActor(pick);
   }
 
   List<Widget> _modelControls(Actor a) {
@@ -933,7 +1039,7 @@ class _HomePageState extends State<HomePage> {
       final d = fig.own[id.substring(ownPrefix.length)]?.duration ?? 2;
       return d < 0.8 ? d * 3 : d;
     }
-    final m = moveById(id);
+    final m = moveById(id, _actors[a.id]?.rig?.rig ?? 'human');
     if (m == null) return 2;
     return m.loop ? m.duration * 2 : m.duration + 0.5;
   }
@@ -1015,19 +1121,16 @@ class _HomePageState extends State<HomePage> {
     }
     if (bytes == null) return;
     _modelBytes[info.id] = bytes;
-    final n = _movie.actors.length;
-    final actor = Actor(
-      kind: Kind.man,
-      name: info.name,
-      model: ModelRef(info.id, info.extension, info.name),
-      x: (n % 4 - 1.5) * 1.2,
-      z: n ~/ 4 * -1.2,
+    final (x, z) = _nextSpot;
+    await _addActor(
+      Actor(
+        kind: Kind.man,
+        name: info.name,
+        model: ModelRef(info.id, info.extension, info.name),
+        x: x,
+        z: z,
+      ),
     );
-    setState(() {
-      _movie.actors.add(actor);
-      _selected = actor.id;
-    });
-    await _rebuild();
     if (where == 'file') _snack('Also saved to the Asset Locker (Models)');
   }
 
@@ -1072,7 +1175,9 @@ class _HomePageState extends State<HomePage> {
             dense: true,
             contentPadding: EdgeInsets.zero,
             leading: Text('${i + 1}'),
-            title: Text(a.actions[i].describe()),
+            title: Text(
+              a.actions[i].describe(_moveLabel(a, a.actions[i].move)),
+            ),
             onTap: () => _editAction(a, a.actions[i]),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1165,7 +1270,7 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                act.describe(),
+                act.describe(_moveLabel(a, act.move)),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               if (act.type == ActionType.turn)
@@ -1315,11 +1420,11 @@ class _HomePageState extends State<HomePage> {
           spacing: 4,
           runSpacing: 4,
           children: [
-            for (final j in _jointLabels.entries)
+            for (final j in rig.joints.keys)
               ChoiceChip(
-                label: Text(j.value),
-                selected: _joint == j.key,
-                onSelected: (_) => setState(() => _joint = j.key),
+                label: Text(_jointLabels[j] ?? j),
+                selected: _joint == j,
+                onSelected: (_) => setState(() => _joint = j),
               ),
           ],
         ),
