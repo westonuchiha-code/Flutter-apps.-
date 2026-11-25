@@ -115,7 +115,7 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     fog, triangles sorted far to near and drawn on the GPU; PS1 look by
     default (owner's choice), clean look optional. Test app: 3D Lab.
     Not yet: skinned/animated characters (comes with #19).
-16. ⬜ **Desktop Aquarium.** PS1-style low-poly fish wearing real fish photo
+16. ⏸ **Desktop Aquarium.** *(On hold, owner's choice.)* PS1-style low-poly fish wearing real fish photo
     textures (made with Texture Capture), swimming in a tank on the home
     screen or desktop. The smallest 3D app, so it tests the engine first.
 17. ⬜ **3D Internet City.** A web browser you walk through Doom-style, in the
