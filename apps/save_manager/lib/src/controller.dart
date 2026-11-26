@@ -180,6 +180,102 @@ class SaveManagerConfig {
   CardSafety safety() => CardSafety(isApp: isApp, testRoots: testRoots);
 }
 
+/// Android can't see other apps, so it can't tell whether an emulator has
+/// a card open. Before a job that changes a card the player is asked to
+/// close them; a yes is remembered for [remember]. Its [running] goes in
+/// [SaveManagerConfig.running].
+class EmulatorCheck {
+  /// A check; [now] is the clock (tests).
+  EmulatorCheck({
+    this.remember = const Duration(minutes: 2),
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
+
+  /// How long a yes counts.
+  final Duration remember;
+
+  final DateTime Function() _now;
+  DateTime? _yesAt;
+
+  /// What [running] says after a yes: a list with no emulator in it. (An
+  /// empty list would mean "can't tell" to CardOwners.reason.)
+  static const confirmed = ['user-confirmed-closed'];
+
+  /// The emulators an Android card's folder belongs to, by its path.
+  static const androidEmulators = [
+    ('retroarch', 'RetroArch'),
+    ('duckstation', 'DuckStation'),
+    ('aethersx2', 'NetherSX2'),
+    ('nethersx2', 'NetherSX2'),
+    ('dolphin', 'Dolphin'),
+    ('flycast', 'Flycast'),
+    ('yabasanshiro', 'YabaSanshiro'),
+  ];
+
+  /// The player said yes, and it still counts.
+  bool get fresh {
+    final at = _yesAt;
+    return at != null && _now().difference(at) < remember;
+  }
+
+  /// The player said the emulators are closed.
+  void yes() => _yesAt = _now();
+
+  /// Forget the yes.
+  void reset() => _yesAt = null;
+
+  /// For [SaveManagerConfig.running]: [confirmed] after a fresh yes, else
+  /// null (can't tell: nothing is changed).
+  List<String>? running() => fresh ? confirmed : null;
+
+  /// The emulators the cards at [paths] belong to ("RetroArch and
+  /// DuckStation"; "your emulators" when the folders don't say).
+  static String namesFor(Iterable<String> paths) {
+    final names = <String>[];
+    for (final path in paths) {
+      final low = path.toLowerCase();
+      for (final (key, name) in androidEmulators) {
+        if (low.contains(key) && !names.contains(name)) names.add(name);
+      }
+    }
+    if (names.isEmpty) return 'your emulators';
+    if (names.length == 1) return names[0];
+    return '${names.sublist(0, names.length - 1).join(', ')} and ${names.last}';
+  }
+
+  /// The question.
+  static String question(String names) =>
+      'Close $names fully first (not just Home). Are they closed?';
+}
+
+/// The question asked before a job that changes a card (Android).
+class ClosedQuestion {
+  /// Asking about [job]; [names] = its emulators.
+  ClosedQuestion(this.job, this.names);
+
+  /// The job waiting for the answer.
+  final FlowJob job;
+
+  /// "RetroArch and DuckStation".
+  final String names;
+
+  /// The answers, the safe one first.
+  static const answers = ['NOT YET', "YES, THEY'RE CLOSED"];
+
+  /// The answer highlighted.
+  int index = 0;
+
+  /// The heading.
+  static const title = 'ARE THE EMULATORS CLOSED?';
+
+  /// What it says.
+  List<String> get lines => [
+    EmulatorCheck.question(names),
+    "An emulator that's still open writes its own copy of the card back "
+        'over the change.',
+  ];
+}
+
 Future<R> _defaultRunner<A, R>(R Function(A) work, A arg) =>
     runInBackground<A, R>(work, arg);
 
@@ -188,9 +284,15 @@ class SaveManagerController extends ChangeNotifier {
   /// A controller for [config]; [runner] runs the reads and jobs (default
   /// a background isolate; tests can pass a synchronous one); [onSound]
   /// hears the PC's sound cues (confirm, error, back, panel_open, move).
-  SaveManagerController(this.config, {BackgroundRunner? runner, this.onSound})
-    : _runner = runner ?? _defaultRunner,
-      utcOffset = config.utcOffset ?? Texts.localOffset();
+  /// [check] (Android) asks whether the emulators are closed before a job
+  /// that changes a card.
+  SaveManagerController(
+    this.config, {
+    BackgroundRunner? runner,
+    this.onSound,
+    this.check,
+  }) : _runner = runner ?? _defaultRunner,
+       utcOffset = config.utcOffset ?? Texts.localOffset();
 
   /// How long a notice stays up, for the UI.
   static const noticeSeconds = 4.0;
@@ -200,6 +302,30 @@ class SaveManagerController extends ChangeNotifier {
 
   /// The sound cues.
   final void Function(String cue)? onSound;
+
+  /// Android: asks whether the emulators are closed (null = the system is
+  /// asked instead).
+  final EmulatorCheck? check;
+
+  /// The emulators-closed question showing now (null = none).
+  ClosedQuestion? asking;
+
+  /// Jobs that change a card (the others only read, or write files of
+  /// this app's own).
+  static const writes = {
+    'delete',
+    'copy',
+    'restore_save',
+    'restore_card',
+    'undelete',
+    'import',
+    'format',
+    'delete_card',
+    'bring_back',
+    'slot_in',
+    'slot_out',
+    'slot_out_card',
+  };
 
   final BackgroundRunner _runner;
 
@@ -234,8 +360,8 @@ class SaveManagerController extends ChangeNotifier {
   /// Reading the cards.
   bool get isLoading => _reading != null;
 
-  /// A job is running.
-  bool get isJobRunning => _working != null;
+  /// A job is running (or waiting for the emulators-closed answer).
+  bool get isJobRunning => _working != null || asking != null;
 
   /// Reading or working.
   bool get isBusy => isLoading || isJobRunning;
@@ -327,6 +453,14 @@ class SaveManagerController extends ChangeNotifier {
 
   /// The d-pad. True = something changed.
   bool step(int dx, int dy) {
+    final q = asking;
+    if (q != null) {
+      final to = clampi(q.index + dx, 0, ClosedQuestion.answers.length - 1);
+      if (to == q.index || dx == 0) return false;
+      q.index = to;
+      notifyListeners();
+      return true;
+    }
     final moved = flow.isOpen() ? flow.step(dx, dy) : state.step(dx, dy);
     if (moved) notifyListeners();
     return moved;
@@ -334,6 +468,7 @@ class SaveManagerController extends ChangeNotifier {
 
   /// LB / RB. True = something changed.
   bool turnPage(int dir) {
+    if (asking != null) return false;
     final moved = flow.isOpen() ? flow.turnPage(dir) : state.turnPage(dir);
     if (moved) notifyListeners();
     return moved;
@@ -341,6 +476,11 @@ class SaveManagerController extends ChangeNotifier {
 
   /// A. Returns the game id to start, '' = it was handled here.
   String confirm() {
+    final q = asking;
+    if (q != null) {
+      answerClosed(q.index == 1);
+      return '';
+    }
     if (state.moving) {
       _putCardDown();
       return '';
@@ -431,6 +571,10 @@ class SaveManagerController extends ChangeNotifier {
 
   /// B. False = there's nowhere further back: the save manager closes.
   bool cancel() {
+    if (asking != null) {
+      answerClosed(false);
+      return true;
+    }
     if (state.moving) {
       _putCardDown();
       return true;
@@ -454,6 +598,7 @@ class SaveManagerController extends ChangeNotifier {
 
   /// Y: the options for what you're on.
   void toggleOptions() {
+    if (asking != null) return;
     if (state.moving) {
       _putCardDown();
       return;
@@ -469,6 +614,7 @@ class SaveManagerController extends ChangeNotifier {
 
   /// X: marks one save (or, on the copy screen, one save to copy).
   void mark() {
+    if (asking != null) return;
     final did = flow.isOpen() ? flow.mark() : state.toggleMark();
     if (did) {
       _sound('move');
@@ -478,7 +624,7 @@ class SaveManagerController extends ChangeNotifier {
 
   /// Hold X: marks every save of that game.
   void markGame() {
-    if (flow.isOpen()) return;
+    if (flow.isOpen() || asking != null) return;
     _say('${state.markGame()} marked from that game');
     notifyListeners();
   }
@@ -592,6 +738,58 @@ class SaveManagerController extends ChangeNotifier {
   /// Touch: highlight Customize's row [r].
   bool selectLookRow(int r) => _touched(flow.selectLookRow(r));
 
+  /// Touch: highlight answer [i] of the emulators-closed question.
+  bool selectClosedAnswer(int i) {
+    final q = asking;
+    if (q == null || i < 0 || i >= ClosedQuestion.answers.length) {
+      return false;
+    }
+    final changed = q.index != i;
+    q.index = i;
+    return _touched(changed);
+  }
+
+  /// The emulators-closed question's answer: yes runs the job (and counts
+  /// for a while), no leaves everything as it was.
+  void answerClosed(bool closed) {
+    final q = asking;
+    if (q == null) return;
+    asking = null;
+    if (closed) {
+      check?.yes();
+      _sound('confirm');
+      _working = _work(q.job);
+    } else {
+      flow.close();
+      _sound('back');
+      _say('Nothing was changed. Close the emulators, then try again');
+    }
+    notifyListeners();
+  }
+
+  /// The job changes a card that an emulator could have open (not one
+  /// in the downloaded saves or the exports).
+  bool changesCards(FlowJob job) {
+    if (!writes.contains(job.verb)) return false;
+    final paths = _paths(job);
+    if (paths.isEmpty) return true;
+    return paths.any((path) => !_loose(path));
+  }
+
+  static List<String> _paths(FlowJob job) => [
+    if (job.card != null) job.card!.path,
+    if (job.to != null) job.to!.path,
+    for (final c in job.cards) c.path,
+    for (final g in job.groups) g.card.path,
+  ].where((path) => path.isNotEmpty).toList();
+
+  bool _loose(String path) {
+    bool under(String dir) =>
+        dir.isNotEmpty &&
+        p.isWithin(p.normalize(dir).toLowerCase(), path.toLowerCase());
+    return under(config.looseDir) || under(config.exportDir);
+  }
+
   bool _touched(bool changed) {
     if (changed) notifyListeners();
     return changed;
@@ -600,7 +798,7 @@ class SaveManagerController extends ChangeNotifier {
   // ---- inside --------------------------------------------------------------
 
   void _run(FlowJob? job) {
-    if (job == null || _working != null) return;
+    if (job == null || _working != null || asking != null) return;
     if (job.verb == 'rename') {
       renaming = job.card;
       return;
@@ -635,6 +833,17 @@ class SaveManagerController extends ChangeNotifier {
     final given = job.verb == 'import_list'
         ? job.copyWith(folders: config.importFolders)
         : job;
+    final ask = check;
+    if (ask != null && !ask.fresh && changesCards(given)) {
+      // Android can't see the emulators: ask first (the flow stays on
+      // "working" behind the question)
+      asking = ClosedQuestion(
+        given,
+        EmulatorCheck.namesFor(_paths(given).where((path) => !_loose(path))),
+      );
+      _sound('panel_open');
+      return;
+    }
     _working = _work(given);
   }
 

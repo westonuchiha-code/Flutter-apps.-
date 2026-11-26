@@ -158,7 +158,7 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     4. 🔨 Save manager, as full as the PC's (owner: for preservation and
        portability, PS3 saves included): `packages/save_kit` ✅ (every format
        read+write, checked on real downloaded cards), the standalone
-       `apps/save_manager` (Android, Windows, Linux) 🔨, then a Saves row in
+       `apps/save_manager` (Android, Windows, Linux) ✅, then a Saves row in
        the XMB.
     5. ⬜ Pokéville: view and arrange the Box synced from the PC.
     6. ⬜ CRT TV (from the PC suite's `apps/crt_tv`).

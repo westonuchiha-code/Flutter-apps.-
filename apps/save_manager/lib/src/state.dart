@@ -76,11 +76,8 @@ void stableSort<T>(List<T> list, int Function(T a, T b) compare) {
 
 /// The save manager's cursor, pages and selection.
 class MemoryCardState {
-  /// Saves across the grid.
-  static const cols = 5;
-
-  /// Rows of the grid on screen.
-  static const rows = 4;
+  /// The PC's grid: 5 saves across, 4 rows on screen.
+  static const defaultCols = 5, defaultRows = 4;
 
   /// The tabs: ALL, then one per console.
   static const filters = CardSystems.tabs;
@@ -181,6 +178,13 @@ class MemoryCardState {
 
   /// Verbs drawn in the danger colour.
   static const destructive = ['delete', 'delete_all', 'format', 'delete_card'];
+
+  /// Saves across the grid (the UI sets what it shows, so the d-pad
+  /// moves the way the grid looks; see [setGrid]).
+  int cols = defaultCols;
+
+  /// Rows of the grid on screen.
+  int rows = defaultRows;
 
   /// Every card read.
   List<MemoryCard> cards = [];
@@ -358,6 +362,18 @@ class MemoryCardState {
   MemoryCard? focusedCard() {
     final list = column();
     return cardI >= 0 && cardI < list.length ? list[cardI] : null;
+  }
+
+  /// The grid the UI shows: [c] saves across, [r] rows on screen. True =
+  /// it changed (the save you're on stays on screen).
+  bool setGrid(int c, int r) {
+    final nc = c < 1 ? 1 : c, nr = r < 1 ? 1 : r;
+    if (nc == cols && nr == rows) return false;
+    cols = nc;
+    rows = nr;
+    topRow = 0;
+    _scrollToIndex();
+    return true;
   }
 
   /// Saves of one tab ('ALL' = every save).
