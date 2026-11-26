@@ -7,7 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:xmb_frontend/main.dart';
 import 'package:xmb_frontend/src/library/scanner.dart';
 import 'package:xmb_frontend/src/state.dart';
-import 'package:xmb_frontend/src/sync/controller.dart';
+import 'package:cross_save/cross_save.dart';
 import 'package:xmb_frontend/src/ui/home.dart';
 
 void main() {

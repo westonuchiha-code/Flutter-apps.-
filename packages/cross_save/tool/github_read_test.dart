@@ -6,8 +6,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:xmb_frontend/src/sync/cross_save.dart';
-import 'package:xmb_frontend/src/sync/github.dart';
+import 'package:cross_save/src/cross_save.dart';
+import 'package:cross_save/src/github.dart';
 
 void main() {
   test('reads the real repo and takes its saves', () async {

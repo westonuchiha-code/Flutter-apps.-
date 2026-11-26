@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:app_shell/app_shell.dart';
+import 'package:cross_save/cross_save.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
@@ -13,9 +14,6 @@ import '../launch.dart';
 import '../library/scanner.dart';
 import '../library/systems.dart';
 import '../state.dart';
-import '../sync/controller.dart';
-import '../sync/cross_save.dart';
-import '../sync/setup.dart';
 import '../comics/library.dart';
 import '../comics/pdf_book.dart';
 import 'comic_reader.dart';

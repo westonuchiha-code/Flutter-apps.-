@@ -37,6 +37,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   path: ^1.9.0
   crypto: ^3.0.7
+  cross_save:
+    path: ../../packages/cross_save
   pokeville:
     path: ../../packages/pokeville
   save_screens:

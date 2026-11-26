@@ -4,9 +4,9 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:app_shell/app_shell.dart';
-import 'package:xmb_frontend/src/sync/controller.dart';
-import 'package:xmb_frontend/src/sync/cross_save.dart';
-import 'package:xmb_frontend/src/sync/setup.dart';
+import 'package:cross_save/src/controller.dart';
+import 'package:cross_save/src/cross_save.dart';
+import 'package:cross_save/src/setup.dart';
 
 /// GitHub in memory: commits are (tree = files), the branch moves only
 /// forward.

@@ -1,0 +1,21 @@
+name: cross_save
+description: "Cross saves through the private Cross-Save GitHub repo (its PROTOCOL.md): the phone's folder layout, the sync, conflicts, the token. Shared by the XMB Frontend and Pokéville."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.14.0
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  app_shell:
+    path: ../app_shell
+  path: ^1.9.0
+  crypto: ^3.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

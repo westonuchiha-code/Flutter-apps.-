@@ -251,6 +251,8 @@ packages/    # shared Dart/Flutter packages
              #                   (emulator closed, unchanged, backed up, read back), favorites, slots
              #   save_screens  - the save manager's screens (controller, dialogs flow, art incl. PS2
              #                   3D icons, wide/Retroid/phone layouts), shared by save_manager + XMB
+             #   cross_save    - Cross-Save sync (the private repo's PROTOCOL.md): phone folder layout
+             #                   (XmbFolders), sync + conflicts, GitHub token; XMB + Pokéville app
              #   pokeville     - the PC's Pokémon Box ("Pokéville"): box.json store (PC's exact format,
              #                   atomic, refuses if a sync changed it), screens (wide/Retroid/phone),
              #                   PokeAPI sprites cached, OFL pixel fonts; game saves come with poke_saves
