@@ -1,4 +1,5 @@
 import 'package:app_shell/app_shell.dart';
+import 'package:pokeville/pokeville.dart' show registerPokevilleLicenses;
 import 'package:material_ui/material_ui.dart';
 
 import 'src/ui/home.dart';
@@ -15,4 +16,7 @@ const appConfig = AppShellConfig(
   defaultThemeMode: ThemeMode.dark,
 );
 
-void main() => runShellApp(appConfig, (_) => const HomePage());
+void main() {
+  registerPokevilleLicenses(); // its two OFL fonts
+  runShellApp(appConfig, (_) => const HomePage());
+}

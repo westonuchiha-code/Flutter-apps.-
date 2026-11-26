@@ -207,7 +207,7 @@ apps/        # one folder per Flutter application
              #   xmb_frontend     - PS3-style game menu for Android (Retroid / phone): the PC
              #                      XMB Frontend's companion; starts RetroArch / PPSSPP /
              #                      DuckStation / Dolphin; cross saves, comics, Memory Card row
-             #                      (save_screens' SaveManagerHome; Start game uses the XMB's
+             #                      (Save Manager + Pokéville; save_screens' SaveManagerHome; Start game uses the XMB's
              #                      launcher); Pokéville and CRT TV come later (Android only)
              #   save_manager     - the PC XMB Frontend's save manager, standalone: memory cards of
              #                      PS1/PS2/DC/GC/N64/Saturn/Neo Geo + PS3 saves; copy, move, back up,
@@ -251,6 +251,9 @@ packages/    # shared Dart/Flutter packages
              #                   (emulator closed, unchanged, backed up, read back), favorites, slots
              #   save_screens  - the save manager's screens (controller, dialogs flow, art incl. PS2
              #                   3D icons, wide/Retroid/phone layouts), shared by save_manager + XMB
+             #   pokeville     - the PC's Pokémon Box ("Pokéville"): box.json store (PC's exact format,
+             #                   atomic, refuses if a sync changed it), screens (wide/Retroid/phone),
+             #                   PokeAPI sprites cached, OFL pixel fonts; game saves come with poke_saves
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,
              #                   band-limited morphing wavetables (Wavetable; set
              #                   PolySynth.wavetable to play drawn waves), speech chips

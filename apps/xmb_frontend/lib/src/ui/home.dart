@@ -5,6 +5,7 @@ import 'package:app_shell/app_shell.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
+import 'package:pokeville/pokeville.dart' as poke;
 import 'package:save_screens/save_screens.dart' as saves;
 
 import '../android.dart';
@@ -635,7 +636,34 @@ class _HomePageState extends State<HomePage> {
       icon: Icons.sd_card_outlined,
       onPress: () => unawaited(_openSaves()),
     ),
+    XItem(
+      title: 'Pokéville',
+      subtitle: _cs?.folders == null
+          ? 'Set up the Games folder first'
+          : 'Your Pokémon from every game, synced with the PC',
+      icon: Icons.catching_pokemon,
+      onPress: _cs?.folders == null ? null : () => unawaited(_openPokeville()),
+    ),
   ];
+
+  Future<void> _openPokeville() async {
+    final f = _cs?.folders;
+    if (f == null) return;
+    final storage = Shell.of(context).storage;
+    final cache = p.join(storage.directory.path, 'pokemon sprites');
+    final nav = Navigator.of(context);
+    await nav.push(
+      MaterialPageRoute<void>(
+        builder: (_) => poke.PokevilleHome(
+          f.pokeville,
+          cache,
+          swapAB: _s.swapAB,
+          onLeave: () => nav.maybePop(),
+        ),
+      ),
+    );
+    if (mounted) setState(() => _revision++);
+  }
 
   Future<void> _openSaves() async {
     saves.androidChannel = const MethodChannel('xmb/android');

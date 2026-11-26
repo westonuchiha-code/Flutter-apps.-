@@ -1,0 +1,199 @@
+{
+	"version": 1.0,
+	"boxes": [
+		{
+			"name": "Box 1",
+			"slots": [
+				{
+					"file": "mons/20261124-220244-054466.pk2",
+					"mon": {
+						"ability": "",
+						"ball": "None",
+						"egg": false,
+						"form": 0.0,
+						"format": "pk2",
+						"from": "party",
+						"from_save": "crystal-clear-2.4.4-color-filter.srm",
+						"gender": 0.0,
+						"generation": 2.0,
+						"item": "Grepa Berry",
+						"level": 19.0,
+						"moves": [
+							"Scratch",
+							"Growl",
+							"Bite"
+						],
+						"name": "Meowth",
+						"nature": "",
+						"nickname": "D․I․Z․",
+						"origin": "GSC",
+						"ot": "Dude",
+						"pid": 0.0,
+						"shiny": false,
+						"species": 52.0,
+						"stats": [
+							40.0,
+							45.0,
+							35.0,
+							40.0,
+							40.0,
+							90.0
+						],
+						"types": [
+							"Normal"
+						],
+						"v": 2.0
+					}
+				},
+				{
+					"file": "mons/20261124-220244-215252.pk2",
+					"mon": {
+						"ability": "",
+						"ball": "None",
+						"egg": false,
+						"form": 0.0,
+						"format": "pk2",
+						"from": "party",
+						"from_save": "crystal-clear-2.4.4-color-filter.srm",
+						"gender": 1.0,
+						"generation": 2.0,
+						"item": "",
+						"level": 55.0,
+						"moves": [
+							"Surf",
+							"Hydro Pump",
+							"Twister",
+							"Agility"
+						],
+						"name": "Kingdra",
+						"nature": "",
+						"nickname": "Leffi",
+						"origin": "GSC",
+						"ot": "Dude",
+						"pid": 0.0,
+						"shiny": false,
+						"species": 230.0,
+						"stats": [
+							75.0,
+							95.0,
+							95.0,
+							95.0,
+							95.0,
+							85.0
+						],
+						"types": [
+							"Water",
+							"Dragon"
+						],
+						"v": 2.0
+					}
+				},
+				{
+					"file": "mons/20261124-220244-820697.pk2",
+					"mon": {
+						"ability": "",
+						"ball": "None",
+						"egg": false,
+						"form": 0.0,
+						"format": "pk2",
+						"from": "party",
+						"from_save": "crystal-clear-2.4.4-color-filter.srm",
+						"gender": 0.0,
+						"generation": 2.0,
+						"item": "",
+						"level": 52.0,
+						"moves": [
+							"Tri Attack",
+							"Rage",
+							"Drill Peck",
+							"Fly"
+						],
+						"name": "Dodrio",
+						"nature": "",
+						"nickname": "Wice",
+						"origin": "GSC",
+						"ot": "Dude",
+						"pid": 0.0,
+						"shiny": false,
+						"species": 85.0,
+						"stats": [
+							60.0,
+							110.0,
+							70.0,
+							60.0,
+							60.0,
+							110.0
+						],
+						"types": [
+							"Normal",
+							"Flying"
+						],
+						"v": 2.0
+					}
+				},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"name": "Box 2",
+			"slots": [
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		}
+	]
+}
