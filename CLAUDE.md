@@ -118,6 +118,13 @@ the app has that platform's folder (`android/`, `windows/`, `linux/`).
   takes (`tool/album/bin/sample.dart`) one at a time, and nothing is built
   on them until the owner approves one.
 
+- **The owner's saves live only in the private Cross-Save repo** (owner's rule:
+  one place, so progress is never lost or confused). Never copy save files
+  into this repo or anywhere else; tests read them through env vars
+  (`POKE_SAMPLES=<cross-save checkout>`) and work on temp copies, never
+  writing into the Cross-Save checkout. Apps change saves only through the
+  sync's safety (backup, temp write, read back, swap; emulator closed).
+
 - **Creative work uses only this repo's tools** (owner's rule): music,
   voices, pictures and video are made with our packages and apps (chip_synth,
   fx_kit, pixel_kit, engine3d, video_kit, video_encoder, Puppet Stage, Vista,
