@@ -1,0 +1,11 @@
+name: poke_saves
+description: "Pokémon boxes of the Game Boy and GBA games (Gen 1-3): read saves, take and put Pokémon as PKHeX files (.pk1/.pk2/.pk3), byte for byte like PKHeX. Pure Dart."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.10.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^6.0.0

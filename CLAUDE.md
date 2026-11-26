@@ -259,6 +259,9 @@ packages/    # shared Dart/Flutter packages
              #   pokeville     - the PC's Pokémon Box ("Pokéville"): box.json store (PC's exact format,
              #                   atomic, refuses if a sync changed it), screens (wide/Retroid/phone),
              #                   PokeAPI sprites cached, OFL pixel fonts; game saves come with poke_saves
+             #   poke_saves    - pure-Dart Gen 1-3 Pokémon saves (RBY, GSC, RS/E, FRLG; Western): boxes,
+             #                   party, take/put/move as PKHeX-identical .pk1/.pk2/.pk3, Time Capsule
+             #                   conversion, summaries like the PC helper's (tests: POKE_SAMPLES)
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,
              #                   band-limited morphing wavetables (Wavetable; set
              #                   PolySynth.wavetable to play drawn waves), speech chips
