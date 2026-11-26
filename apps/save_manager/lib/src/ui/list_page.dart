@@ -923,7 +923,13 @@ class CompactList extends StatelessWidget {
       onTap: taps.sort,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Text(Texts.listCorner(st), style: body(12, Look.soft)),
+        child: Text(
+          Texts.listCorner(st),
+          style: body(12, Look.soft),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
+        ),
       ),
     );
     final cardH = tall ? 62.0 : (short ? 44.0 : 54.0);
@@ -991,7 +997,7 @@ class CompactList extends StatelessWidget {
                     children: [
                       const PaintTitle('MEMORY CARDS', width: 210, height: 58),
                       const Spacer(),
-                      sort,
+                      Flexible(child: sort),
                       ...actions,
                     ],
                   ),
@@ -999,7 +1005,7 @@ class CompactList extends StatelessWidget {
               Row(
                 children: [
                   Expanded(child: tabs),
-                  if (!tall) ...[sort, ...actions],
+                  if (!tall) ...[Flexible(child: sort), ...actions],
                 ],
               ),
               const SizedBox(height: 6),
