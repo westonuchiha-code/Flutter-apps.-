@@ -1,3 +1,4 @@
+// Copied from packages/save_screens/test: the app's own smoke test needs them.
 // A temp test root of made-up memory cards for the screen tests and
 // shots, or a copy of real ones (SAVE_SAMPLES), and a controller over it.
 import 'dart:io';
@@ -7,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
 import 'package:save_kit/save_kit.dart';
-import 'package:save_manager/src/controller.dart';
+import 'package:save_screens/src/controller.dart';
 
 import 'fixtures.dart';
 

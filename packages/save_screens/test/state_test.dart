@@ -4,8 +4,8 @@
 // destructive is ever highlighted first.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:save_kit/save_kit.dart';
-import 'package:save_manager/src/state.dart';
-import 'package:save_manager/src/texts.dart';
+import 'package:save_screens/src/state.dart';
+import 'package:save_screens/src/texts.dart';
 
 import 'fixtures.dart';
 

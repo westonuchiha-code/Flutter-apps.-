@@ -1,6 +1,6 @@
 /// Where this app keeps things on each platform, and the controller's
 /// config built from them. Android's storage root and all-files access
-/// come from MainActivity's `save_manager/android` channel.
+/// come from MainActivity's channel ([androidChannel]).
 library;
 
 import 'dart:io';
@@ -14,7 +14,9 @@ import 'controller.dart';
 import 'folders.dart';
 
 /// MainActivity's channel: `hasAllFiles`, `requestAllFiles`, `storageRoot`.
-const androidChannel = MethodChannel('save_manager/android');
+/// The Save Manager app's own; a host app with its own channel offering
+/// the same three methods sets it before use (the XMB: `xmb/android`).
+MethodChannel androidChannel = const MethodChannel('save_manager/android');
 
 /// The app's own files, kept in Documents so they outlive an uninstall.
 class AppFiles {

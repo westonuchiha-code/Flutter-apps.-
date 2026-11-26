@@ -39,8 +39,8 @@ dependencies:
     path: ../../packages/app_shell
   save_kit:
     path: ../../packages/save_kit
-  engine3d:
-    path: ../../packages/engine3d
+  save_screens:
+    path: ../../packages/save_screens
   path: any
   path_provider: any
 

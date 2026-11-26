@@ -4,7 +4,7 @@ import 'package:app_shell/app_shell.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:save_manager/main.dart';
-import 'package:save_manager/src/ui/screen.dart';
+import 'package:save_screens/save_screens.dart';
 
 import 'screen_fixtures.dart';
 

@@ -4,13 +4,7 @@ import 'dart:io';
 import 'package:app_shell/app_shell.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
-
-import 'src/art/art.dart';
-import 'src/controller.dart';
-import 'src/host.dart';
-import 'src/state.dart';
-import 'src/ui/access_page.dart';
-import 'src/ui/screen.dart';
+import 'package:save_screens/save_screens.dart';
 
 /// Folders to read besides the emulators' usual ones.
 const extraFoldersSetting = TextSetting(

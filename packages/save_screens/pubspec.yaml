@@ -1,0 +1,24 @@
+name: save_screens
+description: "The save manager's screens (ported from the PC XMB Frontend), shared by the Save Manager app and the XMB Frontend."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.14.0
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  material_ui: ^1.11.1
+  app_shell:
+    path: ../app_shell
+  save_kit:
+    path: ../save_kit
+  path: any
+  path_provider: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

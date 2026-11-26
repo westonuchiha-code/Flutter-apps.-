@@ -1,3 +1,4 @@
+// Copied from packages/save_screens/test: the app's own smoke test needs them.
 // Made-up save files and cards for the save manager's tests (the same
 // shapes as save_kit's own tests and the PC's CardWriteTests.gd etc.).
 import 'dart:io';

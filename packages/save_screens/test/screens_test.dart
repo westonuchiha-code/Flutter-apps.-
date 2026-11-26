@@ -7,10 +7,10 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:save_manager/src/controller.dart';
-import 'package:save_manager/src/flow.dart';
-import 'package:save_manager/src/state.dart';
-import 'package:save_manager/src/ui/screen.dart';
+import 'package:save_screens/src/controller.dart';
+import 'package:save_screens/src/flow.dart';
+import 'package:save_screens/src/state.dart';
+import 'package:save_screens/src/ui/screen.dart';
 
 import 'screen_fixtures.dart';
 

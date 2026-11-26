@@ -5,11 +5,11 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:save_kit/save_kit.dart';
-import 'package:save_manager/src/controller.dart';
-import 'package:save_manager/src/flow.dart';
-import 'package:save_manager/src/folders.dart';
-import 'package:save_manager/src/host.dart';
-import 'package:save_manager/src/state.dart';
+import 'package:save_screens/src/controller.dart';
+import 'package:save_screens/src/flow.dart';
+import 'package:save_screens/src/folders.dart';
+import 'package:save_screens/src/host.dart';
+import 'package:save_screens/src/state.dart';
 
 import 'fixtures.dart';
 

@@ -248,6 +248,8 @@ packages/    # shared Dart/Flutter packages
              #   save_kit      - pure-Dart save manager core (port of the PC's): every console's card
              #                   format read+write, card scan, CardOps actions, CardStore safety
              #                   (emulator closed, unchanged, backed up, read back), favorites, slots
+             #   save_screens  - the save manager's screens (controller, dialogs flow, art incl. PS2
+             #                   3D icons, wide/Retroid/phone layouts), shared by save_manager + XMB
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,
              #                   band-limited morphing wavetables (Wavetable; set
              #                   PolySynth.wavetable to play drawn waves), speech chips

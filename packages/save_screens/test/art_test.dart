@@ -4,7 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:save_kit/save_kit.dart';
-import 'package:save_manager/src/art/art.dart';
+import 'package:save_screens/src/art/art.dart';
 
 import 'art_fixtures.dart';
 
