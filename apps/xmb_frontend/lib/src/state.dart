@@ -26,6 +26,9 @@ enum SortBy { title, recent, system }
 /// Everything the menu remembers (saved as one JSON file).
 class MenuState extends ChangeNotifier {
   String? romsDir;
+
+  /// Where the comics are (the built-in XMB Frontend/Comics unless set).
+  String? comicsDir;
   List<Game> games = [];
   DateTime? scanned;
 
@@ -172,6 +175,7 @@ class MenuState extends ChangeNotifier {
   Map<String, Object?> toJson() => {
     'version': 1,
     'romsDir': romsDir,
+    'comicsDir': comicsDir,
     'games': [for (final g in games) g.toJson()],
     'scanned': scanned?.millisecondsSinceEpoch,
     'pins': pins,
@@ -192,6 +196,7 @@ class MenuState extends ChangeNotifier {
   void load(Object? j) {
     if (j is! Map) return;
     romsDir = j['romsDir'] as String?;
+    comicsDir = j['comicsDir'] as String?;
     games = [
       for (final g in (j['games'] as List?) ?? const [])
         if (g is Map) Game.fromJson(g),

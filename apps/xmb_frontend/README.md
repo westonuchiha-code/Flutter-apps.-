@@ -77,3 +77,23 @@ RetroArch settings, `controller.dart` token, state and conflicts).
 Box) — 7. CRT TV.
 
 Screenshots: `tool/shot_test.dart` (`--dart-define=OUT=<folder>`).
+
+## Comics (part 3)
+
+The **Comics** row reads `XMB Frontend/Comics` (made with the other folders;
+Settings → Comics Folder to use another, like `Documents/Comics`): loose
+books and one folder per series, each showing New / Page x of y / Finished.
+Books: `.cbz .zip .epub .cbt`, PDF (drawn by pdfrx), or a folder of page
+pictures. Pages in natural order; `__MACOSX` and hidden files skipped.
+RAR / 7z (`.cbr .cb7`) come next.
+
+The reader (`lib/src/ui/comic_reader.dart`) is the PC's ComicReader.gd:
+Left/Right pages (or panels; flipped for manga), A panel by panel, X pops
+out the next speech balloon (B puts it back), LB/RB pages, LT/RT zoom,
+Start/Y switches manga ↔ comic for the series, B closes. Touch: tap the
+sides, swipe, double-tap for panels, hold for a balloon, pinch to zoom.
+Panels (`comics/panels.dart`) and balloons (`comics/bubbles.dart`) are
+ports of the PC's finders, run in the background per page. Manga: your
+setting for the series, else ComicInfo.xml, else the names. Your place is
+in `comics.json`, keyed by the path inside the Comics folder.
+`tool/comic_shot_test.dart` makes screenshots at the Retroid's size.

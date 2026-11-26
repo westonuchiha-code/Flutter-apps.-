@@ -150,7 +150,10 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     2. ✅ Cross saves through the private `Cross-Save` GitHub repo, following
        its PROTOCOL.md (GitHub API, git blob hashes; pull before a game, push
        after; conflicts keep both and the player picks; backups first).
-    3. ⬜ Comic reader (CBZ/PDF first, then CBR/CB7; manga, panels).
+    3. 🔨 Comic reader: CBZ/ZIP/EPUB, CBT, PDF (pdfrx) and image folders done,
+       ported from the PC (natural page order, ComicInfo manga, panels from
+       gutters, balloon pop-out, places by path inside the Comics folder);
+       CBR/CB7 next.
     4. ⬜ Save manager (PS1 memory cards, PSP save folders).
     5. ⬜ Pokéville: view and arrange the Box synced from the PC.
     6. ⬜ CRT TV (from the PC suite's `apps/crt_tv`).

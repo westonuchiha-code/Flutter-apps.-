@@ -26,6 +26,7 @@ class XmbFolders {
   String get ppssppStick => p.join(root, 'Saves', 'PPSSPP');
   String get pspSaves => p.join(ppssppStick, 'PSP', 'SAVEDATA');
   String get pokeville => p.join(root, 'Pokeville');
+  String get comics => p.join(root, 'Comics');
   String get backups => p.join(root, 'Backups');
   String get raConfig => p.join(root, 'RetroArch', 'retroarch.cfg');
 
@@ -51,6 +52,7 @@ class XmbFolders {
       duckCards,
       pspSaves,
       pokeville,
+      comics,
       backups,
       p.dirname(raConfig),
     ]) {

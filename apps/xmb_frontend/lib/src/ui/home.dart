@@ -14,6 +14,9 @@ import '../state.dart';
 import '../sync/controller.dart';
 import '../sync/cross_save.dart';
 import '../sync/setup.dart';
+import '../comics/library.dart';
+import '../comics/pdf_book.dart';
+import 'comic_reader.dart';
 import 'xmb.dart';
 
 /// The menu: Settings and Game for now (more categories come with the
@@ -105,6 +108,11 @@ class _HomePageState extends State<HomePage> {
       final f = XmbFolders(p.join(roots.first, 'XMB Frontend'))..create();
       writeRetroArchConfig(f);
       _cs?.folders = f;
+      if (_s.comicsDir == null) {
+        _s.comicsDir = f.comics;
+        _writeComicsGuide(f.comics);
+        _s.changed();
+      }
       if (_s.romsDir == null) {
         prepareRomsFolder(f.roms);
         _s.romsDir = f.roms;
@@ -152,7 +160,7 @@ class _HomePageState extends State<HomePage> {
     final fromGame = _s.running != null;
     _s.returned(DateTime.now().millisecondsSinceEpoch);
     await _checkDevice();
-    if (_cs?.folders == null || _s.romsDir == null) {
+    if (_cs?.folders == null || _s.romsDir == null || _s.comicsDir == null) {
       await _setupFolders();
     } else if (_allFiles) {
       // Games may have been copied in while the menu was away.
@@ -492,7 +500,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// A folder picker as XMB folders. [dir] null: the storage roots.
-  List<XItem> _browse(String? dir) {
+  List<XItem> _browse(String? dir, [void Function(String dir)? use]) {
     if (dir == null) {
       return [
         XItem(
@@ -507,7 +515,7 @@ class _HomePageState extends State<HomePage> {
         title: 'Use This Folder',
         subtitle: dir,
         icon: Icons.check_circle_outline,
-        onPress: () => _useRoms(dir),
+        onPress: () => (use ?? _useRoms)(dir),
       ),
     ];
     try {
@@ -530,7 +538,7 @@ class _HomePageState extends State<HomePage> {
             title: p.basename(d.path),
             subtitle: console ? 'A console folder' : null,
             icon: Icons.folder_outlined,
-            children: () => _browse(d.path),
+            children: () => _browse(d.path, use),
           ),
         );
       }
@@ -546,8 +554,24 @@ class _HomePageState extends State<HomePage> {
     return out;
   }
 
+  List<String> _rootPaths = const [];
+
+  /// Storage roots to choose a folder from, each opening onto [use].
+  List<XItem> _rootsFor(void Function(String dir) use) => [
+    for (final (i, r) in _rootPaths.indexed)
+      XItem(
+        title: i == 0
+            ? 'Internal Storage'
+            : 'SD Card ${_rootPaths.length > 2 ? i : ''}'.trim(),
+        subtitle: r,
+        icon: i == 0 ? Icons.phone_android : Icons.sd_card_outlined,
+        children: () => _browse(r, use),
+      ),
+  ];
+
   Future<List<XItem>> _roots() async {
     final roots = await _a.storageRoots();
+    _rootPaths = roots;
     return [
       for (final (i, r) in roots.indexed)
         XItem(
@@ -593,6 +617,147 @@ class _HomePageState extends State<HomePage> {
 
   List<XItem>? _rootsCache;
 
+  // ---- Comics ----
+
+  ComicProgress _comicProgress = ComicProgress();
+  ComicShelf? _shelf;
+  bool _comicsLoaded = false;
+
+  static const _comicsGuide = 'HOW TO ADD COMICS.txt';
+
+  void _writeComicsGuide(String dir) {
+    final f = File(p.join(dir, _comicsGuide));
+    if (f.existsSync()) return;
+    f.writeAsStringSync(
+      'Put comics here: .cbz .zip .epub .cbt .pdf, or a folder of page\n'
+      'pictures (one book). Make a folder per series to group them.\n'
+      'Manga reads right to left by itself when the book says so\n'
+      '(ComicInfo.xml), or its folder/name says manga; switch it with\n'
+      'Start while reading. RAR and 7z comics (.cbr .cb7) come next.\n',
+    );
+  }
+
+  void _useComics(String dir) {
+    _s.comicsDir = dir;
+    _shelf = null;
+    _s.changed();
+    _xmb.currentState?.closeFolders();
+    setState(() => _revision++);
+  }
+
+  Future<void> _loadComicProgress() async {
+    if (_comicsLoaded) return;
+    _comicsLoaded = true;
+    final j = await Shell.of(context).storage.readJson('comics.json');
+    _comicProgress = ComicProgress(j is Map<String, Object?> ? j : null);
+    if (mounted) setState(() => _revision++);
+  }
+
+  void _saveComicProgress() => unawaited(
+    Shell.of(context).storage.writeJson('comics.json', _comicProgress.toJson()),
+  );
+
+  List<XItem> _comicsRow() {
+    final dir = _s.comicsDir;
+    if (!_comicsLoaded) unawaited(_loadComicProgress());
+    if (dir == null) {
+      return [
+        XItem(
+          title: 'Comics',
+          subtitle: _allFiles
+              ? 'Setting up the Comics folder…'
+              : 'Allow storage access in Settings first',
+          icon: Icons.menu_book_outlined,
+          onPress: () => _a.requestAllFiles(),
+        ),
+      ];
+    }
+    final shelf = _shelf ??= () {
+      try {
+        return scanComics(dir);
+      } catch (_) {
+        return const ComicShelf([], {});
+      }
+    }();
+    XItem book(String b) => XItem(
+      title: FileSystemEntity.isDirectorySync(b)
+          ? p.basename(b)
+          : p.basenameWithoutExtension(b),
+      subtitle: [
+        _comicProgress.status(dir, b),
+        if (_comicProgress.guessRtl(dir, b)) 'Manga (right to left)',
+      ].join('  ·  '),
+      icon: Icons.auto_stories_outlined,
+      onPress: () => unawaited(_openComic(b)),
+    );
+    return [
+      for (final b in shelf.books) book(b),
+      for (final e in shelf.series.entries)
+        XItem(
+          title: e.key,
+          subtitle: '${e.value.length} book${e.value.length == 1 ? '' : 's'}',
+          icon: Icons.collections_bookmark_outlined,
+          children: () => [for (final b in e.value) book(b)],
+        ),
+      if (shelf.books.isEmpty && shelf.series.isEmpty)
+        XItem(
+          title: 'No comics yet',
+          subtitle:
+              'Put .cbz / .pdf files (or folders of pages) in ${_shortPath(dir)}',
+          icon: Icons.lightbulb_outline,
+          onPress: () {},
+        ),
+      XItem(
+        title: 'Refresh Comic Library',
+        subtitle: 'Looks in: ${_shortPath(dir)}',
+        icon: Icons.refresh,
+        onPress: () => setState(() {
+          _shelf = null;
+          _revision++;
+        }),
+      ),
+    ];
+  }
+
+  Future<void> _openComic(String path) async {
+    final root = _s.comicsDir!;
+    final err = <String>[];
+    final book = await openComic(path, err);
+    if (!mounted) return;
+    if (book == null) {
+      _xmb.currentState?.toast(err.isEmpty ? 'Could not open it' : err.first);
+      return;
+    }
+    final key = ComicProgress.key(root, path);
+    final place = _comicProgress.pages[key];
+    var start = place?.page ?? 0;
+    // A finished book starts again.
+    if (place != null && start >= book.pageCount - 1) start = 0;
+    final rtl = book.manga >= 0
+        ? book.manga == 1
+        : _comicProgress.guessRtl(root, path);
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ComicReader(
+          book: book,
+          startPage: start,
+          rtl: rtl,
+          swapAB: _s.swapAB,
+          onPlace: (pg, of) {
+            _comicProgress.pages[key] = (page: pg, of: of);
+            _saveComicProgress();
+          },
+          onDirection: (r) {
+            _comicProgress.rtl[ComicProgress.seriesKey(root, path)] = r;
+            _saveComicProgress();
+          },
+        ),
+      ),
+    );
+    book.close();
+    if (mounted) setState(() => _revision++);
+  }
+
   List<XItem> _settingsRow() {
     final raInstalled = [
       for (final pkg in runnerPackages[Runner.retroarch]!)
@@ -632,6 +797,39 @@ class _HomePageState extends State<HomePage> {
             subtitle: 'An existing ROMs folder, on this device or an SD card',
             icon: Icons.drive_folder_upload_outlined,
             children: () => _rootsCache ?? _browse(null),
+          ),
+        ],
+      ),
+      XItem(
+        title: 'Comics Folder',
+        subtitle: _s.comicsDir == null
+            ? 'Made when storage access is allowed'
+            : _s.comicsDir!.contains('XMB Frontend')
+            ? '${_shortPath(_s.comicsDir!)} (built in)'
+            : _s.comicsDir!,
+        icon: Icons.menu_book_outlined,
+        children: () => [
+          XItem(
+            title: 'Use the Built-in Folder',
+            subtitle: 'XMB Frontend/Comics',
+            icon: Icons.folder_special_outlined,
+            onPress: () async {
+              final roots = await _a.storageRoots();
+              final dir = p.join(roots.first, 'XMB Frontend', 'Comics');
+              try {
+                Directory(dir).createSync(recursive: true);
+                _writeComicsGuide(dir);
+              } catch (_) {}
+              _useComics(dir);
+            },
+          ),
+          XItem(
+            title: 'Choose Another Folder',
+            subtitle:
+                'For example Documents/Comics, on this device or an SD card',
+            icon: Icons.drive_folder_upload_outlined,
+            children: () =>
+                _rootPaths.isEmpty ? _browse(null) : _rootsFor(_useComics),
           ),
         ],
       ),
@@ -1064,6 +1262,7 @@ class _HomePageState extends State<HomePage> {
         categories: [
           XCategory('settings', 'Settings', Icons.work_outline, _settingsRow),
           XCategory('game', 'Game', Icons.sports_esports_outlined, _gameRow),
+          XCategory('comics', 'Comics', Icons.menu_book_outlined, _comicsRow),
         ],
       ),
     );
