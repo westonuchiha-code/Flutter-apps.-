@@ -10,11 +10,16 @@ import 'setup.dart';
 /// The menu's cross saves: the token, what was last synced, conflicts.
 /// Kept in the app's private storage (never in the repo).
 class CrossSaveController extends ChangeNotifier {
-  CrossSaveController(this.storage, {this.makeRepo, this.only});
+  CrossSaveController(this.storage, {this.makeRepo, this.only, this.files});
 
   /// Repo folders this app syncs (e.g. `['pokeville']`); null: all of
   /// [XmbFolders.maps].
   final List<String>? only;
+
+  /// Per repo folder (a [SyncMap.repo], e.g. `'saves/retroarch'`): the
+  /// only files in it to sync, asked before each sync (relative to the
+  /// folder, '/' separators). Folders not named here sync every file.
+  final Map<String, Future<Set<String>> Function()>? files;
 
   final AppStorage storage;
 
@@ -101,14 +106,18 @@ class CrossSaveController extends ChangeNotifier {
     notifyListeners();
     try {
       f.create();
+      final maps = <SyncMap>[];
+      for (final m in f.maps) {
+        if (only != null &&
+            !only!.any((o) => m.repo == o || m.repo.startsWith('$o/'))) {
+          continue;
+        }
+        final pick = files?[m.repo];
+        maps.add(pick == null ? m : m.limitedTo(await pick()));
+      }
       final rep = await crossSync(
         repo: _repo(),
-        maps: [
-          for (final m in f.maps)
-            if (only == null ||
-                only!.any((o) => m.repo == o || m.repo.startsWith('$o/')))
-              m,
-        ],
+        maps: maps,
         state: state,
         device: device,
         backups: f.backups,

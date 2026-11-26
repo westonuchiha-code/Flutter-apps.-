@@ -350,4 +350,57 @@ void main() {
     expect(again.conflicts, isEmpty);
     expect(repo.lastMessage, startsWith('phone: ')); // no model: a phone
   });
+
+  test('a map limited to some files syncs only those, both ways', () async {
+    final m = SyncMap(
+      'saves/retroarch',
+      p.join(root.path, 'ra'),
+      exts: const ['srm'],
+    ).limitedTo({'Gambatte/Red.srm'});
+    expect(m.takes('Gambatte/Red.srm'), isTrue);
+    expect(m.takes('Gambatte/Tetris.srm'), isFalse);
+    expect(m.takes('Gambatte/Red.srm.box-new'), isFalse);
+    expect(m.exts, ['srm']);
+  });
+
+  test('controller: only + files sync Pokéville and the named saves', () async {
+    final storage = AppStorage(Directory(p.join(root.path, 'app')));
+    final repo = FakeRepo()
+      ..pushAs('saves/retroarch/Gambatte/Red.srm', 'pc red')
+      ..pushAs('saves/retroarch/Gambatte/Tetris.srm', 'pc tetris')
+      ..pushAs('saves/duckstation/memcards/A_1.mcd', 'card');
+    final f = XmbFolders(p.join(root.path, 'XMB Frontend'))..create();
+    void local(String rel, String text) =>
+        File(p.joinAll([f.raSaves, ...rel.split('/')]))
+          ..createSync(recursive: true)
+          ..writeAsStringSync(text);
+    local('mGBA/Emerald.srm', 'phone emerald');
+    local('mGBA/Zelda.srm', 'phone zelda');
+    File(p.join(f.pokeville, 'box.json')).writeAsStringSync('{}');
+    var asked = 0;
+    final cs =
+        CrossSaveController(
+            storage,
+            makeRepo: (_) => repo,
+            only: const ['pokeville', 'saves/retroarch'],
+            files: {
+              'saves/retroarch': () async {
+                asked++;
+                return {'Gambatte/Red.srm', 'mGBA/Emerald.srm'};
+              },
+            },
+          )
+          ..folders = f
+          ..token = 't';
+    final rep = (await cs.sync())!;
+    expect(asked, 1);
+    expect(rep.took, ['Gambatte/Red.srm']);
+    expect(rep.sent, unorderedEquals(['mGBA/Emerald.srm', 'box.json']));
+    expect(
+      File(p.join(f.raSaves, 'Gambatte', 'Tetris.srm')).existsSync(),
+      isFalse,
+    );
+    expect(repo.current.containsKey('saves/retroarch/mGBA/Zelda.srm'), isFalse);
+    expect(Directory(f.duckCards).listSync(), isEmpty);
+  });
 }

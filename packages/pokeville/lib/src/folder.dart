@@ -66,6 +66,9 @@ class PokevilleFolder {
   final String dir;
   final BackgroundRunner _run;
 
+  /// Where this folder's (and its games') work runs.
+  BackgroundRunner get runner => _run;
+
   /// box.json's text as last read or written here (null: there was none).
   String? _seen;
   bool _known = false;

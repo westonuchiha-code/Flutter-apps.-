@@ -213,7 +213,8 @@ apps/        # one folder per Flutter application
              #                      PS1/PS2/DC/GC/N64/Saturn/Neo Geo + PS3 saves; copy, move, back up,
              #                      restore, undelete, export/import, favorites, card looks (save_kit)
              #   pokeville_app    - Pokéville standalone (packages/pokeville): Android = the XMB's
-             #                      Pokeville folder + its own Cross-Save sync (pokeville/ only);
+             #                      Pokeville folder + its own Cross-Save sync (pokeville/ + only
+             #                      the Pokémon saves it found under saves/retroarch);
              #                      Windows = the PC menu's own folder (XMB Pokemon Box)
              #   texture_capture  - photo -> game texture: perspective corners, even lighting,
              #                      seamless tiling, photo checks, PS1/N64/PS2/GameCube/Dreamcast
@@ -258,7 +259,9 @@ packages/    # shared Dart/Flutter packages
              #                   (XmbFolders), sync + conflicts, GitHub token; XMB + Pokéville app
              #   pokeville     - the PC's Pokémon Box ("Pokéville"): box.json store (PC's exact format,
              #                   atomic, refuses if a sync changed it), screens (wide/Retroid/phone),
-             #                   PokeAPI sprites cached, OFL pixel fonts; game saves come with poke_saves
+             #                   PokeAPI sprites cached, OFL pixel fonts; part B: Games list, Gen 1-3
+             #                   game saves (poke_saves) moved like the PC's helper (backup, temp,
+             #                   read back, swap; emulator-closed question), PokeTransfer port
              #   poke_saves    - pure-Dart Gen 1-3 Pokémon saves (RBY, GSC, RS/E, FRLG; Western): boxes,
              #                   party, take/put/move as PKHeX-identical .pk1/.pk2/.pk3, Time Capsule
              #                   conversion, summaries like the PC helper's (tests: POKE_SAMPLES)

@@ -249,7 +249,17 @@ class GbSave {
             at,
           );
         } else {
-          _merge(boxes[b], currentBoxOffset, capacity, false, init);
+          // The current box's own copy is live even before the other boxes
+          // are set up: when it still lists Pokémon, emptying it is written
+          // too (else the last one taken out would stay in the game).
+          final listed = data[currentBoxOffset];
+          _merge(
+            boxes[b],
+            currentBoxOffset,
+            capacity,
+            false,
+            init || (listed > 0 && listed <= capacity),
+          );
         }
       }
       _merge(party, partyOffset, 6, true, true);

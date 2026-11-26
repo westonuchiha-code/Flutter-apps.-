@@ -18,9 +18,12 @@ import 'package:material_ui/material_ui.dart';
 
 import 'controller.dart';
 import 'folder.dart';
+import 'games.dart';
+import 'guard.dart';
 import 'look.dart';
 import 'sprites.dart';
 import 'store.dart';
+import 'transfer.dart';
 
 enum LayoutKind { wide, side, tall }
 
@@ -44,6 +47,8 @@ enum HitKind {
   checkNext,
   menuRow,
   menuOutside,
+  answer, // the emulators-closed question: 0 NOT YET, 1 YES
+  transfer, // the whole screen while the transfer plays (a tap skips)
 }
 
 class Hit {
@@ -173,8 +178,24 @@ class PokevillePainter extends CustomPainter {
       }
     }
     if (c.menuOpen) _menu(kind);
+    if (c.asking != null) _question(kind);
     _notice(kind);
     if (kind == LayoutKind.wide) canvas.restore();
+    final tr = c.transfer;
+    if (tr != null) {
+      paintTransfer(
+        canvas,
+        size,
+        tr,
+        sprites,
+        wide: kind == LayoutKind.wide,
+        scale: _scale,
+        offset: _off,
+      );
+      hits.list
+        ..clear()
+        ..add(Hit(Offset.zero & size, HitKind.transfer));
+    }
   }
 
   // ---- the box: wide (the PC's layout) ------------------------------------------
@@ -186,7 +207,7 @@ class PokevillePainter extends CustomPainter {
     final k = _k;
     k.say('POKéMON BOX', const Offset(70, 92), Face.title, 58, Look.line);
     k.say(
-      '${_pokemon(c.total)} · ${c.pageCount} boxes · in Pokéville',
+      '${_pokemon(c.total)} · ${c.pageCount} boxes · in ${_where()}',
       const Offset(74, 134),
       Face.title,
       24,
@@ -196,10 +217,10 @@ class PokevillePainter extends CustomPainter {
     _box(
       grid: _grid,
       banner: Rect.fromLTWH(_grid.center.dx - 260, 168, 520, 72),
-      cell: const Size(160, 112),
+      cell: c.cols == 5 ? const Size(168, 132) : const Size(160, 112),
       sprite: 112,
       bannerFs: 40,
-      tag: 'POKéVILLE   (X: menu)',
+      tag: '${_tagName()}   (X: games)',
       tagFs: 22,
       captionFs: 20,
       captionLimit: 1900,
@@ -215,7 +236,7 @@ class PokevillePainter extends CustomPainter {
       arrowS: 18,
     );
     final a = c.holding ? 'Put down' : 'Pick up';
-    final names = [a, 'Check', 'Menu', c.holding ? 'Let go' : 'Back'];
+    final names = [a, 'Check', 'Games', c.holding ? 'Let go' : 'Back'];
     const keys = ['A', 'Y', 'X', 'B'];
     for (var i = 0; i < 4; i++) {
       final r = k.button(
@@ -377,7 +398,7 @@ class PokevillePainter extends CustomPainter {
   }) {
     final k = _k;
     final u = k.u;
-    k.wallPanel(grid, Look.wallOf(c.page));
+    k.wallPanel(grid, _wall(c.page));
     // the banner: which box
     k.box(banner.shift(Offset(0, 5 * u)), Look.line, Look.line, 0, 12 * u);
     k.box(
@@ -420,11 +441,11 @@ class PokevillePainter extends CustomPainter {
     k.tag(
       tag,
       grid.topLeft + Offset(24 * u, -tagFs * 0.75),
-      Look.line,
+      c.onGame ? Look.red : Look.line,
       fs: tagFs,
       maxW: grid.width - 48 * u,
     );
-    for (var i = 0; i < PokeBoxStore.slots; i++) {
+    for (var i = 0; i < c.slotCount; i++) {
       final r = _cellRect(grid, cell, i);
       _hit(r, HitKind.slot, i);
       final m = c.pageMon(c.page, i);
@@ -511,7 +532,7 @@ class PokevillePainter extends CustomPainter {
       final r = Rect.fromLTWH(x + j * step, y, w, h);
       _hit(r.inflate(4 * u), HitKind.strip, p);
       if (p == c.page) k.box(r.inflate(8 * u), Look.gold, Look.gold, 0, 16 * u);
-      k.wallPanel(r, Look.wallOf(p), radius: 12, bw: 4);
+      k.wallPanel(r, _wall(p), radius: 12, bw: 4);
       final cell = math.min(
         (w - 16 * u) / c.cols,
         (h - 8 * u - tagFs) / c.rows,
@@ -520,7 +541,7 @@ class PokevillePainter extends CustomPainter {
           r.center -
           Offset(c.cols * cell, c.rows * cell) / 2 +
           Offset(0, tagFs * 0.45);
-      for (var i = 0; i < PokeBoxStore.slots; i++) {
+      for (var i = 0; i < c.slotCount; i++) {
         final m = c.pageMon(p, i);
         if (m == null) continue;
         final at =
@@ -546,7 +567,7 @@ class PokevillePainter extends CustomPainter {
       k.tag(
         c.pageTitle(p),
         r.topLeft + Offset(6 * u, -tagFs * 0.67),
-        const Color(0xFF3F7FD0),
+        c.onGame ? Look.red : const Color(0xFF3F7FD0),
         fs: tagFs,
         maxW: w - 12 * u,
       );
@@ -601,10 +622,10 @@ class PokevillePainter extends CustomPainter {
     _box(
       grid: grid,
       banner: Rect.fromLTWH(grid.center.dx - bw / 2, m, bw, bannerH),
-      cell: Size(cw, ch),
-      sprite: math.min(cw, ch) - 2,
+      cell: _cellFor(Size(cw, ch)),
+      sprite: _spriteFor(Size(cw, ch)),
       bannerFs: 16,
-      tag: 'POKéVILLE · ${_pokemon(c.total)}',
+      tag: '${_tagName()} · ${_pokemon(c.total)}',
       tagFs: 10,
       captionFs: 10,
       captionLimit: grid.right + 4,
@@ -613,6 +634,21 @@ class PokevillePainter extends CustomPainter {
     _compactData(data);
     _compactStrip(Rect.fromLTRB(m, stripTop, w - m, stripTop + stripH), 9);
     _hints(Rect.fromLTRB(m, hintTop, w - m, hintTop + _hintH));
+  }
+
+  /// The cell for what the grid shows, from Pokéville's 6 x 5 [six]: a
+  /// Game Boy game's 5 x 4 cells fill the same grid.
+  Size _cellFor(Size six) => c.cols == PokeBoxStore.cols
+      ? six
+      : Size(
+          six.width * PokeBoxStore.cols / c.cols,
+          six.height * PokeBoxStore.rows / c.rows,
+        );
+
+  double _spriteFor(Size six) {
+    final base = math.min(six.width, six.height) - 2;
+    final cell = _cellFor(six);
+    return math.min(math.min(cell.width, cell.height) - 2, base * 1.2);
   }
 
   void _tallBox() {
@@ -643,10 +679,10 @@ class PokevillePainter extends CustomPainter {
     _box(
       grid: grid,
       banner: banner,
-      cell: Size(cw, ch),
-      sprite: math.min(cw, ch) - 2,
+      cell: _cellFor(Size(cw, ch)),
+      sprite: _spriteFor(Size(cw, ch)),
       bannerFs: 20,
-      tag: 'POKéVILLE   (X: menu)',
+      tag: '${_tagName()}   (X: games)',
       tagFs: 11,
       captionFs: 11,
       captionLimit: w - 4,
@@ -688,7 +724,7 @@ class PokevillePainter extends CustomPainter {
     final names = [
       c.holding ? 'Put down' : 'Pick up',
       'Check',
-      'Menu',
+      'Games',
       c.holding ? 'Let go' : 'Back',
     ];
     const keys = ['A', 'Y', 'X', 'B'];
@@ -1138,7 +1174,7 @@ class PokevillePainter extends CustomPainter {
     k.panel(panel);
     k.label('BOX DEX', const Offset(990, 146));
     k.say(
-      '${c.owned.length} / ${PokevilleController.dexAll} in Pokéville',
+      '${c.owned.length} / ${PokevilleController.dexAll} caught across your games',
       const Offset(1180, 172),
       Face.title,
       28,
@@ -1156,7 +1192,7 @@ class PokevillePainter extends CustomPainter {
       m: m,
     );
     k.say(
-      'Lit = in Pokéville. Dark = not in the Box yet.',
+      'Lit = in Pokéville or any of your games. Dark = not caught yet.',
       const Offset(990, 1024),
       Face.text,
       18,
@@ -1533,7 +1569,7 @@ class PokevillePainter extends CustomPainter {
     final k = _k;
     final fs = tall ? 14.0 : 12.0;
     k.say(
-      '${c.owned.length} / ${PokevilleController.dexAll} in Pokéville',
+      '${c.owned.length} / ${PokevilleController.dexAll} caught across your games',
       Offset(r.center.dx, r.top + fs),
       Face.title,
       fs,
@@ -1577,7 +1613,7 @@ class PokevillePainter extends CustomPainter {
       m: m,
     );
     k.say(
-      'Lit = in Pokéville. Dark = not in the Box yet.',
+      'Lit = in Pokéville or any of your games. Dark = not caught yet.',
       Offset(r.left, r.bottom),
       Face.text,
       foot - 2,
@@ -1610,7 +1646,7 @@ class PokevillePainter extends CustomPainter {
     final s = wide ? 1.0 : 0.5;
     final pad = 24 * s;
     k.label(
-      'POKéVILLE',
+      'GAMES',
       panel.topLeft + Offset(pad, 20 * s),
       fs: 20 * math.max(s, 0.55),
     );
@@ -1656,20 +1692,22 @@ class PokevillePainter extends CustomPainter {
       );
       _hit(r, HitKind.menuRow, i);
       var x = r.left + 18 * s;
-      if (row.box != null) {
-        final sw = Rect.fromLTWH(x, r.top + rowH * 0.2, rowH * 0.8, rowH * 0.6);
-        k.box(sw, Look.line, Look.line, 0, 6 * s);
-        k.wallpaper(sw.deflate(2), Look.wallOf(row.box!), 5 * s);
-        x = sw.right + 14 * s;
-      } else {
+      final chip = consoleChips[row.chip];
+      if (chip != null) {
+        final cf = dfs * 0.82;
         x +=
             k.chip(
-              'PC',
-              Offset(x, r.center.dy - (dfs + 16 * dfs / 22) / 2),
-              const Color(0x738A8FB8),
-              fs: dfs,
+              chip.$1,
+              Offset(x, r.center.dy - (cf + 16 * cf / 22) / 2),
+              Color(chip.$2),
+              fs: cf,
             ) +
             14 * s;
+      } else if (row.source == -1) {
+        k.star(Offset(x + 18 * s, r.center.dy), 16 * s, Look.star);
+        x += 48 * s;
+      } else {
+        x += 8 * s;
       }
       final ink = off ? Look.faint : Look.ink;
       final dw = k.width(row.detail, Face.text, dfs);
@@ -1689,7 +1727,7 @@ class PokevillePainter extends CustomPainter {
         off ? Look.faint : Look.soft,
         align: 2,
       );
-      if (row.box == c.page) {
+      if (row.source != null && row.source == c.source) {
         k.c.drawCircle(
           Offset(r.left - 10 * s, r.center.dy),
           6 * s,
@@ -1708,7 +1746,9 @@ class PokevillePainter extends CustomPainter {
       );
     }
     k.say(
-      'Games: moving Pokémon in and out of them happens on the PC.',
+      c.games == null
+          ? 'Games: moving Pokémon in and out of them happens on the PC.'
+          : "Games without a save show up once you've played and saved them.",
       Offset(panel.center.dx, panel.bottom - 22 * s),
       Face.text,
       wide ? 20 : 10,
@@ -1720,8 +1760,91 @@ class PokevillePainter extends CustomPainter {
 
   // ---- notices and messages ---------------------------------------------------------
 
+  // The emulators-closed question (Android; or when the running programs
+  // can't be listed): NOT YET first.
+  void _question(LayoutKind kind) {
+    final q = c.asking!;
+    final k = _k;
+    final wide = kind == LayoutKind.wide;
+    final all = wide
+        ? const Rect.fromLTWH(-2000, -200, 6000, 1600)
+        : Offset.zero & _size;
+    k.c.drawRect(all, Paint()..color = Look.line.withValues(alpha: 0.45));
+    _hit(all, HitKind.menuOutside);
+    final s = wide ? 1.0 : (kind == LayoutKind.side ? 0.42 : 0.5);
+    final area = wide ? const Size(1920, 1080) : _size;
+    final w = math.min(1000 * s * (wide ? 1 : 1.7), area.width - 24);
+    final fs = wide ? 28.0 : 13.0;
+    final lines = [
+      for (final l in q.lines) ..._wrap(l, Face.text, fs, w - 60 * s),
+    ];
+    final bh = wide ? 70.0 : 36.0;
+    final h = 90 * s + 30 * s + lines.length * fs * 1.4 + 30 * s + bh + 30 * s;
+    final r = Rect.fromCenter(
+      center: area.center(Offset.zero),
+      width: w,
+      height: math.min(h, area.height - 16),
+    );
+    k.panel(r);
+    _hit(r, HitKind.menuRow, -1);
+    k.label(q.title, r.topLeft + Offset(28 * s, 24 * s), fs: wide ? 22 : 11);
+    var y = r.top + 90 * s + fs;
+    for (final l in lines) {
+      k.say(
+        l,
+        Offset(r.left + 30 * s, y),
+        Face.text,
+        fs,
+        Look.ink,
+        maxW: r.width - 60 * s,
+      );
+      y += fs * 1.4;
+    }
+    final gap = 20 * s;
+    final bw = (r.width - 60 * s - gap) / 2;
+    final by = r.bottom - 30 * s - bh;
+    for (var i = 0; i < ClosedQuestion.answers.length; i++) {
+      final b = Rect.fromLTWH(r.left + 30 * s + i * (bw + gap), by, bw, bh);
+      final on = q.index == i;
+      k.box(b.shift(Offset(0, 4 * s)), Look.line, Look.line, 0, 12 * s);
+      k.box(
+        b,
+        on ? Look.lit : Look.white,
+        on ? Look.gold : Look.line,
+        (on ? 6 : 4) * s,
+        12 * s,
+      );
+      k.say(
+        ClosedQuestion.answers[i],
+        Offset(b.center.dx, b.center.dy + fs * 0.4),
+        Face.title,
+        fs,
+        Look.ink,
+        align: 1,
+        maxW: bw - 16 * s,
+      );
+      _hit(b, HitKind.answer, i);
+    }
+  }
+
+  List<String> _wrap(String text, Face f, double fs, double w) {
+    final out = <String>[];
+    var line = '';
+    for (final word in text.split(' ')) {
+      final next = line.isEmpty ? word : '$line $word';
+      if (_k.width(next, f, fs) > w && line.isNotEmpty) {
+        out.add(line);
+        line = word;
+      } else {
+        line = next;
+      }
+    }
+    out.add(line);
+    return out;
+  }
+
   void _notice(LayoutKind kind) {
-    final text = c.notice;
+    final text = c.notice.isNotEmpty ? c.notice : c.busyText;
     if (text.isEmpty) return;
     final k = _k;
     final wide = kind == LayoutKind.wide;
@@ -1820,6 +1943,19 @@ class PokevillePainter extends CustomPainter {
   }
 
   // ---- words ------------------------------------------------------------------------------
+
+  /// "Pokéville", or "Pokémon Gold".
+  String _where() => c.currentGame?.title ?? 'Pokéville';
+
+  /// The box's tag: "POKéVILLE", or "GOLD · DUDE" (as the PC).
+  String _tagName() {
+    final g = c.currentGame;
+    if (g == null) return 'POKéVILLE';
+    return g.trainer.isEmpty ? g.game : '${g.game} · ${g.trainer}';
+  }
+
+  /// A game's boxes are grass (as on the PC); Pokéville's take turns.
+  String _wall(int page) => c.onGame ? 'grass' : Look.wallOf(page);
 
   static String _three(int n) => n.toString().padLeft(3, '0');
 

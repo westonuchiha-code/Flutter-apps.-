@@ -54,7 +54,12 @@ void main() {
     final out = Directory(p.join('build', 'shots', real ? 'real' : ''))
       ..createSync(recursive: true);
 
-    Future<void> shoot(String name, Widget child, String size) async {
+    Future<void> shoot(
+      String name,
+      Widget child,
+      String size, {
+      void Function()? last,
+    }) async {
       final (dp, dpr) = sizes[size]!;
       tester.view.devicePixelRatio = dpr;
       tester.view.physicalSize = dp * dpr;
@@ -68,6 +73,10 @@ void main() {
       );
       for (var i = 0; i < 6; i++) {
         await tester.pump(const Duration(milliseconds: 50));
+      }
+      if (last != null) {
+        last();
+        await tester.pump();
       }
       final b = tester.renderObject<RenderRepaintBoundary>(
         find.byKey(const Key('shot')),
@@ -160,6 +169,124 @@ void main() {
         }
       }
       reset();
+      c.dispose();
+    }
+    // part B: the Games list, a game's boxes, the question, the transfer
+    {
+      final root = p.join(temp.path, 'games');
+      final saves = makeGames(root, more: true);
+      final dir = p.join(root, 'pokeville');
+      var now = DateTime(2026, 11, 26, 12);
+      final c = PokevilleController(
+        PokevilleFolder(dir, runner: runHere),
+        games: PokeGames([saves]),
+        guard: SaveGuard.ask(now: () => now),
+      );
+      await c.open();
+      await tester.runAsync(
+        () => sprites.preload([
+          for (final sp in [1, 152, 252, 52, 117, 85]) ...[
+            (sp, false),
+            (sp, true),
+          ],
+          (130, true),
+        ]),
+      );
+      Widget screen() => PokevilleScreen(
+        dir,
+        temp.path,
+        controller: c,
+        sprites: sprites,
+        onLeave: () {},
+      );
+      int game(String name) =>
+          c.gameSaves.indexWhere((g) => g.fileName == name);
+      Future<void> reset() async {
+        while (c.cancel()) {}
+        await Future<void>.delayed(Duration.zero);
+        c.skipTransfer();
+        c.skipTransfer();
+        await c.showSource(-1);
+        c.goToPage(0);
+        c.select(0);
+        c.clearNotice();
+        now = now.add(const Duration(minutes: 5)); // ask again
+      }
+
+      double? at;
+      final shots = <String, Future<void> Function()>{
+        'games': () async {
+          c.menu();
+          c.step(0, 2);
+        },
+        'gamebox': () async {
+          await c.showSource(game(crystal));
+          c.select(2);
+        },
+        'gbabox': () async {
+          await c.showSource(game(leaf));
+          c.select(3);
+        },
+        'gameholding': () async {
+          await c.showSource(game(crystal));
+          c.select(1);
+          await c.confirm();
+          await c.showSource(-1);
+          c.select(12);
+        },
+        'question': () async {
+          await c.showSource(game(red));
+          c.select(0);
+          await c.confirm();
+          await c.showSource(-1);
+          c.select(3);
+          await c.confirm();
+        },
+        'transfer': () async {
+          await c.showSource(game(red));
+          c.select(0);
+          await c.confirm();
+          await c.showSource(-1);
+          c.select(3);
+          await c.confirm();
+          await c.answer(1);
+          at = 2.9;
+        },
+        'transfer_end': () async {
+          c.select(3);
+          await c.confirm(); // the one just moved in
+          await c.showSource(game(red));
+          c.select(10);
+          await c.confirm();
+          await c.answer(1);
+          at = 5.6;
+        },
+      };
+      for (final size in sizes.keys) {
+        for (final MapEntry(key: name, value: setUp) in shots.entries) {
+          await tester.runAsync(reset);
+          at = null;
+          await tester.runAsync(setUp);
+          final t = at;
+          await shoot(
+            name,
+            screen(),
+            size,
+            last: t == null
+                ? null
+                : () {
+                    c.transfer?.t = t;
+                    c.transfer?.clock = t;
+                  },
+          );
+          // let it finish (the save has changed already)
+          for (var i = 0; i < 4; i++) {
+            c.skipTransfer();
+          }
+        }
+      }
+      await tester.runAsync(reset);
+      await tester.pumpWidget(const SizedBox());
       c.dispose();
     }
     // no box.json yet

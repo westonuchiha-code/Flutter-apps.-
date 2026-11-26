@@ -4,12 +4,14 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
 
 import 'controller.dart';
 import 'folder.dart';
+import 'guard.dart';
 import 'look.dart';
 import 'painter.dart';
 import 'sprites.dart';
@@ -66,6 +68,8 @@ class PokevilleScreen extends StatefulWidget {
     this.controller,
     this.sprites,
     this.fetcher,
+    this.games,
+    this.guard,
   });
 
   /// The Pokéville folder (box.json, mons/).
@@ -89,12 +93,18 @@ class PokevilleScreen extends StatefulWidget {
   final PokeSprites? sprites;
   final SpriteFetcher? fetcher;
 
+  /// The host's Pokémon game saves (null: none here, "on the PC").
+  final PokeGames? games;
+
+  /// Emulator safety (null: the platform's, see [SaveGuard.forPlatform]).
+  final SaveGuard? guard;
+
   @override
   State<PokevilleScreen> createState() => _PokevilleScreenState();
 }
 
 class _PokevilleScreenState extends State<PokevilleScreen>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late PokevilleController c;
   late PokeSprites sprites;
   late bool _ownController;
@@ -102,6 +112,8 @@ class _PokevilleScreenState extends State<PokevilleScreen>
   final _hits = Hits();
   final _focus = FocusNode(debugLabel: 'pokeville');
   late final AnimationController _sway;
+  late final Ticker _clock = createTicker(_tick);
+  Duration _last = Duration.zero;
   Timer? _noticeTimer;
   int _noticeSeen = 0;
   bool _dragging = false;
@@ -111,9 +123,7 @@ class _PokevilleScreenState extends State<PokevilleScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _ownController = widget.controller == null;
-    c =
-        widget.controller ??
-        (PokevilleController(PokevilleFolder(widget.folder))..open());
+    c = widget.controller ?? _make();
     _ownSprites = widget.sprites == null;
     sprites =
         widget.sprites ?? PokeSprites(widget.cacheDir, fetcher: widget.fetcher);
@@ -134,9 +144,7 @@ class _PokevilleScreenState extends State<PokevilleScreen>
       c.removeListener(_changed);
       if (_ownController) c.dispose();
       _ownController = widget.controller == null;
-      c =
-          widget.controller ??
-          (PokevilleController(PokevilleFolder(widget.folder))..open());
+      c = widget.controller ?? _make();
       c.addListener(_changed);
       _changed();
     }
@@ -149,17 +157,35 @@ class _PokevilleScreenState extends State<PokevilleScreen>
     }
   }
 
+  PokevilleController _make() => PokevilleController(
+    PokevilleFolder(widget.folder),
+    games: widget.games,
+    guard: widget.guard,
+  )..open();
+
   void _changed() {
     if (c.noticeId != _noticeSeen) {
       _noticeSeen = c.noticeId;
       _noticeTimer?.cancel();
       _noticeTimer = Timer(const Duration(seconds: 5), c.clearNotice);
     }
+    if (c.transfer != null && !_clock.isActive) {
+      _last = Duration.zero;
+      _clock.start();
+    } else if (c.transfer == null && _clock.isActive) {
+      _clock.stop();
+    }
     if (c.holding && !_sway.isAnimating) {
       _sway.repeat();
     } else if (!c.holding && _sway.isAnimating) {
       _sway.stop();
     }
+  }
+
+  void _tick(Duration at) {
+    final dt = (at - _last).inMicroseconds / 1e6;
+    _last = at;
+    c.advanceTransfer(dt.clamp(0, 0.1));
   }
 
   @override
@@ -176,6 +202,7 @@ class _PokevilleScreenState extends State<PokevilleScreen>
     if (_ownController) c.dispose();
     if (_ownSprites) sprites.dispose();
     _sway.dispose();
+    _clock.dispose();
     _focus.dispose();
     super.dispose();
   }
@@ -282,6 +309,11 @@ class _PokevilleScreenState extends State<PokevilleScreen>
         }
       case HitKind.menuOutside:
         c.cancel();
+      case HitKind.answer:
+        c.answerSelect(h.index);
+        unawaited(c.answer(h.index));
+      case HitKind.transfer:
+        c.skipTransfer();
     }
   }
 
@@ -364,6 +396,8 @@ class PokevilleHome extends StatefulWidget {
     this.onLeave,
     this.swapAB = false,
     this.fetcher,
+    this.games,
+    this.guard,
   });
 
   final String folder;
@@ -371,6 +405,10 @@ class PokevilleHome extends StatefulWidget {
   final VoidCallback? onLeave;
   final bool swapAB;
   final SpriteFetcher? fetcher;
+
+  /// The host's Pokémon game saves (see [PokevilleScreen.games]).
+  final PokeGames? games;
+  final SaveGuard? guard;
 
   @override
   State<PokevilleHome> createState() => _PokevilleHomeState();
@@ -420,6 +458,8 @@ class _PokevilleHomeState extends State<PokevilleHome>
         onLeave: widget.onLeave,
         swapAB: widget.swapAB,
         fetcher: widget.fetcher,
+        games: widget.games,
+        guard: widget.guard,
       );
     }
     return PopScope(

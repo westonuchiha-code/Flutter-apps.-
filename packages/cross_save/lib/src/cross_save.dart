@@ -45,7 +45,12 @@ class SyncMap {
     this.local, {
     this.exts = const [],
     this.skipDirs = const [],
+    this.only,
   });
+
+  /// This map limited to the files [names] (relative, '/').
+  SyncMap limitedTo(Set<String> names) =>
+      SyncMap(repo, local, exts: exts, skipDirs: skipDirs, only: names);
 
   /// Folder in the repo ("saves/retroarch").
   final String repo;
@@ -59,6 +64,11 @@ class SyncMap {
   /// Folder names left out.
   final List<String> skipDirs;
 
+  /// Only these files (relative, '/' separators), on both sides; null:
+  /// every file the other rules take. (The Pokéville app syncs only the
+  /// Pokémon game saves it found under saves/retroarch.)
+  final Set<String>? only;
+
   bool takes(String rel) {
     final parts = rel.split('/');
     if (parts
@@ -68,6 +78,7 @@ class SyncMap {
     }
     final name = parts.last;
     if (skipped(name)) return false;
+    if (only != null && !only!.contains(rel)) return false;
     if (exts.isEmpty) return true;
     final ext = p.extension(name).toLowerCase().replaceFirst('.', '');
     return exts.contains(ext);

@@ -656,6 +656,9 @@ class _HomePageState extends State<HomePage> {
           f.pokeville,
           cache,
           swapAB: _s.swapAB,
+          // the Pokémon game saves RetroArch keeps here (moving Pokémon in
+          // and out changes them; the XMB syncs all of saves/retroarch)
+          games: poke.PokeGames([f.raSaves]),
           onLeave: () => nav.maybePop(),
         ),
       ),

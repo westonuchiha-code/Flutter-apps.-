@@ -209,24 +209,21 @@ void main() {
     expect(c.view, PokeView.box);
   });
 
-  test('the menu: every box, then games (on the PC)', () async {
+  test('the menu without games: Pokéville, then games (on the PC)', () async {
     final c = await opened();
     expect(c.menu(), isTrue);
     expect(c.menuOpen, isTrue);
-    expect(c.menuRows.map((r) => r.title), ['Box 1', 'Box 2', 'Your games']);
+    expect(c.menuRows.map((r) => r.title), ['Pokéville', 'Your games']);
     expect(c.menuRows[0].detail, '3 Pokémon');
     expect(c.menuRows.last.enabled, isFalse);
     expect(c.step(0, 1), isTrue);
     await c.confirm();
-    expect(c.menuOpen, isFalse);
-    expect(c.page, 1);
-    c.menu();
-    c.menuSelect(2);
-    await c.confirm();
     expect(c.menuOpen, isTrue);
     expect(c.notice, OnThePc.games);
-    expect(c.cancel(), isTrue);
+    c.menuSelect(0);
+    await c.confirm();
     expect(c.menuOpen, isFalse);
+    expect(c.onGame, isFalse);
     expect(c.menu(), isTrue);
     expect(c.menu(), isTrue, reason: 'X again closes it');
     expect(c.menuOpen, isFalse);

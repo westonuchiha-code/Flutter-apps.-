@@ -18,6 +18,16 @@ const folderSetting = TextSetting(
   section: 'Pokéville',
 );
 
+const saveFoldersSetting = TextSetting(
+  key: 'saveFolders',
+  title: 'More game save folders',
+  subtitle:
+      'Folders to look in for Pokémon game saves (.srm / .sav), separated '
+      'by ; (Android: XMB Frontend/Saves/RetroArch is always looked in; '
+      "Windows: RetroArch's saves folder when it's found).",
+  section: 'Pokéville',
+);
+
 const swapSetting = BoolSetting(
   key: 'swapAB',
   title: 'Swap A and B on a gamepad',
@@ -33,7 +43,7 @@ const appConfig = AppShellConfig(
       'Your Pokémon from every game, kept in Pokéville and synced with the '
       'PC XMB Frontend through Cross-Save.',
   accent: Color(0xFFE8463C),
-  settings: [folderSetting, swapSetting],
+  settings: [folderSetting, saveFoldersSetting, swapSetting],
 );
 
 const _channel = MethodChannel('pokeville/android');
@@ -60,6 +70,23 @@ Future<({String folder, XmbFolders? xmb})> findPokeville(String chosen) async {
   return (folder: p.join(docs.path, 'Pokeville'), xmb: null);
 }
 
+/// Where to look for Pokémon game saves: the XMB's RetroArch saves
+/// (Android), RetroArch's saves folder (Windows), plus [extra] (`;`
+/// separated).
+List<String> gameSaveRoots(XmbFolders? xmb, String extra) => [
+  if (xmb != null) xmb.raSaves,
+  if (Platform.isWindows) ...retroArchSaveDirs(),
+  for (final d in extra.split(';'))
+    if (d.trim().isNotEmpty) d.trim(),
+];
+
+/// The Pokémon game saves under the XMB's RetroArch saves, relative to it
+/// ('/' separators): the only saves this app syncs.
+Future<Set<String>> pokemonSaveNames(String raSaves) async => {
+  for (final g in await runInBackground(findGameSaves, [raSaves]))
+    p.relative(g.path, from: raSaves).replaceAll(r'\', '/'),
+};
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -69,6 +96,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   String? _folder;
+  XmbFolders? _xmb;
   bool _access = true;
   CrossSaveController? _sync;
   int _generation = 0; // a new one re-reads Pokéville (after a sync)
@@ -108,15 +136,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final at = await findPokeville(shell.settings.get(folderSetting));
     CrossSaveController? sync;
     if (at.xmb != null) {
-      sync = CrossSaveController(shell.storage, only: const ['pokeville'])
-        ..folders = at.xmb
-        ..model = await _channel.invokeMethod<String>('deviceModel') ?? '';
+      final ra = at.xmb!.raSaves;
+      // Pokéville, plus the Pokémon game saves it changes (the XMB syncs
+      // every save; this app only the ones it found).
+      sync =
+          CrossSaveController(
+              shell.storage,
+              only: const ['pokeville', 'saves/retroarch'],
+              files: {'saves/retroarch': () => pokemonSaveNames(ra)},
+            )
+            ..folders = at.xmb
+            ..model = await _channel.invokeMethod<String>('deviceModel') ?? '';
       await sync.load();
     }
     if (!mounted) return;
     setState(() {
       _access = true;
       _folder = at.folder;
+      _xmb = at.xmb;
       _sync = sync;
     });
     if (sync != null && sync.token.isNotEmpty) await _syncNow();
@@ -184,6 +221,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               p.join(services.storage.directory.path, 'pokemon sprites'),
               key: ValueKey('$folder#$_generation'),
               swapAB: services.settings.get(swapSetting),
+              games: PokeGames(
+                gameSaveRoots(_xmb, services.settings.get(saveFoldersSetting)),
+              ),
               onLeave: () => unawaited(SystemNavigator.pop()),
             ),
           ),

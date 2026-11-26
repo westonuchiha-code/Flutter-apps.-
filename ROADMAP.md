@@ -163,9 +163,12 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
        launches the matched game).
     5. 🔨 Pokéville (owner: box first, then games): A ✅ view and arrange the
        Box synced from the PC (`packages/pokeville`, XMB Memory Card row);
-       B 🔨 take/put Pokémon in the Gen 1–3 games in pure Dart
-       (`packages/poke_saves`, PKHeX-identical files); the standalone
-       `apps/pokeville_app` ✅ with its own Cross-Save sync.
+       B ✅ (built; not yet tried on a device) move Pokémon between Pokéville and the Gen 1–3 game
+       saves in pure Dart (`packages/poke_saves`, PKHeX-identical files;
+       Games list, game boxes, backups + read-back like the PC's helper,
+       emulator-closed question, the transfer); the standalone
+       `apps/pokeville_app` ✅ with its own Cross-Save sync (Pokéville + the
+       Pokémon saves it found).
     6. ⬜ CRT TV (from the PC suite's `apps/crt_tv`).
 
 ## On hold · needs AI (voices or a language model)

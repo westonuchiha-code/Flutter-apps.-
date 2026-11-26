@@ -8,6 +8,57 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 import 'package:pokeville/pokeville.dart';
+import 'package:poke_saves/poke_saves.dart' as ps;
+import 'package:poke_saves/testing.dart';
+
+import 'dart:convert';
+
+/// A built save with [pk] put into box 0 (null: empty).
+Uint8List withMon(Uint8List save, Uint8List? pk, String ext, [int slot = 0]) {
+  if (pk == null) return save;
+  final r = ps.PokeSave.open(save)!.put(0, slot, pk, ext: ext);
+  if (!r.ok) throw StateError(r.error);
+  return r.save!;
+}
+
+const red = 'Pokemon - Red Version (USA, Europe).srm';
+const crystal = 'Pokemon - Crystal Version (USA, Europe).srm';
+const leaf = 'Pokemon - Leaf Green Version.srm';
+
+/// [root]/pokeville (the PC's example) and [root]/saves with Red (a
+/// Bulbasaur), Crystal (a Chikorita) and LeafGreen (a Treecko), plus files
+/// that aren't saves to show.
+String makeGames(String root, {bool more = false}) {
+  makePokeville(root, more: more);
+  final saves = p.join(root, 'saves');
+  void put(String rel, List<int> bytes) => File(p.join(saves, rel))
+    ..createSync(recursive: true)
+    ..writeAsBytesSync(bytes);
+  var r = withMon(gen1Save(), bulbasaurPk1(), 'pk1');
+  var c = withMon(crystalSave(), chikoritaPk2(), 'pk2');
+  var l = withMon(gen3Save(code: 1), treeckoPk3(), 'pk3');
+  if (more) {
+    for (var i = 1; i < 7; i++) {
+      r = withMon(r, bulbasaurPk1(), 'pk1', i);
+      c = i.isEven
+          ? withMon(c, chikoritaPk2(), 'pk2', i)
+          : withMon(c, bulbasaurPk1(), 'pk1', i);
+      l = withMon(l, treeckoPk3(), 'pk3', i * 3);
+    }
+  }
+  put(p.join('Gambatte', red), r);
+  put(p.join('Gambatte', crystal), c);
+  put(p.join('mGBA', leaf), l);
+  // not saves to show
+  put(p.join('Gambatte', 'Tetris.srm'), Uint8List(0x2000));
+  put(p.join('Gambatte', '$red.box-backup-20261126-101010-000'), gen1Save());
+  put(
+    p.join('Gambatte', 'Pokemon - Red.from-repo-20261126-101010.srm'),
+    gen1Save(),
+  );
+  put(p.join('mGBA', 'notes.txt'), utf8.encode('hello'));
+  return saves;
+}
 
 final exampleDir = p.join('test', 'fixtures', 'example-pokeville');
 

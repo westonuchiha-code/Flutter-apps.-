@@ -546,6 +546,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
+  poke_saves:
+    dependency: transitive
+    description:
+      path: "../../packages/poke_saves"
+      relative: true
+    source: path
+    version: "0.1.0"
   pokeville:
     dependency: "direct main"
     description:
