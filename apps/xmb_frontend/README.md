@@ -83,9 +83,12 @@ Screenshots: `tool/shot_test.dart` (`--dart-define=OUT=<folder>`).
 The **Comics** row reads `XMB Frontend/Comics` (made with the other folders;
 Settings → Comics Folder to use another, like `Documents/Comics`): loose
 books and one folder per series, each showing New / Page x of y / Finished.
-Books: `.cbz .zip .epub .cbt`, PDF (drawn by pdfrx), or a folder of page
-pictures. Pages in natural order; `__MACOSX` and hidden files skipped.
-RAR / 7z (`.cbr .cb7`) come next.
+Books: `.cbz .zip .epub .cbt`, PDF (drawn by pdfrx), `.cbr` (RAR 4 and
+older, junrar) and `.cb7` (Apache Commons Compress) unpacked page by page
+into the app's cache on Android (`ComicArchives.kt`; solid archives keep
+the pages they pass), or a folder of page pictures. A `.cbr` that is really
+a zip opens as one. RAR 5 isn't supported yet. Pages in natural order;
+`__MACOSX` and hidden files skipped.
 
 The reader (`lib/src/ui/comic_reader.dart`) is the PC's ComicReader.gd:
 Left/Right pages (or panels; flipped for manga), A panel by panel, X pops

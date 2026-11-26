@@ -7,6 +7,8 @@ import 'package:path/path.dart' as p;
 import 'package:xmb_frontend/src/comics/book.dart';
 import 'package:xmb_frontend/src/comics/bubbles.dart';
 import 'package:xmb_frontend/src/comics/library.dart';
+import 'package:xmb_frontend/src/comics/native_book.dart';
+import 'package:xmb_frontend/src/comics/pdf_book.dart';
 import 'package:xmb_frontend/src/comics/panels.dart';
 
 /// A white page with [rects] filled grey-dark (art), w×h.
@@ -72,7 +74,16 @@ void main() {
     book.close();
     final err = <String>[];
     expect(ComicBook.open(p.join(dir.path, 'x.cbr'), err), isNull);
-    expect(err.single, contains('next update'));
+    expect(err.single, contains('Android'));
+    // A .cbr that is really a zip opens like one.
+    final cbr = File(p.join(dir.path, 'really zip.cbr'))
+      ..writeAsBytesSync(file.readAsBytesSync());
+    expect(archiveKind(cbr.path), 'zip');
+    final viaCbr = (await openComic(cbr.path))!;
+    expect(viaCbr.pageCount, 3);
+    viaCbr.close();
+    File(p.join(dir.path, 'r.cbr')).writeAsBytesSync('Rar!\x1a\x07'.codeUnits);
+    expect(archiveKind(p.join(dir.path, 'r.cbr')), 'rar');
     dir.deleteSync(recursive: true);
   });
 

@@ -629,11 +629,11 @@ class _HomePageState extends State<HomePage> {
     final f = File(p.join(dir, _comicsGuide));
     if (f.existsSync()) return;
     f.writeAsStringSync(
-      'Put comics here: .cbz .zip .epub .cbt .pdf, or a folder of page\n'
-      'pictures (one book). Make a folder per series to group them.\n'
+      'Put comics here: .cbz .cbr .cb7 .zip .epub .cbt .pdf, or a folder\n'
+      'of page pictures (one book). Make a folder per series to group them.\n'
       'Manga reads right to left by itself when the book says so\n'
       '(ComicInfo.xml), or its folder/name says manga; switch it with\n'
-      'Start while reading. RAR and 7z comics (.cbr .cb7) come next.\n',
+      'Start while reading.\n',
     );
   }
 
@@ -703,7 +703,7 @@ class _HomePageState extends State<HomePage> {
         XItem(
           title: 'No comics yet',
           subtitle:
-              'Put .cbz / .pdf files (or folders of pages) in ${_shortPath(dir)}',
+              'Put .cbz / .cbr / .pdf files (or folders of pages) in ${_shortPath(dir)}',
           icon: Icons.lightbulb_outline,
           onPress: () {},
         ),

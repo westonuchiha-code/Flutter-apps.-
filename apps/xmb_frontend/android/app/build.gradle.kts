@@ -29,6 +29,11 @@ android {
         versionName = flutter.versionName
     }
 
+    packaging {
+        // The RAR / 7z libraries both ship licence files.
+        resources.excludes += setOf("META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/DEPENDENCIES")
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
@@ -46,4 +51,11 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Comics: RAR (.cbr, RAR 4 and older) and 7z (.cb7) books.
+    implementation("com.github.junrar:junrar:7.5.5")
+    implementation("org.apache.commons:commons-compress:1.27.1")
+    implementation("org.tukaani:xz:1.10")
 }

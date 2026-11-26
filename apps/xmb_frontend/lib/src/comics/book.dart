@@ -1,8 +1,8 @@
 /// One comic or manga: its pages in reading order and which way it reads.
 /// Ported from the PC XMB Frontend's ComicBook.gd: a folder of images, a
 /// zip-family file (.cbz / .zip / .epub) or a tar (.cbt) read page by page
-/// as shown (big omnibus files open at once), or a PDF (drawn page by page
-/// by pdfrx; see pdf_book.dart). RAR / 7z come later (Android side).
+/// as shown (big omnibus files open at once), a PDF (drawn page by page by
+/// pdfrx; pdf_book.dart) or RAR / 7z (unpacked on Android; native_book.dart).
 ///
 /// Reading direction: a ComicInfo.xml inside the book
 /// (`<Manga>YesAndRightToLeft</Manga>`) decides; else the library's guess.
@@ -99,16 +99,20 @@ abstract class ComicBook {
   void close() {}
 
   /// Opens [path] (null and [error] set if it can't).
-  static ComicBook? open(String path, [List<String>? error]) {
+  static ComicBook? open(
+    String path, [
+    List<String>? error,
+    bool asZip = false,
+  ]) {
     try {
       final e = _ext(path);
       ComicBook book;
       if (FileSystemEntity.isDirectorySync(path)) {
         book = FolderBook(path);
-      } else if (zipExts.contains(e) || tarExts.contains(e)) {
+      } else if (asZip || zipExts.contains(e) || tarExts.contains(e)) {
         book = ArchiveBook(path, tar: tarExts.contains(e));
       } else if (laterExts.contains(e)) {
-        error?.add('RAR and 7z comics (.cbr / .cb7) come in the next update');
+        error?.add('RAR and 7z comics (.cbr / .cb7) open on Android');
         return null;
       } else {
         error?.add('Not a comic');

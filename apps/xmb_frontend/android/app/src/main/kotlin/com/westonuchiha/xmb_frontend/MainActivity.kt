@@ -19,6 +19,10 @@ import java.io.File
 /// The menu's Android side: which emulators are installed, storage access,
 /// and starting games (MethodChannel "xmb/android").
 class MainActivity : FlutterActivity() {
+    private val io = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+    private val comics by lazy { ComicArchives(cacheDir) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Emulators take games as file paths (file:// data), which Android
@@ -45,6 +49,21 @@ class MainActivity : FlutterActivity() {
                     "launch" -> {
                         @Suppress("UNCHECKED_CAST")
                         result.success(launch(call.arguments as Map<String, Any?>))
+                    }
+                    "comicList", "comicPage" -> {
+                        val path = call.argument<String>("path") ?: ""
+                        val name = call.argument<String>("name") ?: ""
+                        val method = call.method
+                        // Unpacking can take a moment: off the main thread.
+                        io.execute {
+                            try {
+                                val v: Any = if (method == "comicList") comics.list(path)
+                                    else comics.page(path, name)
+                                main.post { result.success(v) }
+                            } catch (e: Throwable) {
+                                main.post { result.error("comic", e.message ?: e.toString(), null) }
+                            }
+                        }
                     }
                     else -> result.notImplemented()
                 }

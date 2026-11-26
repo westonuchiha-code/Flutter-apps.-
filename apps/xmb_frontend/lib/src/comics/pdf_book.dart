@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:pdfrx/pdfrx.dart';
 
 import 'book.dart';
+import 'native_book.dart';
 
 class PdfBook extends ComicBook {
   PdfBook._(super.path, this._doc);
@@ -66,6 +67,26 @@ Future<ComicBook?> openComic(String path, [List<String>? error]) async {
       return b;
     } catch (e) {
       error?.add("Couldn't read this PDF ($e)");
+      return null;
+    }
+  }
+  final e = path.toLowerCase().split('.').last;
+  if (laterExts.contains(e)) {
+    final kind = archiveKind(path);
+    if (kind == 'zip') return ComicBook.open(path, error, true);
+    try {
+      final b = await NativeArchiveBook.load(path);
+      if (b.pageCount == 0) {
+        error?.add('No pages in it');
+        return null;
+      }
+      return b;
+    } catch (e) {
+      error?.add(
+        '$e'.contains('rar5')
+            ? 'This .cbr is RAR 5, which the reader can\'t unpack yet'
+            : "Couldn't unpack this file ($e)",
+      );
       return null;
     }
   }
