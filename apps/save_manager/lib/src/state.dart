@@ -285,7 +285,9 @@ class MemoryCardState {
       } else if (mode == Mode.options) {
         groups = optionsForCard(optCard!, showingMore);
         final last = flatOptions().length - 1;
-        option = option < (last > 0 ? last : 0) ? option : (last > 0 ? last : 0);
+        option = option < (last > 0 ? last : 0)
+            ? option
+            : (last > 0 ? last : 0);
       }
     }
     if (pageKey.isNotEmpty) {
@@ -313,7 +315,8 @@ class MemoryCardState {
   }
 
   /// The save you're on (null = none).
-  CardSave? current() => index >= 0 && index < saves.length ? saves[index] : null;
+  CardSave? current() =>
+      index >= 0 && index < saves.length ? saves[index] : null;
 
   /// The left column: every card of this tab's console, empty ones too,
   /// yours before the downloaded ones, then as you've put them in order.
@@ -593,7 +596,8 @@ class MemoryCardState {
       return true;
     }
     final last = saves.length - 1;
-    if (mode == Mode.opened && _select(clampi(index + dir, 0, last > 0 ? last : 0))) {
+    if (mode == Mode.opened &&
+        _select(clampi(index + dir, 0, last > 0 ? last : 0))) {
       fileTop = 0;
       return true;
     }

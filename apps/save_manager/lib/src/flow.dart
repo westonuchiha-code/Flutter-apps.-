@@ -526,7 +526,11 @@ class MemoryCardFlow {
     if (verb == 'slot_out') {
       if (onCard != null && onCard.inSlot.isNotEmpty) {
         return _working(
-          FlowJob('slot_out_card', card: onCard, where: _capitalize(onCard.inSlot)),
+          FlowJob(
+            'slot_out_card',
+            card: onCard,
+            where: _capitalize(onCard.inSlot),
+          ),
           'Taking it out...',
         );
       }
@@ -567,9 +571,15 @@ class MemoryCardFlow {
       case 'copy_all':
         _openCopy(current.card?.saves ?? [], false);
       case 'back_up':
-        return _working(FlowJob('back_up', groups: groups(chosen)), 'Backing up...');
+        return _working(
+          FlowJob('back_up', groups: groups(chosen)),
+          'Backing up...',
+        );
       case 'export':
-        return _working(FlowJob('export', groups: groups(chosen)), 'Exporting...');
+        return _working(
+          FlowJob('export', groups: groups(chosen)),
+          'Exporting...',
+        );
       case 'delete':
         _askDelete(chosen);
       case 'delete_all':
@@ -742,7 +752,10 @@ class MemoryCardFlow {
 
   /// Touch: highlight row [r] of [lookRows].
   bool selectLookRow(int r) {
-    if (kind != FlowKind.look || r < 0 || r >= lookRows.length || r == lookRow) {
+    if (kind != FlowKind.look ||
+        r < 0 ||
+        r >= lookRows.length ||
+        r == lookRow) {
       return false;
     }
     lookRow = r;
@@ -858,7 +871,11 @@ class MemoryCardFlow {
       case 'lost':
         return ops.lostSaves(card!);
       case 'restore_save':
-        return ops.restoreSave(card!, job.entry! as Backup, replace: job.replace);
+        return ops.restoreSave(
+          card!,
+          job.entry! as Backup,
+          replace: job.replace,
+        );
       case 'restore_card':
         return ops.restoreCard(card!, job.entry! as Backup);
       case 'undelete':
@@ -879,7 +896,8 @@ class MemoryCardFlow {
         return slotList(ops.slots, card);
       case 'slot_in':
         final no =
-            ops.slots?.putIn(job.slot, card) ?? 'Nothing can be moved from here';
+            ops.slots?.putIn(job.slot, card) ??
+            'Nothing can be moved from here';
         return no.isNotEmpty
             ? OpResult(false, no)
             : OpResult(
@@ -926,7 +944,10 @@ class MemoryCardFlow {
       if (why.isEmpty) out.addAll(slots.describe(system));
     }
     if (out.isEmpty) {
-      return OpResult(false, why.isNotEmpty ? why : 'No console slots were found');
+      return OpResult(
+        false,
+        why.isNotEmpty ? why : 'No console slots were found',
+      );
     }
     return out;
   }
@@ -989,7 +1010,11 @@ class MemoryCardFlow {
     final to = clampi(index + by, 0, items.length - 1);
     if (to == index) return false;
     index = to;
-    top = clampi(top, index - pickRows + 1 > 0 ? index - pickRows + 1 : 0, index);
+    top = clampi(
+      top,
+      index - pickRows + 1 > 0 ? index - pickRows + 1 : 0,
+      index,
+    );
     return true;
   }
 
@@ -1038,9 +1063,15 @@ class MemoryCardFlow {
       case 'duplicate':
         return _working(FlowJob('duplicate', card: card), 'Duplicating...');
       case 'new_card':
-        return _working(FlowJob('new_card', card: card), 'Making a new card...');
+        return _working(
+          FlowJob('new_card', card: card),
+          'Making a new card...',
+        );
       case 'check':
-        return _working(FlowJob('check', card: card), 'Checking ${card?.name}...');
+        return _working(
+          FlowJob('check', card: card),
+          'Checking ${card?.name}...',
+        );
       case 'restore_card':
         return _working(
           FlowJob('card_history', card: card),
@@ -1188,7 +1219,10 @@ class MemoryCardFlow {
     final n = card.saves.length;
     final body = [
       '${card.name} (${MemoryCards.place(card)})',
-      if (n == 0) "It's empty." else 'Its $n save${n == 1 ? '' : 's'} go with it.',
+      if (n == 0)
+        "It's empty."
+      else
+        'Its $n save${n == 1 ? '' : 's'} go with it.',
       "It's backed up first: More > Bring back a deleted card undoes it.",
     ];
     _ask(
@@ -1354,12 +1388,18 @@ class MemoryCardFlow {
     } else if (dy < 0 && cell >= copyCols) {
       to = cell - copyCols;
     } else if (dy > 0 && cell ~/ copyCols < (list.length - 1) ~/ copyCols) {
-      to = cell + copyCols < list.length - 1 ? cell + copyCols : list.length - 1;
+      to = cell + copyCols < list.length - 1
+          ? cell + copyCols
+          : list.length - 1;
     }
     if (to == cell) return false;
     cell = to;
     final row = cell ~/ copyCols;
-    copyTop = clampi(copyTop, row - copyRows + 1 > 0 ? row - copyRows + 1 : 0, row);
+    copyTop = clampi(
+      copyTop,
+      row - copyRows + 1 > 0 ? row - copyRows + 1 : 0,
+      row,
+    );
     return true;
   }
 
@@ -1400,7 +1440,10 @@ class MemoryCardFlow {
       return null;
     }
     if (verb == 'back_up') {
-      return _working(FlowJob('back_up', groups: groups(picked)), 'Backing up...');
+      return _working(
+        FlowJob('back_up', groups: groups(picked)),
+        'Backing up...',
+      );
     }
     var guarded = false;
     for (final s in picked) {

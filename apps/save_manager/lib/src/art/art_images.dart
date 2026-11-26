@@ -35,16 +35,20 @@ abstract final class ArtImages {
     final have = solid ? _solid[px] : _plain[px];
     if (have != null) return Future.value(have);
     final busy = solid ? _busySolid : _busy;
-    return busy[px] ??= _make(px, solid).then((img) {
-      if (solid) {
-        _solid[px] = img;
-      } else {
-        _plain[px] = img;
-      }
-      busy[px] = null;
-      loaded.value++;
-      return img;
-    });
+    // Made in the root zone: whoever asks first (a painter inside a test's
+    // fake clock, say) mustn't strand everyone else waiting on it.
+    return busy[px] ??= Zone.root.run<Future<ui.Image>>(
+      () => _make(px, solid).then((img) {
+        if (solid) {
+          _solid[px] = img;
+        } else {
+          _plain[px] = img;
+        }
+        busy[px] = null;
+        loaded.value++;
+        return img;
+      }),
+    );
   }
 
   /// Every picture [saves] and [cards] show, ready to draw (for tests and

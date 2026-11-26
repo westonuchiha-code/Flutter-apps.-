@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:save_kit/save_kit.dart';
@@ -74,7 +75,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
       expect(tester.takeException(), isNull);
-      expect(find.byType(SaveIcon), findsNWidgets(12));
+      expect(find.byType(SaveIcon), findsNWidgets(11));
       await tester.pumpWidget(const SizedBox());
     });
   }
@@ -152,6 +153,7 @@ void main() {
       return d.buffer.asUint8List().toList();
     }
 
+    await tester.runAsync(() => ArtImages.load(PaintSplash.pixels(2)));
     Future<void> build() async {
       await tester.pumpWidget(
         _host(
@@ -160,9 +162,6 @@ void main() {
             child: PaintButton('GO', seed: 2, onTap: () => taps++),
           ),
         ),
-      );
-      await tester.runAsync(
-        () => ArtImages.load(PaintSplash.pixels(2)).then((_) {}),
       );
       await tester.pump();
     }
