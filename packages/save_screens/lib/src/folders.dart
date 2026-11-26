@@ -106,6 +106,9 @@ abstract final class CardFolders {
         String data(String pkg, String rest) =>
             p.join(s, 'Android', 'data', pkg, 'files', rest);
         out.addAll([
+          // the XMB Frontend's own folders (Cross-Save brings the PC's
+          // saves here, and the XMB points the emulators at them)
+          p.join(s, 'XMB Frontend', 'Saves'),
           p.join(s, 'RetroArch', 'saves'),
           p.join(s, 'RetroArch', 'system', 'dc'),
           data('com.retroarch', 'saves'),
