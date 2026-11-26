@@ -238,6 +238,13 @@ void main() {
     );
     await show(tester, 'retroid');
     final before = c.state.allSaves.length;
+    // a save that has another card of its console to go to (the order of
+    // saves follows file times, which differ between systems)
+    final movable = c.state.saves.indexWhere(
+      (s) => c.state.cards.any((k) => k.system == s.system && k != s.card),
+    );
+    expect(movable, isNot(-1));
+    c.selectSave(movable);
     c.selectListButton(0); // COPY
     c.confirm();
     expect(c.flow.kind, FlowKind.copy);
