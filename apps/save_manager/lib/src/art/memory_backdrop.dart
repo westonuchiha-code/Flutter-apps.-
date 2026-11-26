@@ -23,13 +23,20 @@ class MemoryBackdrop extends StatelessWidget {
   /// How much of [tint] shows (a PS2 save's own backAlpha).
   final double tintAmount;
 
-  /// A save's corner colours and strength, for [tint] / [tintAmount]
-  /// (null when it has none).
+  /// How much of a save's colours show at its full backAlpha (the PC's
+  /// OWN_STRENGTH).
+  static const ownStrength = 0.5;
+
+  /// A save's corner colours (brightened 1.5×, like the PC) and strength,
+  /// for [tint] / [tintAmount] (null when it has none).
   static ({List<Color> tint, double amount})? tintOf(CardSave? s) {
     if (s == null || s.backColors.length < 4 || s.backAlpha <= 0) return null;
     return (
-      tint: [for (final c in s.backColors.take(4)) Look.rgb(c)],
-      amount: s.backAlpha,
+      tint: [
+        for (final c in s.backColors.take(4))
+          Look.rgb(Rgb(c.r * 1.5, c.g * 1.5, c.b * 1.5)),
+      ],
+      amount: ownStrength * s.backAlpha,
     );
   }
 

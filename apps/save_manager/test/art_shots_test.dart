@@ -16,6 +16,7 @@ import 'package:save_manager/src/art/art.dart';
 import 'art_fixtures.dart';
 
 const _font = 'Inter';
+final _sticker = fakeSticker();
 
 Future<void> _loadFonts() async {
   final l = FontLoader(_font);
@@ -138,9 +139,6 @@ Widget _cardRow(MemoryCard c, bool selected, {CardSave? save}) => Container(
 
 Widget _sheet(List<MemoryCard> cards, List<CardSave> saves) {
   final grid = saves.take(15).toList();
-  for (final s in grid) {
-    debugPrint('DBG ${s.system} ${s.id} ${s.frames.length} ${[for (final f in s.frames) '${f.w}x${f.h} ${f.rgba.where((v) => v != 0).length}']}');
-  }
   final looks = [
     for (final (i, (_, v)) in CardLooks.palette.indexed)
       if (i % 2 == 0 || v.contains('/'))
@@ -150,7 +148,7 @@ Widget _sheet(List<MemoryCard> cards, List<CardSave> saves) {
               ? 0
               : 0xFF000000 | int.parse(v.split('/')[0], radix: 16),
           finish: v.contains('/') ? v.split('/')[1] : '',
-          sticker: i == 2 ? fakeSticker() : null,
+          sticker: i == 2 ? _sticker : null,
         ),
   ];
   return MemoryBackdrop(
@@ -388,6 +386,7 @@ void main() {
       await _loadFonts();
       final d = _data();
       await ArtImages.preload(d.saves, d.cards);
+      await ArtImages.load(_sticker);
       for (var i = 0; i < 7; i++) {
         await ArtImages.load(PaintSplash.pixels(i));
       }
