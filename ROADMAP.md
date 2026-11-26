@@ -134,6 +134,12 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     moves retargeted onto their skeletons), 7 animals with their own moves,
     22 plants and props, person templates (body sliders, extras, saved to
     the Locker).
+    Music videos added after: places (sets + Vista landscapes), film looks,
+    music; an "Auto music video" pipeline (song map, six styles after Dead
+    Prez, Hieroglyphics, People Under the Stairs, Tool, Cake and
+    Parliament, a director that cuts on the bar) with a song per style from
+    `tool/album` (instrumental album "Twelve-Bit Science", own MP3 encoder
+    `packages/mp3_kit`).
 
 ## Phase 4 · XMB Frontend for Android
 
