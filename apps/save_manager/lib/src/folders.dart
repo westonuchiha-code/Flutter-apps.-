@@ -131,8 +131,9 @@ abstract final class CardFolders {
     final seen = <String>{};
     for (final d in [...known(platform, at), ...added]) {
       final key = p.normalize(d).toLowerCase();
-      if (d.isNotEmpty && Directory(d).existsSync() && seen.add(key))
+      if (d.isNotEmpty && Directory(d).existsSync() && seen.add(key)) {
         out.add(d);
+      }
     }
     return out;
   }
