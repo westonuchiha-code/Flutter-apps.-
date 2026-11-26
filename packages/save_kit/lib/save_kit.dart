@@ -17,5 +17,7 @@ export 'src/formats/saturn.dart';
 export 'src/looks.dart';
 export 'src/model.dart';
 export 'src/pictures.dart';
+export 'src/ops.dart';
 export 'src/prefs.dart';
+export 'src/slots.dart';
 export 'src/store.dart';

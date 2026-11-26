@@ -208,6 +208,9 @@ apps/        # one folder per Flutter application
              #                      XMB Frontend's companion; starts RetroArch / PPSSPP /
              #                      DuckStation / Dolphin; cross saves, comics, save manager,
              #                      Pokéville and CRT TV come in later parts (Android only)
+             #   save_manager     - the PC XMB Frontend's save manager, standalone: memory cards of
+             #                      PS1/PS2/DC/GC/N64/Saturn/Neo Geo + PS3 saves; copy, move, back up,
+             #                      restore, undelete, export/import, favorites, card looks (save_kit)
              #   texture_capture  - photo -> game texture: perspective corners, even lighting,
              #                      seamless tiling, photo checks, PS1/N64/PS2/GameCube/Dreamcast
              #                      formats (CLUT, S3TC, VQ) with their memory limits
@@ -242,6 +245,9 @@ packages/    # shared Dart/Flutter packages
              #   engine3d      - lightweight 3D: scene graph, meshes/terrain, glTF/OBJ loaders, orbit/
              #                   walk cameras, sorted-triangle renderer (PS1 look by default,
              #                   RenderOptions.clean), Viewport3D widget
+             #   save_kit      - pure-Dart save manager core (port of the PC's): every console's card
+             #                   format read+write, card scan, CardOps actions, CardStore safety
+             #                   (emulator closed, unchanged, backed up, read back), favorites, slots
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,
              #                   band-limited morphing wavetables (Wavetable; set
              #                   PolySynth.wavetable to play drawn waves), speech chips

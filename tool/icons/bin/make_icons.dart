@@ -221,6 +221,23 @@ final icons = <String, Art>{
       }
     },
   ),
+  'save_manager': (
+    0xFF3B2E9E,
+    (c) {
+      // A memory card with a rainbow label (the PC menu's paint) and gold contacts.
+      c.rect(3, 1, 12, 14, 0xFF16161E, filled: true);
+      c.rect(4, 2, 11, 13, 0xFF3A3C4C, filled: true);
+      c.line(12, 2, 12, 13, 0xFF56586C);
+      const paint = [0xFFE5483C, 0xFFF2B51C, 0xFF3BB54A, 0xFF4A7AE0, 0xFFB04AE0];
+      for (var i = 0; i < 5; i++) {
+        c.line(5, 3 + i, 10, 3 + i, paint[i]);
+      }
+      c.rect(5, 9, 10, 10, 0xFFE8ECF4, filled: true);
+      for (var x = 5; x <= 10; x += 2) {
+        c.plot(x, 12, 0xFFE0B040);
+      }
+    },
+  ),
   'scan_ranch': (
     0xFF3E7A2E,
     (c) {
