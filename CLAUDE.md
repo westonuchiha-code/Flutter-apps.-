@@ -212,6 +212,9 @@ apps/        # one folder per Flutter application
              #   save_manager     - the PC XMB Frontend's save manager, standalone: memory cards of
              #                      PS1/PS2/DC/GC/N64/Saturn/Neo Geo + PS3 saves; copy, move, back up,
              #                      restore, undelete, export/import, favorites, card looks (save_kit)
+             #   pokeville_app    - Pokéville standalone (packages/pokeville): Android = the XMB's
+             #                      Pokeville folder + its own Cross-Save sync (pokeville/ only);
+             #                      Windows = the PC menu's own folder (XMB Pokemon Box)
              #   texture_capture  - photo -> game texture: perspective corners, even lighting,
              #                      seamless tiling, photo checks, PS1/N64/PS2/GameCube/Dreamcast
              #                      formats (CLUT, S3TC, VQ) with their memory limits

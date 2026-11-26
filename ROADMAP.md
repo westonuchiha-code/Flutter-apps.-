@@ -164,8 +164,8 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
     5. 🔨 Pokéville (owner: box first, then games): A ✅ view and arrange the
        Box synced from the PC (`packages/pokeville`, XMB Memory Card row);
        B 🔨 take/put Pokémon in the Gen 1–3 games in pure Dart
-       (`packages/poke_saves`, PKHeX-identical files); then a standalone
-       Pokéville app with its own Cross-Save sync.
+       (`packages/poke_saves`, PKHeX-identical files); the standalone
+       `apps/pokeville_app` ✅ with its own Cross-Save sync.
     6. ⬜ CRT TV (from the PC suite's `apps/crt_tv`).
 
 ## On hold · needs AI (voices or a language model)

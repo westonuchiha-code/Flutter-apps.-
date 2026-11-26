@@ -10,7 +10,11 @@ import 'setup.dart';
 /// The menu's cross saves: the token, what was last synced, conflicts.
 /// Kept in the app's private storage (never in the repo).
 class CrossSaveController extends ChangeNotifier {
-  CrossSaveController(this.storage, {this.makeRepo});
+  CrossSaveController(this.storage, {this.makeRepo, this.only});
+
+  /// Repo folders this app syncs (e.g. `['pokeville']`); null: all of
+  /// [XmbFolders.maps].
+  final List<String>? only;
 
   final AppStorage storage;
 
@@ -99,7 +103,12 @@ class CrossSaveController extends ChangeNotifier {
       f.create();
       final rep = await crossSync(
         repo: _repo(),
-        maps: f.maps,
+        maps: [
+          for (final m in f.maps)
+            if (only == null ||
+                only!.any((o) => m.repo == o || m.repo.startsWith('$o/')))
+              m,
+        ],
         state: state,
         device: device,
         backups: f.backups,

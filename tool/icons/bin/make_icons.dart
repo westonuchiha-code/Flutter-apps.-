@@ -180,6 +180,31 @@ final icons = <String, Art>{
       );
     },
   ),
+  'pokeville_app': (
+    0xFF5AA84A,
+    (c) {
+      // Two little houses (the "ville") and a red-and-white ball.
+      for (final x in [0, 10]) {
+        c.rect(x + 1, 4, x + 5, 8, 0xFFF2E6C8, filled: true);
+        c.line(x, 3, x + 6, 3, 0xFFC0603A);
+        c.line(x + 1, 2, x + 5, 2, 0xFFC0603A);
+        c.line(x + 2, 1, x + 4, 1, 0xFFC0603A);
+        c.rect(x + 3, 6, x + 3, 8, 0xFF6A4A3A, filled: true);
+      }
+      c.ellipse(4, 7, 11, 14, 0xFF22222C, filled: true);
+      c.ellipse(5, 8, 10, 13, 0xFFE8ECF4, filled: true);
+      for (var y = 8; y <= 10; y++) {
+        for (var x = 5; x <= 10; x++) {
+          if (c.pixels[y * c.w + x] == 0xFFE8ECF4) {
+            c.plot(x, y, 0xFFE5483C);
+          }
+        }
+      }
+      c.line(5, 10, 10, 10, 0xFF22222C);
+      c.rect(7, 9, 8, 11, 0xFF22222C, filled: true);
+      c.plot(7, 10, 0xFFE8ECF4);
+    },
+  ),
   'puppet_stage': (
     0xFF7A1F2A,
     (c) {
