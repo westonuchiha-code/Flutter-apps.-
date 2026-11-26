@@ -138,6 +138,9 @@ Widget _cardRow(MemoryCard c, bool selected, {CardSave? save}) => Container(
 
 Widget _sheet(List<MemoryCard> cards, List<CardSave> saves) {
   final grid = saves.take(15).toList();
+  for (final s in grid) {
+    debugPrint('DBG ${s.system} ${s.id} ${s.frames.length} ${[for (final f in s.frames) '${f.w}x${f.h} ${f.rgba.where((v) => v != 0).length}']}');
+  }
   final looks = [
     for (final (i, (_, v)) in CardLooks.palette.indexed)
       if (i % 2 == 0 || v.contains('/'))
