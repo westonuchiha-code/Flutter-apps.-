@@ -285,10 +285,10 @@ class CardStore {
       }
       out.add(
         Backup(
-          time: (j['time'] as num).toInt(),
-          n: (j['n'] as num).toInt(),
+          time: _int(j['time']),
+          n: _int(j['n']),
           what: '${j['what']}',
-          size: (j['size'] as num).toInt(),
+          size: _int(j['size']),
           md5: '${j['md5']}',
           file: dataFile,
           path: '${j['path'] ?? ''}',
@@ -297,6 +297,13 @@ class CardStore {
     }
     return out..sort(_newest);
   }
+
+  /// A record's number, as the PC reads it (a damaged one is 0, not fatal).
+  static int _int(Object? v) => switch (v) {
+    num() => v.toInt(),
+    String() => int.tryParse(v.trim()) ?? 0,
+    _ => 0,
+  };
 
   /// Empty = that backup is damaged.
   Uint8List readBackup(Backup b) {

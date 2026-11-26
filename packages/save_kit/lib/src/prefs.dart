@@ -45,10 +45,7 @@ abstract final class CardOwners {
       if (Platform.isWindows) {
         final r = Process.runSync('tasklist.exe', ['/NH', '/FO', 'CSV']);
         if (r.exitCode != 0) return null;
-        return [
-          for (final line in '${r.stdout}'.split('\n'))
-            if (line.startsWith('"')) line.split('"')[1].toLowerCase(),
-        ];
+        return tasklistNames('${r.stdout}');
       }
       if (Platform.isLinux) {
         return [
@@ -68,6 +65,12 @@ abstract final class CardOwners {
     } catch (_) {}
     return null;
   }
+
+  /// The names in `tasklist /NH /FO CSV` output, lower case.
+  static List<String> tasklistNames(String csv) => [
+    for (final line in csv.split('\n'))
+      if (line.startsWith('"')) line.split('"')[1].toLowerCase(),
+  ];
 
   static String reason(String path, List<String> running) {
     if (running.isEmpty) return cantTell;

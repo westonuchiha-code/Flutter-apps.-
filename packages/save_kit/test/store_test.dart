@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
+import 'package:save_kit/src/prefs.dart';
 import 'package:save_kit/src/store.dart';
 import 'package:test/test.dart';
 
@@ -98,5 +99,83 @@ void main() {
       reason: 'an interrupted change stops the next',
     );
     expect(File(path).readAsBytesSync(), one);
+  });
+
+  test('an interrupted change stops the next, and neither copy is lost', () {
+    expect(s.create(path, one, fine), '');
+    File(path + CardStore.oldExt).writeAsBytesSync(two);
+    expect(s.change(path, one, two, 'x', fine), isNot(''));
+    expect(File(path).readAsBytesSync(), one);
+    expect(File(path + CardStore.oldExt).readAsBytesSync(), two);
+  });
+
+  test('the gate: only test copies, unless it is the app', () {
+    final tool = CardSafety(isApp: false, testRoots: [root]);
+    expect(tool.refusal(path), '');
+    expect(tool.refusal(p.join(tmp.path, 'x.mcd')), CardSafety.refused);
+    expect(
+      tool.refusal(p.join(root, '..', 'x.mcd')),
+      CardSafety.refused,
+      reason: "'..' can't climb out",
+    );
+    expect(tool.refusal(root), CardSafety.refused, reason: 'only inside it');
+    expect(tool.refusal(' '), isNot(''), reason: 'no card chosen');
+    expect(CardSafety(isApp: true).refusal(p.join(tmp.path, 'x.mcd')), '');
+  });
+
+  group('which emulator has a card open', () {
+    final names = CardOwners.tasklistNames(
+      '"System","4"\r\n"pcsx2-qt.exe","12"\r\n',
+    );
+    const ps2 = 'C:/Users/x/Documents/PCSX2/memcards/Mcd001.ps2';
+    const ra = r'C:\RetroArch-Win64\saves\Flycast\a.bin';
+
+    test('the process list is read', () {
+      expect(names, ['system', 'pcsx2-qt.exe']);
+    });
+
+    test('an emulator locks only its own cards', () {
+      expect(CardOwners.reason(ps2, names), isNot(''), reason: 'PCSX2 open');
+      expect(CardOwners.reason(ra, names), '', reason: "RetroArch's alone");
+      expect(
+        CardOwners.reason('D:/cards/a.mcd', names),
+        isNot(''),
+        reason: 'a card kept elsewhere is locked by any emulator',
+      );
+      expect(CardOwners.reason(ra, ['retroarch.exe']), isNot(''));
+      expect(
+        CardOwners.reason(ps2, []),
+        CardOwners.cantTell,
+        reason: 'no process list = no write',
+      );
+    });
+
+    test(
+      'the real process list can be read',
+      () => expect(CardOwners.inUse(ps2), isNot(CardOwners.cantTell)),
+      skip: Platform.isWindows || Platform.isLinux
+          ? false
+          : 'only Windows and Linux list processes',
+    );
+  });
+
+  test('a damaged backup record is passed over, not fatal', () {
+    expect(s.create(path, one, fine), '');
+    expect(s.change(path, one, two, 'delete', fine), '');
+    final good = s.history(path).single;
+    final dir = p.dirname(good.file);
+    File(p.join(dir, '1-0001.card')).writeAsBytesSync(one);
+    File(p.join(dir, '1-0001.json')).writeAsStringSync(
+      '{"time": "soon", "n": null, "what": 1, "size": "x", "md5": 2}',
+    );
+    File(p.join(dir, '1-0002.json')).writeAsStringSync('[1, 2]');
+    File(p.join(dir, '1-0003.json')).writeAsStringSync('{broken');
+    final h = s.history(path);
+    expect(h.first.what, 'delete', reason: 'the good one is still there');
+    expect(s.readBackup(h.first), one);
+    expect(s.allBackups().first.what, 'delete');
+    for (final b in h.skip(1)) {
+      expect(s.readBackup(b), isEmpty, reason: "a damaged one can't be read");
+    }
   });
 }
