@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'package:save_kit/save_kit.dart';
+
 import 'controller.dart';
 import 'folders.dart';
 
@@ -96,6 +98,8 @@ SaveManagerConfig appConfigFor(
   List<String> extra = const [],
   EmulatorCheck? check,
   String platform = '',
+  List<LibraryGame> games = const [],
+  Map<String, PlayStats> played = const {},
 }) {
   final files = AppFiles(p.join(at.documents, AppFiles.folderName));
   final exports = CardFolders.exports(at);
@@ -114,6 +118,8 @@ SaveManagerConfig appConfigFor(
     stickerFolder: files.stickers,
     // Windows / Linux: null asks the system (save_kit's process check)
     running: check?.running,
+    games: games,
+    played: played,
   );
 }
 

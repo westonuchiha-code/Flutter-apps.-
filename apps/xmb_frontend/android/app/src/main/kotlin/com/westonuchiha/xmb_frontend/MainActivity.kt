@@ -45,6 +45,8 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "storageRoots" -> result.success(storageRoots())
+                    // the save manager's (packages/save_screens) storage root
+                    "storageRoot" -> result.success(Environment.getExternalStorageDirectory().path)
                     "deviceModel" -> result.success("${Build.MANUFACTURER} ${Build.MODEL}")
                     "launch" -> {
                         @Suppress("UNCHECKED_CAST")

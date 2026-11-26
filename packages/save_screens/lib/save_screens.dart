@@ -10,4 +10,5 @@ export 'src/host.dart';
 export 'src/state.dart';
 export 'src/texts.dart';
 export 'src/ui/access_page.dart';
+export 'src/ui/home.dart';
 export 'src/ui/screen.dart';

@@ -5,6 +5,7 @@ import 'package:app_shell/app_shell.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
+import 'package:save_screens/save_screens.dart' as saves;
 
 import '../android.dart';
 import '../launch.dart';
@@ -616,6 +617,60 @@ class _HomePageState extends State<HomePage> {
   }
 
   List<XItem>? _rootsCache;
+
+  // ---- Memory Card (the PC's row between Game and the rest) ----
+
+  /// The save manager's own consoles, by this library's system ids.
+  static const _saveSystems = {
+    'ps1': 'PS1',
+    'n64': 'N64',
+    'saturn': 'SATURN',
+    'dreamcast': 'DC',
+    'gamecube': 'GC',
+  };
+
+  List<XItem> _memoryRow() => [
+    XItem(
+      title: 'Save Manager',
+      icon: Icons.sd_card_outlined,
+      onPress: () => unawaited(_openSaves()),
+    ),
+  ];
+
+  Future<void> _openSaves() async {
+    saves.androidChannel = const MethodChannel('xmb/android');
+    final games = [
+      for (final g in _s.games)
+        if (_saveSystems[g.system] case final sys?)
+          (id: g.id, title: g.title, system: sys, serial: ''),
+    ];
+    final played = {
+      for (final e in _s.played.entries)
+        e.key: (
+          seconds: e.value.seconds,
+          sessions: e.value.sessions,
+          last: e.value.last,
+        ),
+    };
+    final nav = Navigator.of(context);
+    await nav.push(
+      MaterialPageRoute<void>(
+        builder: (context) => saves.SaveManagerHome(
+          games: games,
+          played: played,
+          onTick: Shell.of(context).tick,
+          onLeave: () => nav.maybePop(),
+          onGame: (id) {
+            final g = _s.games.where((g) => g.id == id).firstOrNull;
+            if (g == null) return;
+            nav.pop();
+            unawaited(_play(g));
+          },
+        ),
+      ),
+    );
+    if (mounted) setState(() => _revision++);
+  }
 
   // ---- Comics ----
 
@@ -1262,6 +1317,12 @@ class _HomePageState extends State<HomePage> {
         categories: [
           XCategory('settings', 'Settings', Icons.work_outline, _settingsRow),
           XCategory('game', 'Game', Icons.sports_esports_outlined, _gameRow),
+          XCategory(
+            'memory',
+            'Memory Card',
+            Icons.sd_card_outlined,
+            _memoryRow,
+          ),
           XCategory('comics', 'Comics', Icons.menu_book_outlined, _comicsRow),
         ],
       ),

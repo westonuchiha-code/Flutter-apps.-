@@ -128,6 +128,12 @@ void main() {
         LogicalKeyboardKey.arrowDown,
       ],
     ),
+    (
+      'xmb_memory',
+      const Size(1240, 1080),
+      2.75,
+      [LogicalKeyboardKey.arrowRight],
+    ),
     ('xmb_phone', const Size(1080, 2340), 2.625, <LogicalKeyboardKey>[]),
     // The Retroid Pocket Classic: 1240×1080, wider than tall, at the
     // densities Android may use for it.
