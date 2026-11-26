@@ -10,6 +10,7 @@ import 'package:pokeville/pokeville.dart' as poke;
 import 'package:save_screens/save_screens.dart' as saves;
 
 import '../android.dart';
+import '../files_path.dart';
 import '../launch.dart';
 import '../library/scanner.dart';
 import '../library/systems.dart';
@@ -585,20 +586,19 @@ class _HomePageState extends State<HomePage> {
     ];
   }
 
-  /// "XMB Frontend/ROMs" for the built-in folder, else the full path.
-  String _shortPath(String dir) {
-    final i = dir.indexOf('XMB Frontend');
-    return i >= 0 ? dir.substring(i) : dir;
-  }
+  /// The folder as the phone's file manager shows it ("Internal storage ›
+  /// XMB Frontend › ROMs"), not Android's /storage/emulated/0 path.
+  String _shortPath(String dir) => filesPath(dir);
 
   void _howToAdd() => _xmb.currentState?.showPanel(
     XPanel(
       title: 'How to Add Games',
       lines: [
-        'Copy each game into its console\'s folder in',
-        _s.romsDir ?? '',
-        'with a file manager, or over USB from a PC. The menu finds them '
-            'when you come back to it.',
+        'Copy each game into its console\'s folder. In the My Files app:',
+        filesPath(_s.romsDir ?? ''),
+        'then the console\'s folder (long-press a game in Downloads, Move, '
+            'go there, Move here). Or over USB from a PC. The menu finds '
+            'them when you come back to it.',
         '',
         for (final s in systems) '${s.folder}:  .${s.exts.join('  .')}',
         '',

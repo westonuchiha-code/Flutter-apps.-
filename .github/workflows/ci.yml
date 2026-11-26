@@ -317,6 +317,8 @@ jobs:
             app=$(basename "$d")
             label=$(grep -oP 'android:label="\K[^"]+' "$d/android/app/src/main/AndroidManifest.xml" 2>/dev/null | head -1)
             [ -n "$label" ] || label="$app"
+            # plain letters in file names: zip mangles é ("Pok#U00e9ville")
+            label=$(printf %s "$label" | LC_ALL=C.UTF-8 iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null) || label="$app"
             if [ -f "dist/$app-android-apk/app-release.apk" ]; then
               cp "dist/$app-android-apk/app-release.apk" "out/android/$label.apk"
               echo "$label ($app): Android" >> out/README.txt
