@@ -1,0 +1,18 @@
+name: save_kit
+description: "Game save files of eight consoles (PS1, PS2, PS3, Dreamcast, GameCube, N64, Saturn, Neo Geo): read, write, copy, back up. Pure Dart."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  charset: ^2.0.1
+  path: ^1.9.0
+  archive: ^4.0.0
+  image: ^4.2.0
+  crypto: ^3.0.3
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^6.0.0
