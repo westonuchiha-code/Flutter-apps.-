@@ -156,8 +156,19 @@ class XmbViewState extends State<XmbView> with SingleTickerProviderStateMixin {
       _toastLeft -= dt;
       if (_toastLeft <= 0) _toast = null;
     }
+    // Battery: while the menu glides, every frame; once it has settled,
+    // only the waves move, and 30 frames a second is plenty for them.
+    final settled =
+        (_cat - _catPos).abs() < 0.002 &&
+        (_selected - _itemPos).abs() < 0.002 &&
+        _dragX == 0 &&
+        _dragY == 0;
+    if (settled && now - _drawn < const Duration(milliseconds: 33)) return;
+    _drawn = now;
     setState(() {});
   }
+
+  Duration _drawn = Duration.zero;
 
   int get _selected =>
       _folders.isNotEmpty ? _folders.last.index : (_index[_cat] ?? 0);
