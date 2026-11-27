@@ -161,7 +161,8 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
        `apps/save_manager` (Android, Windows, Linux) ✅, and the XMB's Memory
        Card row ✅ (the same screens, `packages/save_screens`; Start game
        launches the matched game).
-    5. 🔨 Pokéville (owner: box first, then games): A ✅ view and arrange the
+    5. ⏸ Pokéville (owner: box first, then games; on hold until the owner can
+       test with the PC online): A ✅ view and arrange the
        Box synced from the PC (`packages/pokeville`, XMB Memory Card row);
        B ✅ (built; not yet tried on a device) move Pokémon between Pokéville and the Gen 1–3 game
        saves in pure Dart (`packages/poke_saves`, PKHeX-identical files;
