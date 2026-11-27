@@ -131,6 +131,12 @@ void main() {
       ],
     ),
     (
+      'xmb_video',
+      const Size(1240, 1080),
+      2.75,
+      [LogicalKeyboardKey.arrowRight, LogicalKeyboardKey.arrowRight],
+    ),
+    (
       'xmb_memory',
       const Size(1240, 1080),
       2.75,

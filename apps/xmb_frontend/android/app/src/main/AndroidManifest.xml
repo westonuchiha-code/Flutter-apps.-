@@ -76,6 +76,8 @@
         <package android:name="com.github.stenzek.duckstation" />
         <package android:name="org.dolphinemu.dolphinemu" />
         <package android:name="org.dolphinemu.mmjr" />
+        <!-- Companion apps the menu opens (Video › CRT TV). -->
+        <package android:name="com.westonuchiha.crt_tv" />
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

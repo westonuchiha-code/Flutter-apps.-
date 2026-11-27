@@ -175,7 +175,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _checkDevice() async {
     try {
-      _installed = await _a.installed(allRunnerPackages);
+      _installed = await _a.installed([...allRunnerPackages, _crtTv]);
       _allFiles = await _a.hasAllFiles();
     } catch (_) {}
   }
@@ -746,6 +746,37 @@ class _HomePageState extends State<HomePage> {
       ),
     );
     if (mounted) setState(() => _revision++);
+  }
+
+  // ---- Video (the PC's row): CRT TV, its own app ----
+
+  static const _crtTv = 'com.westonuchiha.crt_tv';
+  static const _crtTvApk =
+      'https://github.com/westonuchiha-code/Flutter-apps.-/releases/download/'
+      'crt_tv-latest/crt_tv-android.apk';
+
+  List<XItem> _videoRow() {
+    final have = _installed.contains(_crtTv);
+    return [
+      XItem(
+        title: 'CRT TV',
+        subtitle: have
+            ? 'Your shows as channels: ${filesPath(p.join(_cs?.folders?.root ?? '', 'TV'))}'
+            : 'Not installed: press to download it',
+        icon: Icons.live_tv_outlined,
+        onPress: () => unawaited(_openCrtTv(have)),
+      ),
+    ];
+  }
+
+  Future<void> _openCrtTv(bool have) async {
+    if (have) {
+      final err = await _a.launch(const LaunchSpec(package: _crtTv));
+      if (err != null) _xmb.currentState?.toast(err);
+      return;
+    }
+    final ok = await _a.openUrl([_crtTvApk]);
+    if (!ok) _xmb.currentState?.toast('Could not open the download');
   }
 
   // ---- Comics ----
@@ -1553,6 +1584,7 @@ class _HomePageState extends State<HomePage> {
             Icons.sd_card_outlined,
             _memoryRow,
           ),
+          XCategory('video', 'Video', Icons.live_tv_outlined, _videoRow),
           XCategory('comics', 'Comics', Icons.menu_book_outlined, _comicsRow),
         ],
       ),
