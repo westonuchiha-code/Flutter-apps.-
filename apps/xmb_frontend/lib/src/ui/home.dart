@@ -12,6 +12,7 @@ import 'package:save_screens/save_screens.dart' as saves;
 import '../android.dart';
 import '../files_path.dart';
 import '../launch.dart';
+import '../library/emulators.dart';
 import '../library/scanner.dart';
 import '../library/systems.dart';
 import '../state.dart';
@@ -81,7 +82,9 @@ class _HomePageState extends State<HomePage> {
     final cs = widget.crossSave ?? CrossSaveController(storage);
     if (widget.crossSave == null) await cs.load();
     cs.addListener(_bump);
+    cs.addListener(_shareToken);
     _cs = cs;
+    _shareToken();
     // Not awaited: the menu must never wait on the system for this.
     unawaited(_applyScreen().catchError((_) {}));
     await _checkDevice();
@@ -125,19 +128,39 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// A cross save now (if set up); says what moved.
-  Future<void> _sync({bool quiet = false}) async {
+  /// One sign-in for both apps: the Pokéville app reads the token from
+  /// the menu's TokenProvider (Android, same signing key only).
+  String? _sharedToken;
+  void _shareToken() {
+    final t = _cs?.token ?? '';
+    if (t == _sharedToken) return;
+    _sharedToken = t;
+    unawaited(_a.setSharedToken(t).catchError((_) {}));
+  }
+
+  /// A cross save now (if set up); says what moved ([say]: as a toast).
+  Future<SyncReport?> _sync({bool quiet = false, bool say = true}) async {
     final cs = _cs;
-    if (cs == null || !cs.ready) return;
+    if (cs == null || cs.token.isEmpty) return null;
+    if (cs.folders == null) {
+      if (!quiet) {
+        _xmb.currentState?.toast(
+          'Allow storage access first: saves arrive in the XMB Frontend folder',
+        );
+      }
+      return null;
+    }
     final rep = await cs.sync();
-    if (rep == null) return;
+    if (rep == null) return null;
     if (rep.took.isNotEmpty) await _scan(quiet: true);
     final line = rep.summary;
+    if (!say) return rep;
     if (line.isNotEmpty) {
       _xmb.currentState?.toast(line);
     } else if (!quiet) {
       _xmb.currentState?.toast('Cross save: everything is up to date');
     }
+    return rep;
   }
 
   /// Applies the Screen setting ('auto' locks nothing).
@@ -160,7 +183,20 @@ class _HomePageState extends State<HomePage> {
   Future<void> _resumed() async {
     final fromGame = _s.running != null;
     _s.returned(DateTime.now().millisecondsSinceEpoch);
+    final before = {..._installed};
     await _checkDevice();
+    // Back from Google Play: say what arrived and what to do next.
+    final got = [
+      for (final g in emulatorGuides)
+        if (hasRunner(g.runner, _installed) && !hasRunner(g.runner, before))
+          g.runner.label,
+    ];
+    if (got.isNotEmpty) {
+      _xmb.currentState?.toast(
+        '${got.join(' and ')} installed. Next: Get Emulators › '
+        '${got.first} › Set It Up',
+      );
+    }
     if (_cs?.folders == null || _s.romsDir == null || _s.comicsDir == null) {
       await _setupFolders();
     } else if (_allFiles) {
@@ -244,6 +280,10 @@ class _HomePageState extends State<HomePage> {
           lines: [
             'Install ${s.runners.map((r) => r.label).join(' or ')} on this '
                 'device, then come back.',
+          ],
+          options: [
+            XOption('Get Emulators', _openGetEmulators),
+            XOption('OK', () {}),
           ],
         ),
       );
@@ -358,6 +398,10 @@ class _HomePageState extends State<HomePage> {
             'Folder: ${p.relative(p.dirname(g.path), from: _s.romsDir)}',
           'Saves are named: ${g.saveName}',
         ],
+        options: [
+          if (choice == null) XOption('Get Emulators', _openGetEmulators),
+          XOption('OK', () {}),
+        ],
       ),
     );
   }
@@ -373,6 +417,9 @@ class _HomePageState extends State<HomePage> {
           onPress: () => _a.requestAllFiles(),
         ),
       );
+    }
+    if (_installed.isEmpty) {
+      out.add(_getEmulatorsItem());
     }
     if (_s.romsDir == null) {
       if (_allFiles) {
@@ -950,6 +997,7 @@ class _HomePageState extends State<HomePage> {
         icon: Icons.videogame_asset_outlined,
         children: _emulatorsList,
       ),
+      _getEmulatorsItem(),
       if (raInstalled.length > 1)
         XItem(
           title: 'RetroArch Build',
@@ -1046,8 +1094,8 @@ class _HomePageState extends State<HomePage> {
     return XItem(
       title: 'Cross Save',
       subtitle: cs == null || cs.token.isEmpty
-          ? 'Share saves with the PC through your Cross-Save repo'
-          : _crossLine() ?? 'Ready',
+          ? 'Sign in with GitHub to share saves with the PC'
+          : _crossLine() ?? 'Signed in',
       icon: Icons.sync,
       children: _crossSaveList,
     );
@@ -1057,19 +1105,30 @@ class _HomePageState extends State<HomePage> {
     final cs = _cs!;
     final f = cs.folders;
     return [
-      XItem(
-        title: 'GitHub Token',
-        subtitle: cs.token.isEmpty
-            ? 'Not set: needed to reach the Cross-Save repo'
-            : 'Set (Contents: read and write on Cross-Save)',
-        icon: Icons.key_outlined,
-        onPress: _askToken,
-        options: () => [
-          XOption('How to Make One', _tokenHelp),
-          if (cs.token.isNotEmpty)
-            XOption('Forget the Token', cs.forgetToken, danger: true),
-        ],
-      ),
+      if (cs.token.isEmpty)
+        XItem(
+          title: 'Sign In with GitHub',
+          subtitle: 'Shows a code to type on github.com/login/device',
+          icon: Icons.login,
+          onPress: _signIn,
+          options: () => [
+            XOption('Sign In with GitHub', _signIn),
+            XOption('Paste a Token Instead', _askToken),
+            XOption('How to Make a Token', _tokenHelp),
+          ],
+        )
+      else
+        XItem(
+          title: 'GitHub',
+          subtitle: 'Signed in (Pokéville on this device uses it too)',
+          icon: Icons.verified_user_outlined,
+          onPress: _accountPanel,
+          options: () => [
+            XOption('Sign In Again', _signIn),
+            XOption('Paste a Token Instead', _askToken),
+            XOption('Sign Out', cs.forgetToken, danger: true),
+          ],
+        ),
       if (cs.token.isNotEmpty)
         XItem(
           title: cs.busy ? 'Syncing…' : 'Sync Now',
@@ -1250,8 +1309,150 @@ class _HomePageState extends State<HomePage> {
       );
       return;
     }
-    _xmb.currentState?.toast('Connected to Cross-Save. Syncing…');
-    await _sync();
+    await _afterSignIn();
+  }
+
+  Future<void> _signIn() async {
+    final cs = _cs;
+    if (cs == null) return;
+    final ok = await showGitHubSignIn(
+      context,
+      cs,
+      openUrl: (u) => _a.openUrl([u]),
+      swapAB: _s.swapAB,
+    );
+    if (ok) await _afterSignIn();
+  }
+
+  void _accountPanel() => _xmb.currentState?.showPanel(
+    XPanel(
+      title: 'GitHub',
+      lines: const [
+        'Signed in: the menu reaches your Cross-Save repo.',
+        'The Pokéville app on this device signs in through the menu.',
+      ],
+      options: [
+        XOption('OK', () {}),
+        XOption('Sign In Again', _signIn),
+        XOption('Sign Out', () => _cs?.forgetToken(), danger: true),
+      ],
+    ),
+  );
+
+  /// Signed in: get the saves now and say what arrived.
+  Future<void> _afterSignIn() async {
+    final cs = _cs!;
+    if (cs.folders == null) {
+      _xmb.currentState?.showPanel(
+        XPanel(
+          title: 'Signed In',
+          lines: const [
+            'Cross-Save is connected.',
+            'Next: Settings › Storage Access. Your saves arrive in the XMB '
+                'Frontend folder, and they sync as soon as access is allowed.',
+          ],
+          options: [
+            XOption('Allow Storage Access', () => _a.requestAllFiles()),
+            XOption('Later', () {}),
+          ],
+        ),
+      );
+      return;
+    }
+    _xmb.currentState?.toast('Signed in. Getting your saves…');
+    final rep = await _sync(quiet: true, say: false);
+    _xmb.currentState?.showPanel(
+      XPanel(title: 'Signed In to Cross-Save', lines: syncReportLines(rep)),
+    );
+  }
+
+  XItem _getEmulatorsItem() {
+    final missing = [
+      for (final g in emulatorGuides)
+        if (!hasRunner(g.runner, _installed)) g.runner.label,
+    ];
+    return XItem(
+      title: 'Get Emulators',
+      subtitle: missing.isEmpty
+          ? 'All installed  ·  how to set each one up'
+          : missing.length == emulatorGuides.length
+          ? 'Nothing installed yet: get them from Google Play'
+          : 'Not installed yet: ${missing.join(', ')}',
+      icon: Icons.download_outlined,
+      children: _getEmulatorsList,
+    );
+  }
+
+  /// Opens Settings › Get Emulators (from a panel).
+  void _openGetEmulators() =>
+      _xmb.currentState?.openFolder(_getEmulatorsItem());
+
+  List<XItem> _getEmulatorsList() => [
+    for (final g in emulatorGuides)
+      () {
+        final has = hasRunner(g.runner, _installed);
+        return XItem(
+          title: g.runner.label,
+          subtitle: '${has ? 'Installed' : 'Not installed'}  ·  ${g.forWhat}',
+          icon: has ? Icons.check_circle_outline : Icons.download_outlined,
+          onPress: has ? () => _setUp(g) : () => _getFromPlay(g),
+          options: () => [
+            XOption(
+              has ? 'Open in Google Play' : 'Get It on Google Play',
+              () => _getFromPlay(g),
+            ),
+            XOption('Set It Up', () => _setUp(g)),
+            if (g.runner == Runner.retroarch)
+              XOption(
+                'Get It from retroarch.com Instead',
+                () => _a.openUrl(const [
+                  'https://www.retroarch.com/?page=platforms',
+                ]),
+              ),
+          ],
+        );
+      }(),
+  ];
+
+  Future<void> _getFromPlay(EmulatorGuide g) async {
+    if (await _a.openUrl(playUrls(g.playPackage))) return;
+    _xmb.currentState?.showPanel(
+      XPanel(
+        title: 'Get ${g.runner.label}',
+        lines: [
+          'Search Google Play for ${g.runner.label}, or open',
+          '   play.google.com/store/apps/details?id=${g.playPackage}',
+          'then come back: the menu finds it by itself.',
+        ],
+      ),
+    );
+  }
+
+  /// What to set in [g]'s emulator so its saves land where the sync looks.
+  void _setUp(EmulatorGuide g) {
+    final f = _cs?.folders;
+    final has = hasRunner(g.runner, _installed);
+    _xmb.currentState?.showPanel(
+      XPanel(
+        title: 'Set Up ${g.runner.label}',
+        lines: f == null
+            ? const [
+                'Allow storage access first (Settings › Storage Access), so '
+                    'the menu can make its XMB Frontend folder.',
+              ]
+            : setUpLines(
+                g.runner,
+                f,
+                ownRetroArchConfig: _s.raOwnConfig,
+                cores: _s.cores,
+                preferRetroArch: _s.preferRetroArch,
+              ),
+        options: [
+          XOption('OK', () {}),
+          if (!has) XOption('Get It on Google Play', () => _getFromPlay(g)),
+        ],
+      ),
+    );
   }
 
   List<XItem> _emulatorsList() => [

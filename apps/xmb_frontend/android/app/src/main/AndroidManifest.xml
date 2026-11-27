@@ -14,6 +14,12 @@
     <!-- Cross-Save (GitHub) and Pokéville's sprites (PokeAPI). Debug builds add
          this on their own, release builds don't. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- One sign-in for both apps: only apps signed with this app's key (the
+         Pokéville app, from the same CI key) may read the Cross-Save token. -->
+    <permission
+        android:name="com.westonuchiha.xmb_frontend.permission.CROSS_SAVE_TOKEN"
+        android:label="Read the XMB Frontend's Cross-Save sign-in"
+        android:protectionLevel="signature" />
     <uses-feature android:name="android.hardware.gamepad" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <application
@@ -44,6 +50,11 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <provider
+            android:name=".TokenProvider"
+            android:authorities="com.westonuchiha.xmb_frontend.crosssave"
+            android:exported="true"
+            android:permission="com.westonuchiha.xmb_frontend.permission.CROSS_SAVE_TOKEN" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

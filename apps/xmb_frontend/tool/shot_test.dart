@@ -1,4 +1,5 @@
 // Screenshots (look check): TV, Retroid Pocket Classic, phone.
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -12,6 +13,7 @@ import 'package:xmb_frontend/src/library/scanner.dart';
 import 'package:xmb_frontend/src/state.dart';
 import 'package:cross_save/cross_save.dart';
 import 'package:xmb_frontend/src/ui/home.dart';
+import 'package:xmb_frontend/src/ui/xmb.dart';
 
 MenuState demo() {
   Game g(String sys, String folder, String file, String title, int mb) => Game(
@@ -157,71 +159,141 @@ void main() {
       ],
     ),
   ]) {
-    testWidgets(name, (tester) async {
-      tester.view.physicalSize = size;
-      tester.view.devicePixelRatio = dpr;
-      addTearDown(tester.view.reset);
-      final dir = Directory.systemTemp.createTempSync('xmb_shot');
-      final services = (await tester.runAsync(() async {
-        for (final (fam, files) in [
-          (
-            'Roboto',
-            [
-              'Regular',
-              'Medium',
-              'SemiBold',
-            ].map((w) => '/usr/share/fonts/opentype/inter/Inter-$w.otf'),
-          ),
-          (
-            'MaterialIcons',
-            [
-              '/opt/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
-            ],
-          ),
-        ]) {
-          final l = FontLoader(fam);
-          for (final f in files) {
-            l.addFont(
-              Future.value(ByteData.sublistView(File(f).readAsBytesSync())),
-            );
-          }
-          await l.load();
-        }
-        return ShellServices.create(appConfig, root: dir);
-      }))!;
-      await tester.pumpWidget(
-        RepaintBoundary(
-          key: const Key('s'),
-          child: ShellApp(
-            services: services,
-            home: (_) => HomePage(
-              state: demo(),
-              crossSave: CrossSaveController(services.storage),
+    testWidgets(name, (tester) => shoot(tester, out, name, size, dpr, keys));
+  }
+  // Sign in with GitHub (the code panel) and Get Emulators, at the
+  // Retroid Pocket Classic's size and on a phone.
+  for (final (where, size, dpr) in [
+    ('classic', const Size(1240, 1080), 2.75),
+    ('phone', const Size(1080, 2340), 2.625),
+  ]) {
+    testWidgets(
+      'xmb_${where}_sign_in',
+      (tester) => shoot(
+        tester,
+        out,
+        'xmb_${where}_sign_in',
+        size,
+        dpr,
+        const [],
+        after: (cs) => unawaited(
+          showGitHubSignIn(
+            tester.element(find.byType(XmbView)),
+            cs,
+            login: DeviceLogin(
+              clientId: 'shot',
+              post: (url, form) async => (
+                status: 200,
+                body:
+                    '{"device_code":"d","user_code":"WDJB-MJHT",'
+                    '"verification_uri":"https://github.com/login/device",'
+                    '"expires_in":900,"interval":5}',
+              ),
+              wait: (_) => Completer<void>().future,
             ),
           ),
         ),
-      );
-      for (var i = 0; i < 10; i++) {
-        await tester.pump(const Duration(milliseconds: 50));
-      }
-      for (final k in keys) {
-        await tester.sendKeyEvent(k);
-        for (var i = 0; i < 4; i++) {
-          await tester.pump(const Duration(milliseconds: 30));
-        }
-      }
-      for (var i = 0; i < 40; i++) {
-        await tester.pump(const Duration(milliseconds: 30));
-      }
-      final b = tester.renderObject<RenderRepaintBoundary>(
-        find.byKey(const Key('s')),
-      );
-      await tester.runAsync(() async {
-        final img = await b.toImage(pixelRatio: 1);
-        final png = await img.toByteData(format: ui.ImageByteFormat.png);
-        File('$out/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
-      });
-      await tester.pumpWidget(const SizedBox());
-    });
+      ),
+    );
+    testWidgets(
+      'xmb_${where}_get_emulators',
+      (tester) => shoot(
+        tester,
+        out,
+        'xmb_${where}_get_emulators',
+        size,
+        dpr,
+        const [LogicalKeyboardKey.gameButtonA],
+      ),
+    );
+    testWidgets(
+      'xmb_${where}_setup_retroarch',
+      (tester) =>
+          shoot(tester, out, 'xmb_${where}_setup_retroarch', size, dpr, const [
+            LogicalKeyboardKey.gameButtonA,
+            LogicalKeyboardKey.gameButtonY,
+            LogicalKeyboardKey.arrowDown,
+            LogicalKeyboardKey.gameButtonA,
+          ]),
+    );
   }
+}
+
+Future<void> shoot(
+  WidgetTester tester,
+  String out,
+  String name,
+  Size size,
+  double dpr,
+  List<LogicalKeyboardKey> keys, {
+  void Function(CrossSaveController cs)? after,
+}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = dpr;
+  addTearDown(tester.view.reset);
+  final dir = Directory.systemTemp.createTempSync('xmb_shot');
+  final services = (await tester.runAsync(() async {
+    for (final (fam, files) in [
+      (
+        'Roboto',
+        [
+          'Regular',
+          'Medium',
+          'SemiBold',
+        ].map((w) => '/usr/share/fonts/opentype/inter/Inter-$w.otf'),
+      ),
+      (
+        'monospace',
+        ['/usr/share/fonts/truetype/jetbrains-mono/JetBrainsMono-Bold.ttf'],
+      ),
+      (
+        'MaterialIcons',
+        [
+          '/opt/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+        ],
+      ),
+    ]) {
+      final l = FontLoader(fam);
+      for (final f in files) {
+        l.addFont(
+          Future.value(ByteData.sublistView(File(f).readAsBytesSync())),
+        );
+      }
+      await l.load();
+    }
+    return ShellServices.create(appConfig, root: dir);
+  }))!;
+  final cs = CrossSaveController(services.storage)
+    ..folders = const XmbFolders('/storage/emulated/0/XMB Frontend');
+  await tester.pumpWidget(
+    RepaintBoundary(
+      key: const Key('s'),
+      child: ShellApp(
+        services: services,
+        home: (_) => HomePage(state: demo(), crossSave: cs),
+      ),
+    ),
+  );
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+  for (final k in keys) {
+    await tester.sendKeyEvent(k);
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 30));
+    }
+  }
+  after?.call(cs);
+  for (var i = 0; i < 40; i++) {
+    await tester.pump(const Duration(milliseconds: 30));
+  }
+  final b = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(const Key('s')),
+  );
+  await tester.runAsync(() async {
+    final img = await b.toImage(pixelRatio: 1);
+    final png = await img.toByteData(format: ui.ImageByteFormat.png);
+    File('$out/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
+  });
+  await tester.pumpWidget(const SizedBox());
 }

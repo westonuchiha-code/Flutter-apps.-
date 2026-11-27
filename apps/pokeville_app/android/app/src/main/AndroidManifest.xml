@@ -11,6 +11,14 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- One sign-in for both apps: reads the XMB Frontend's Cross-Save token
+         (its TokenProvider). Declared here too, with the same signature
+         level, so it is granted whichever app is installed first. -->
+    <permission
+        android:name="com.westonuchiha.xmb_frontend.permission.CROSS_SAVE_TOKEN"
+        android:label="Read the XMB Frontend's Cross-Save sign-in"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.westonuchiha.xmb_frontend.permission.CROSS_SAVE_TOKEN" />
     <uses-feature android:name="android.hardware.gamepad" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <application
@@ -53,6 +61,8 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- The XMB Frontend, to read its sign-in (package visibility). -->
+        <package android:name="com.westonuchiha.xmb_frontend" />
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

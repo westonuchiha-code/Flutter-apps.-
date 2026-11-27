@@ -26,9 +26,41 @@ class MainActivity : FlutterActivity() {
                     }
                     "storageRoot" -> result.success(Environment.getExternalStorageDirectory().path)
                     "deviceModel" -> result.success("${Build.MANUFACTURER} ${Build.MODEL}")
+                    "sharedToken" -> result.success(sharedToken())
+                    "openUrl" -> {
+                        val urls = call.argument<List<String>>("urls") ?: emptyList()
+                        result.success(openUrl(urls))
+                    }
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    /// The XMB Frontend's Cross-Save sign-in (its TokenProvider; only apps
+    /// signed with the same key may read it). "" when the XMB isn't
+    /// installed, isn't signed in, or won't answer.
+    private fun sharedToken(): String = try {
+        contentResolver.query(
+            Uri.parse("content://com.westonuchiha.xmb_frontend.crosssave/token"),
+            null, null, null, null
+        )?.use { c -> if (c.moveToFirst()) c.getString(0) ?: "" else "" } ?: ""
+    } catch (e: SecurityException) {
+        ""
+    } catch (e: IllegalArgumentException) {
+        ""
+    }
+
+    /// Opens the first of [urls] something can show; false when none.
+    private fun openUrl(urls: List<String>): Boolean {
+        for (u in urls) {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(u)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return true
+            } catch (e: ActivityNotFoundException) {
+            } catch (e: SecurityException) {
+            }
+        }
+        return false
     }
 
     private fun hasAllFiles(): Boolean =

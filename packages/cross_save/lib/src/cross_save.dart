@@ -158,6 +158,32 @@ class SyncReport {
   }
 }
 
+/// What a sync did, as lines for a panel (null: one was already running).
+List<String> syncReportLines(SyncReport? rep) {
+  if (rep == null) {
+    return const ['A sync is already running; Sync Now shows how it went.'];
+  }
+  String plural(int n, String what) => '$n $what${n == 1 ? '' : 's'}';
+  final names = [for (final t in rep.took) p.basenameWithoutExtension(t)];
+  return [
+    if (rep.took.isNotEmpty) ...[
+      '${plural(rep.took.length, 'save')} arrived from your other devices:',
+      for (final n in names.take(6)) '   $n',
+      if (names.length > 6) '   and ${names.length - 6} more',
+    ],
+    if (rep.sent.isNotEmpty)
+      '${plural(rep.sent.length, 'save')} from this device went to the repo.',
+    if (rep.conflicts.isNotEmpty)
+      '${plural(rep.conflicts.length, 'save')} changed on both sides: pick '
+          'which to keep in Cross Save › Changed on Both Sides.',
+    if (rep.took.isEmpty && rep.sent.isEmpty && rep.conflicts.isEmpty && rep.ok)
+      'Everything is up to date: the repo has nothing this device is missing.',
+    if (!rep.ok) 'Not finished: ${rep.error}',
+    'From now on it syncs by itself: when the menu opens, before a game '
+        'starts and when you come back from one.',
+  ];
+}
+
 /// Local files under [dir] (relative, '/' separators) that [m] syncs.
 List<String> localFiles(SyncMap m) {
   final dir = Directory(m.local);

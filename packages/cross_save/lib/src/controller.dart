@@ -92,6 +92,16 @@ class CrossSaveController extends ChangeNotifier {
     return null;
   }
 
+  /// Keeps a token another app already checked (the XMB Frontend's, on
+  /// Android), without asking GitHub first (works offline too).
+  Future<void> adoptToken(String t) async {
+    final tok = t.trim();
+    if (tok.isEmpty || tok == token) return;
+    token = tok;
+    await save();
+    notifyListeners();
+  }
+
   Future<void> forgetToken() async {
     token = '';
     await save();

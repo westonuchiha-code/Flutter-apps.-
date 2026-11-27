@@ -48,6 +48,15 @@ class MainActivity : FlutterActivity() {
                     // the save manager's (packages/save_screens) storage root
                     "storageRoot" -> result.success(Environment.getExternalStorageDirectory().path)
                     "deviceModel" -> result.success("${Build.MANUFACTURER} ${Build.MODEL}")
+                    "openUrl" -> {
+                        val urls = call.argument<List<String>>("urls") ?: emptyList()
+                        result.success(openUrl(urls))
+                    }
+                    // Cross-Save's token, for the Pokéville app (TokenProvider).
+                    "setSharedToken" -> {
+                        TokenProvider.write(this, call.argument<String>("token") ?: "")
+                        result.success(null)
+                    }
                     "launch" -> {
                         @Suppress("UNCHECKED_CAST")
                         result.success(launch(call.arguments as Map<String, Any?>))
@@ -70,6 +79,20 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    /// Opens the first of [urls] something can show (Google Play's app,
+    /// else the browser); false when none could be opened.
+    private fun openUrl(urls: List<String>): Boolean {
+        for (u in urls) {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(u)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return true
+            } catch (e: ActivityNotFoundException) {
+            } catch (e: SecurityException) {
+            }
+        }
+        return false
     }
 
     private fun isInstalled(pkg: String): Boolean = try {

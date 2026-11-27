@@ -51,4 +51,19 @@ class AndroidBridge {
     if (!available) return 'Games start on Android only.';
     return _channel.invokeMethod<String>('launch', spec.toMap());
   }
+
+  /// Opens the first of [urls] Android can show (Google Play's app, else
+  /// the browser); false when nothing opened.
+  Future<bool> openUrl(List<String> urls) async {
+    if (!available) return false;
+    return await _channel.invokeMethod<bool>('openUrl', {'urls': urls}) ??
+        false;
+  }
+
+  /// Hands the Cross-Save token to the Pokéville app ('' = signed out),
+  /// through the menu's signature-protected TokenProvider.
+  Future<void> setSharedToken(String token) async {
+    if (!available) return;
+    await _channel.invokeMethod<void>('setSharedToken', {'token': token});
+  }
 }

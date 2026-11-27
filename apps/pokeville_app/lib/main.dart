@@ -70,6 +70,30 @@ Future<({String folder, XmbFolders? xmb})> findPokeville(String chosen) async {
   return (folder: p.join(docs.path, 'Pokeville'), xmb: null);
 }
 
+/// The XMB Frontend's Cross-Save sign-in (Android, same signing key):
+/// '' when it isn't installed or signed in.
+Future<String> sharedToken() async {
+  if (!Platform.isAndroid) return '';
+  try {
+    return await _channel.invokeMethod<String>('sharedToken') ?? '';
+  } catch (_) {
+    return '';
+  }
+}
+
+/// Opens [url] in the browser (Android); false when it couldn't.
+Future<bool> openUrl(String url) async {
+  if (!Platform.isAndroid) return false;
+  try {
+    return await _channel.invokeMethod<bool>('openUrl', {
+          'urls': [url],
+        }) ??
+        false;
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Where to look for Pokémon game saves: the XMB's RetroArch saves
 /// (Android), RetroArch's saves folder (Windows), plus [extra] (`;`
 /// separated).
@@ -99,6 +123,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   XmbFolders? _xmb;
   bool _access = true;
   CrossSaveController? _sync;
+
+  /// The token came from the XMB Frontend (one sign-in for both apps).
+  bool _viaXmb = false;
   int _generation = 0; // a new one re-reads Pokéville (after a sync)
 
   @override
@@ -119,6 +146,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !_access) unawaited(_start());
+    // Signed in (or again) in the XMB meanwhile: use it.
+    if (state == AppLifecycleState.resumed && _sync != null) {
+      unawaited(_useXmbSignIn(_sync!));
+    }
     // Changes made here go to the PC when the app is left.
     if (state == AppLifecycleState.paused) unawaited(_sync?.sync());
   }
@@ -148,6 +179,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ..folders = at.xmb
             ..model = await _channel.invokeMethod<String>('deviceModel') ?? '';
       await sync.load();
+      await _useXmbSignIn(sync);
     }
     if (!mounted) return;
     setState(() {
@@ -159,6 +191,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (sync != null && sync.token.isNotEmpty) await _syncNow();
   }
 
+  /// Takes the XMB Frontend's token when it has one this app lacks.
+  Future<void> _useXmbSignIn(CrossSaveController sync) async {
+    final t = await sharedToken();
+    if (t.isEmpty) return;
+    final changed = t != sync.token;
+    await sync.adoptToken(t);
+    if (!mounted) return;
+    setState(() => _viaXmb = true);
+    if (changed && _sync != null) await _syncNow();
+  }
+
   Future<void> _syncNow() async {
     final rep = await _sync?.sync();
     if (!mounted || rep == null) return;
@@ -168,7 +211,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Future<void> _openSync() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => SyncPage(controller: _sync, folder: _folder ?? ''),
+        builder: (_) =>
+            SyncPage(controller: _sync, folder: _folder ?? '', viaXmb: _viaXmb),
       ),
     );
     if (mounted) setState(() => _generation++);
@@ -261,7 +305,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 /// Cross-Save for Pokéville: the token, Sync now, the last result and
 /// conflicts (pick which side to keep), plus the app's settings.
 class SyncPage extends StatefulWidget {
-  const SyncPage({super.key, required this.controller, required this.folder});
+  const SyncPage({
+    super.key,
+    required this.controller,
+    required this.folder,
+    this.viaXmb = false,
+  });
+
+  /// Signed in through the XMB Frontend (its token).
+  final bool viaXmb;
 
   /// Null: this platform doesn't sync here (Windows: the PC menu does).
   final CrossSaveController? controller;
@@ -272,43 +324,26 @@ class SyncPage extends StatefulWidget {
 }
 
 class _SyncPageState extends State<SyncPage> {
-  Future<void> _askToken(CrossSaveController c) async {
-    final text = TextEditingController();
-    final t = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('GitHub token'),
-        content: TextField(
-          controller: text,
-          autofocus: true,
-          obscureText: true,
-          decoration: const InputDecoration(
-            hintText: 'The same fine-grained token as the XMB',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, text.text),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+  Future<void> _signIn(CrossSaveController c) async {
+    final ok = await showGitHubSignIn(
+      context,
+      c,
+      openUrl: openUrl,
+      swapAB: Shell.of(context).settings.get(swapSetting),
     );
-    if (t == null || t.trim().isEmpty) return;
-    final err = await c.setToken(t);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    if (!ok || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Signed in. Getting your saves…')),
+    );
+    final rep = await c.sync();
+    if (rep == null) return;
+    messenger.showSnackBar(
       SnackBar(
-        content: Text(
-          err == null ? 'Token saved' : 'That token did not work: $err',
-        ),
+        content: Text(syncReportLines(rep).take(3).join('\n')),
+        duration: const Duration(seconds: 6),
       ),
     );
-    if (err == null) unawaited(c.sync());
   }
 
   @override
@@ -335,22 +370,34 @@ class _SyncPageState extends State<SyncPage> {
               listenable: c,
               builder: (context, _) => ListView(
                 children: [
-                  ListTile(
-                    leading: const Icon(Icons.key_outlined),
-                    title: const Text('GitHub token'),
-                    subtitle: Text(
-                      c.token.isEmpty
-                          ? 'Not set: paste the same token as the XMB Frontend'
-                          : 'Set',
+                  if (c.token.isEmpty)
+                    ListTile(
+                      autofocus: true,
+                      leading: const Icon(Icons.login),
+                      title: const Text('Sign in with GitHub'),
+                      subtitle: const Text(
+                        'Or sign in once in the XMB Frontend: this app then '
+                        'uses it too',
+                      ),
+                      onTap: () => unawaited(_signIn(c)),
+                    )
+                  else
+                    ListTile(
+                      leading: const Icon(Icons.verified_user_outlined),
+                      title: const Text('GitHub'),
+                      subtitle: Text(
+                        widget.viaXmb
+                            ? 'Signed in through the XMB Frontend'
+                            : 'Signed in',
+                      ),
+                      onTap: widget.viaXmb ? null : () => unawaited(_signIn(c)),
+                      trailing: widget.viaXmb
+                          ? null
+                          : TextButton(
+                              onPressed: () => unawaited(c.forgetToken()),
+                              child: const Text('Sign out'),
+                            ),
                     ),
-                    onTap: () => unawaited(_askToken(c)),
-                    trailing: c.token.isEmpty
-                        ? null
-                        : TextButton(
-                            onPressed: () => unawaited(c.forgetToken()),
-                            child: const Text('Forget'),
-                          ),
-                  ),
                   ListTile(
                     leading: c.busy
                         ? const SizedBox.square(

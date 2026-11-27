@@ -5,5 +5,7 @@ library;
 
 export 'src/controller.dart';
 export 'src/cross_save.dart';
+export 'src/device_login.dart';
 export 'src/github.dart';
 export 'src/setup.dart';
+export 'src/sign_in.dart';

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -111,6 +112,11 @@ class XmbViewState extends State<XmbView> with SingleTickerProviderStateMixin {
   final _index = <int, int>{};
   final _folders = <_Folder>[];
   XPanel? _panel;
+
+  /// The open panel's text and options scroll together (long set-up
+  /// steps on the Retroid's short screen); the d-pad follows the choice.
+  final _panelScroll = ScrollController();
+  final _optionKeys = <GlobalKey>[];
   late List<XItem> _items = widget.categories[_cat].items();
   final _focus = FocusNode();
   late final Ticker _ticker;
@@ -140,6 +146,7 @@ class XmbViewState extends State<XmbView> with SingleTickerProviderStateMixin {
   void dispose() {
     _ticker.dispose();
     _focus.dispose();
+    _panelScroll.dispose();
     super.dispose();
   }
 
@@ -201,7 +208,28 @@ class XmbViewState extends State<XmbView> with SingleTickerProviderStateMixin {
     _toastLeft = 3.5;
   });
 
-  void showPanel(XPanel p) => setState(() => _panel = p);
+  void showPanel(XPanel p) => setState(() {
+    _panel = p;
+    if (_panelScroll.hasClients) _panelScroll.jumpTo(0);
+  });
+
+  GlobalKey _optionKey(int i) {
+    while (_optionKeys.length <= i) {
+      _optionKeys.add(GlobalKey());
+    }
+    return _optionKeys[i];
+  }
+
+  /// Opens [item]'s folder (e.g. from a panel's option).
+  void openFolder(XItem item) {
+    final make = item.children;
+    if (make == null) return;
+    setState(() {
+      _panel = null;
+      _folders.add(_Folder(item, make()));
+      _itemPos = 0;
+    });
+  }
 
   /// Closes every folder (e.g. after the ROMs folder was chosen).
   void closeFolders() => setState(() {
@@ -221,10 +249,15 @@ class XmbViewState extends State<XmbView> with SingleTickerProviderStateMixin {
     final panel = _panel;
     if (panel != null) {
       switch (b) {
-        case XButton.up:
-          panel.index = (panel.index - 1).clamp(0, panel.options.length - 1);
-        case XButton.down:
-          panel.index = (panel.index + 1).clamp(0, panel.options.length - 1);
+        case XButton.up || XButton.down:
+          final up = b == XButton.up;
+          final to = panel.index + (up ? -1 : 1);
+          if (to < 0 || to >= panel.options.length) {
+            _scrollPanel(up ? -1 : 1); // past the ends: read the text
+          } else {
+            panel.index = to;
+            _showOption(to);
+          }
         case XButton.a:
           final o = panel.options[panel.index];
           _panel = null;
@@ -267,6 +300,37 @@ class XmbViewState extends State<XmbView> with SingleTickerProviderStateMixin {
       default:
     }
     setState(() {});
+  }
+
+  void _scrollPanel(int dir) {
+    if (!_panelScroll.hasClients) return;
+    final pos = _panelScroll.position;
+    final to = (pos.pixels + dir * pos.viewportDimension * 0.6).clamp(
+      0.0,
+      pos.maxScrollExtent,
+    );
+    unawaited(
+      _panelScroll.animateTo(
+        to,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+      ),
+    );
+  }
+
+  void _showOption(int i) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final c = i < _optionKeys.length ? _optionKeys[i].currentContext : null;
+      if (c != null && c.mounted) {
+        unawaited(
+          Scrollable.ensureVisible(
+            c,
+            duration: const Duration(milliseconds: 150),
+            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          ),
+        );
+      }
+    });
   }
 
   void _activate(XItem item) {
@@ -778,21 +842,23 @@ class XmbViewState extends State<XmbView> with SingleTickerProviderStateMixin {
             children: [
               Text(p.title, style: _text(g.font * 1.3)),
               SizedBox(height: g.font * 0.6),
-              for (final l in p.lines)
-                Padding(
-                  padding: EdgeInsets.only(bottom: g.font * 0.25),
-                  child: Text(
-                    l,
-                    style: _text(g.font * 0.85, color: Colors.white70),
-                  ),
-                ),
-              SizedBox(height: g.font * 0.6),
               Expanded(
                 child: ListView(
+                  controller: _panelScroll,
                   padding: EdgeInsets.zero,
                   children: [
+                    for (final l in p.lines)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: g.font * 0.25),
+                        child: Text(
+                          l,
+                          style: _text(g.font * 0.85, color: Colors.white70),
+                        ),
+                      ),
+                    if (p.lines.isNotEmpty) SizedBox(height: g.font * 0.6),
                     for (var i = 0; i < p.options.length; i++)
                       GestureDetector(
+                        key: _optionKey(i),
                         onTap: () {
                           setState(() => p.index = i);
                           final o = p.options[i];

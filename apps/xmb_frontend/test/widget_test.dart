@@ -53,7 +53,10 @@ void main() {
     expect(find.text('Game'), findsOneWidget);
     expect(find.text('Spyro'), findsOneWidget); // pinned, on the front
     expect(find.text('All Games'), findsOneWidget);
+    // No emulator installed (off Android): Get Emulators comes first.
+    expect(find.text('Get Emulators'), findsOneWidget);
     // Down to All Games, open it, Emerald is there.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.gameButtonA);
     for (var i = 0; i < 20; i++) {
@@ -76,6 +79,66 @@ void main() {
       await tester.pump(const Duration(milliseconds: 30));
     }
     expect(find.text('ROMs Folder'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    try {
+      dir.deleteSync(recursive: true);
+    } catch (_) {}
+  });
+
+  testWidgets('first run: Get Emulators and Sign In with GitHub', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1240, 1080);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    final dir = Directory.systemTemp.createTempSync('xmb_ui');
+    final services = (await tester.runAsync(
+      () => ShellServices.create(appConfig, root: dir),
+    ))!;
+    await tester.pumpWidget(
+      ShellApp(
+        services: services,
+        home: (_) => HomePage(
+          state: MenuState()..romsDir = '/roms',
+          crossSave: CrossSaveController(services.storage),
+        ),
+      ),
+    );
+    Future<void> settle() async {
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 30));
+      }
+    }
+
+    await settle();
+    expect(find.text('Get Emulators'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.gameButtonA);
+    await settle();
+    for (final e in ['RetroArch', 'DuckStation', 'PPSSPP', 'Dolphin']) {
+      expect(find.text(e), findsOneWidget);
+    }
+    expect(
+      find.textContaining('Not installed  ·  Nintendo, Sega, arcade'),
+      findsOneWidget,
+    );
+    // B, then Settings: Cross Save asks to sign in.
+    await tester.sendKeyEvent(LogicalKeyboardKey.gameButtonB);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await settle();
+    // Down to Cross Save (ROMs, Comics, Console Folders, Storage,
+    // Emulators, Get Emulators, Screen, Swap A and B, Cross Save).
+    for (var i = 0; i < 8; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    }
+    await settle();
+    expect(
+      find.text('Sign in with GitHub to share saves with the PC'),
+      findsOneWidget,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.gameButtonA);
+    await settle();
+    expect(find.text('Sign In with GitHub'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     try {
