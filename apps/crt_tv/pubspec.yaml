@@ -1,0 +1,36 @@
+name: crt_tv
+description: "A personal retro TV that turns your folders of shows, movies and commercials into channels."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.14.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  material_ui: ^1.11.1
+  app_shell:
+    path: ../../packages/app_shell
+  # Video playback on Windows, Linux and Android (MIT licensed).
+  media_kit: ^1.2.6
+  media_kit_video: ^2.0.1
+  media_kit_libs_video: ^1.0.7
+  # The app's data folder.
+  path_provider: ^2.1.6
+  path: ^1.9.0
+  # Controllers on Windows (XInput / joystick API).
+  ffi: ^2.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+dependency_overrides:
+  # Patched copy; see third_party/README.md.
+  media_kit_video:
+    path: third_party/media_kit_video
