@@ -20,7 +20,12 @@ void artText(
   double spacing = 0,
   bool italic = false,
   String family = 'monospace',
-  List<String> fallback = const ['Consolas', 'Courier New', 'DejaVu Sans Mono', 'Menlo'],
+  List<String> fallback = const [
+    'Consolas',
+    'Courier New',
+    'DejaVu Sans Mono',
+    'Menlo',
+  ],
 }) {
   final painter = TextPainter(
     text: TextSpan(
@@ -71,7 +76,13 @@ void artShadow(Canvas canvas, Path shape, double blur) {
 const _cyan = Color(0xFF39F3FF);
 const _magenta = Color(0xFFFF3DD4);
 
-void paintCyberpunk(Canvas canvas, Size size, Rect? screen, double bezel, bool dressed) {
+void paintCyberpunk(
+  Canvas canvas,
+  Size size,
+  Rect? screen,
+  double bezel,
+  bool dressed,
+) {
   final rect = Offset.zero & size;
   final u = size.height / 100;
   canvas.drawRect(
@@ -97,7 +108,12 @@ void paintCyberpunk(Canvas canvas, Size size, Rect? screen, double bezel, bool d
   final frameRect = screen.inflate(bezel);
   final pillar = frameRect.left;
   _traces(canvas, Rect.fromLTRB(0, 0, pillar, size.height), Random(7), u);
-  _traces(canvas, Rect.fromLTRB(frameRect.right, 0, size.width, size.height), Random(21), u);
+  _traces(
+    canvas,
+    Rect.fromLTRB(frameRect.right, 0, size.width, size.height),
+    Random(21),
+    u,
+  );
 
   final frame = _chamfered(frameRect, bezel * 0.85);
   artShadow(canvas, frame, bezel * 0.5);
@@ -126,7 +142,10 @@ void paintCyberpunk(Canvas canvas, Size size, Rect? screen, double bezel, bool d
       ..strokeWidth = max(1.5, u * 0.24)
       ..color = _cyan,
   );
-  final inner = RRect.fromRectAndRadius(screen.inflate(bezel * 0.2), Radius.circular(bezel * 0.45));
+  final inner = RRect.fromRectAndRadius(
+    screen.inflate(bezel * 0.2),
+    Radius.circular(bezel * 0.45),
+  );
   canvas.drawRRect(
     inner,
     Paint()
@@ -143,7 +162,10 @@ void paintCyberpunk(Canvas canvas, Size size, Rect? screen, double bezel, bool d
       ..color = _magenta,
   );
   canvas.drawRRect(
-    RRect.fromRectAndRadius(screen.inflate(bezel * 0.1), Radius.circular(bezel * 0.4)),
+    RRect.fromRectAndRadius(
+      screen.inflate(bezel * 0.1),
+      Radius.circular(bezel * 0.4),
+    ),
     Paint()..color = const Color(0xFF050409),
   );
   artText(
@@ -171,10 +193,27 @@ void paintCyberpunk(Canvas canvas, Size size, Rect? screen, double bezel, bool d
       ..strokeJoin = StrokeJoin.round
       ..color = const Color(0xFFFFE14D),
   );
-  artText(canvas, '!', Offset(cx, size.height * 0.085 + u * 3.7), u * 3.2, const Color(0xFFFFE14D));
-  artText(canvas, 'SYS-2049', Offset(cx, size.height * 0.2), u * 1.7, _cyan.withValues(alpha: 0.85), spacing: u * 0.25);
+  artText(
+    canvas,
+    '!',
+    Offset(cx, size.height * 0.085 + u * 3.7),
+    u * 3.2,
+    const Color(0xFFFFE14D),
+  );
+  artText(
+    canvas,
+    'SYS-2049',
+    Offset(cx, size.height * 0.2),
+    u * 1.7,
+    _cyan.withValues(alpha: 0.85),
+    spacing: u * 0.25,
+  );
 
-  final vent = Rect.fromCenter(center: Offset(cx, size.height * 0.52), width: pillar * 0.62, height: size.height * 0.46);
+  final vent = Rect.fromCenter(
+    center: Offset(cx, size.height * 0.52),
+    width: pillar * 0.62,
+    height: size.height * 0.46,
+  );
   canvas.drawRRect(
     RRect.fromRectAndRadius(vent.inflate(u), Radius.circular(u)),
     Paint()..color = const Color(0xFF07060C),
@@ -188,7 +227,10 @@ void paintCyberpunk(Canvas canvas, Size size, Rect? screen, double bezel, bool d
   );
   for (var y = vent.top + u; y < vent.bottom - u * 0.5; y += u * 2.3) {
     canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(vent.left, y, vent.width, u * 1.1), Radius.circular(u * 0.4)),
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(vent.left, y, vent.width, u * 1.1),
+        Radius.circular(u * 0.4),
+      ),
       Paint()..color = const Color(0xFF1B1826),
     );
     canvas.drawLine(
@@ -211,17 +253,37 @@ void paintCyberpunk(Canvas canvas, Size size, Rect? screen, double bezel, bool d
     );
     x += w + u * (0.18 + bars.nextDouble() * 0.4);
   }
-  artText(canvas, '0451-TV', Offset(cx, size.height * 0.905), u * 1.5, Colors.white.withValues(alpha: 0.6), spacing: u * 0.2);
+  artText(
+    canvas,
+    '0451-TV',
+    Offset(cx, size.height * 0.905),
+    u * 1.5,
+    Colors.white.withValues(alpha: 0.6),
+    spacing: u * 0.2,
+  );
 
   // Right pillar, above the buttons: a round-holed speaker with a cyan rim.
-  final speaker = Rect.fromLTWH(frameRect.right + pillar * 0.19, size.height * 0.075, pillar * 0.62, size.height * 0.29);
+  final speaker = Rect.fromLTWH(
+    frameRect.right + pillar * 0.19,
+    size.height * 0.075,
+    pillar * 0.62,
+    size.height * 0.29,
+  );
   final plate = RRect.fromRectAndRadius(speaker, Radius.circular(u * 1.2));
   canvas.drawRRect(plate, Paint()..color = const Color(0xFF07060C));
   final holes = <Offset>[];
   final gap = max(4.0, speaker.width / 9);
   var row = 0;
-  for (var y = speaker.top + gap; y <= speaker.bottom - gap * 0.8; y += gap * 0.87, row++) {
-    for (var hx = speaker.left + gap + (row.isOdd ? gap / 2 : 0); hx <= speaker.right - gap * 0.8; hx += gap) {
+  for (
+    var y = speaker.top + gap;
+    y <= speaker.bottom - gap * 0.8;
+    y += gap * 0.87, row++
+  ) {
+    for (
+      var hx = speaker.left + gap + (row.isOdd ? gap / 2 : 0);
+      hx <= speaker.right - gap * 0.8;
+      hx += gap
+    ) {
       holes.add(Offset(hx, y));
     }
   }
@@ -240,20 +302,35 @@ void paintCyberpunk(Canvas canvas, Size size, Rect? screen, double bezel, bool d
       ..strokeWidth = max(1.2, u * 0.2)
       ..color = _cyan.withValues(alpha: 0.85),
   );
-  artText(canvas, 'AUDIO', Offset(speaker.center.dx, speaker.bottom + u * 2), u * 1.5, _cyan.withValues(alpha: 0.7), spacing: u * 0.4);
+  artText(
+    canvas,
+    'AUDIO',
+    Offset(speaker.center.dx, speaker.bottom + u * 2),
+    u * 1.5,
+    _cyan.withValues(alpha: 0.7),
+    spacing: u * 0.4,
+  );
 }
 
 /// Circuit-board traces: runs of straight and 45 degree lines ending in pads.
 void _traces(Canvas canvas, Rect area, Random random, double u) {
   const directions = [
-    Offset(1, 0), Offset(0, 1), Offset(-1, 0), Offset(0, -1),
-    Offset(0.7, 0.7), Offset(-0.7, 0.7), Offset(0.7, -0.7), Offset(-0.7, -0.7),
+    Offset(1, 0),
+    Offset(0, 1),
+    Offset(-1, 0),
+    Offset(0, -1),
+    Offset(0.7, 0.7),
+    Offset(-0.7, 0.7),
+    Offset(0.7, -0.7),
+    Offset(-0.7, -0.7),
   ];
   canvas.save();
   canvas.clipRect(area);
   final count = (area.width * area.height / (u * u * 120)).round().clamp(6, 60);
   for (var i = 0; i < count; i++) {
-    final color = (random.nextInt(5) == 0 ? _magenta : _cyan).withValues(alpha: 0.16 + random.nextDouble() * 0.16);
+    final color = (random.nextInt(5) == 0 ? _magenta : _cyan).withValues(
+      alpha: 0.16 + random.nextDouble() * 0.16,
+    );
     var point = Offset(
       area.left + random.nextDouble() * area.width,
       area.top + random.nextDouble() * area.height,
@@ -280,12 +357,26 @@ void _traces(Canvas canvas, Rect area, Random random, double u) {
 // Wasteland: salvaged olive steel, rust, rivets, hazard stripes, stencils.
 
 void _rivet(Canvas canvas, Offset at, double r) {
-  canvas.drawCircle(at.translate(r * 0.25, r * 0.35), r * 1.1, Paint()..color = Colors.black.withValues(alpha: 0.45));
+  canvas.drawCircle(
+    at.translate(r * 0.25, r * 0.35),
+    r * 1.1,
+    Paint()..color = Colors.black.withValues(alpha: 0.45),
+  );
   canvas.drawCircle(at, r, Paint()..color = const Color(0xFF6E6C5C));
-  canvas.drawCircle(at.translate(-r * 0.3, -r * 0.35), r * 0.38, Paint()..color = Colors.white.withValues(alpha: 0.4));
+  canvas.drawCircle(
+    at.translate(-r * 0.3, -r * 0.35),
+    r * 0.38,
+    Paint()..color = Colors.white.withValues(alpha: 0.4),
+  );
 }
 
-void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool dressed) {
+void paintWasteland(
+  Canvas canvas,
+  Size size,
+  Rect? screen,
+  double bezel,
+  bool dressed,
+) {
   final rect = Offset.zero & size;
   final u = size.height / 100;
   canvas.drawRect(
@@ -301,7 +392,10 @@ void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool d
   final random = Random(13);
   // Rust: clusters of soft blots, thicker towards the edges.
   final rust = Paint()..maskFilter = MaskFilter.blur(BlurStyle.normal, u * 0.6);
-  final patches = (size.width * size.height / (u * u * 95)).round().clamp(20, 220);
+  final patches = (size.width * size.height / (u * u * 95)).round().clamp(
+    20,
+    220,
+  );
   for (var i = 0; i < patches; i++) {
     var x = random.nextDouble();
     var y = random.nextDouble();
@@ -315,10 +409,17 @@ void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool d
     }
     final centre = Offset(x * size.width, y * size.height);
     for (var blot = 0; blot < 5 + random.nextInt(8); blot++) {
-      rust.color = Color.lerp(const Color(0xFF5C2A0E), const Color(0xFFB0602A), random.nextDouble())!
-          .withValues(alpha: 0.10 + random.nextDouble() * 0.2);
+      rust.color = Color.lerp(
+        const Color(0xFF5C2A0E),
+        const Color(0xFFB0602A),
+        random.nextDouble(),
+      )!.withValues(alpha: 0.10 + random.nextDouble() * 0.2);
       canvas.drawCircle(
-        centre + Offset((random.nextDouble() - 0.5) * u * 6, (random.nextDouble() - 0.5) * u * 6),
+        centre +
+            Offset(
+              (random.nextDouble() - 0.5) * u * 6,
+              (random.nextDouble() - 0.5) * u * 6,
+            ),
         u * (0.5 + random.nextDouble() * 2.4),
         rust,
       );
@@ -330,15 +431,23 @@ void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool d
     final top = random.nextDouble() * size.height * 0.5;
     canvas.drawLine(
       Offset(x, top),
-      Offset(x + u * (random.nextDouble() - 0.5), top + u * (6 + random.nextDouble() * 22)),
+      Offset(
+        x + u * (random.nextDouble() - 0.5),
+        top + u * (6 + random.nextDouble() * 22),
+      ),
       Paint()
         ..strokeCap = StrokeCap.round
         ..strokeWidth = u * (0.4 + random.nextDouble() * 0.9)
-        ..color = Colors.black.withValues(alpha: 0.07 + random.nextDouble() * 0.08),
+        ..color = Colors.black.withValues(
+          alpha: 0.07 + random.nextDouble() * 0.08,
+        ),
     );
   }
   for (var i = 0; i < (size.width * size.height / (u * u * 140)).round(); i++) {
-    final from = Offset(random.nextDouble() * size.width, random.nextDouble() * size.height);
+    final from = Offset(
+      random.nextDouble() * size.width,
+      random.nextDouble() * size.height,
+    );
     final angle = random.nextDouble() * pi;
     final length = u * (0.8 + random.nextDouble() * 5);
     canvas.drawLine(
@@ -346,7 +455,8 @@ void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool d
       from + Offset(cos(angle), sin(angle)) * length,
       Paint()
         ..strokeWidth = 1
-        ..color = const Color(0xFFEDE6C4).withValues(alpha: 0.08 + random.nextDouble() * 0.16),
+        ..color = const Color(0xFFEDE6C4)
+            .withValues(alpha: 0.08 + random.nextDouble() * 0.16),
     );
   }
   if (screen == null) return;
@@ -357,12 +467,20 @@ void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool d
   for (final seam in [0.335, 0.72]) {
     final y = size.height * seam;
     for (final span in [(0.0, pillar), (frameRect.right, size.width)]) {
-      canvas.drawLine(Offset(span.$1, y), Offset(span.$2, y), Paint()
-        ..strokeWidth = max(1.5, u * 0.3)
-        ..color = Colors.black.withValues(alpha: 0.5));
-      canvas.drawLine(Offset(span.$1, y + u * 0.3), Offset(span.$2, y + u * 0.3), Paint()
-        ..strokeWidth = 1
-        ..color = Colors.white.withValues(alpha: 0.12));
+      canvas.drawLine(
+        Offset(span.$1, y),
+        Offset(span.$2, y),
+        Paint()
+          ..strokeWidth = max(1.5, u * 0.3)
+          ..color = Colors.black.withValues(alpha: 0.5),
+      );
+      canvas.drawLine(
+        Offset(span.$1, y + u * 0.3),
+        Offset(span.$2, y + u * 0.3),
+        Paint()
+          ..strokeWidth = 1
+          ..color = Colors.white.withValues(alpha: 0.12),
+      );
     }
   }
   if (pillar > u * 8) {
@@ -372,7 +490,10 @@ void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool d
     }
   }
 
-  final frame = RRect.fromRectAndRadius(frameRect, Radius.circular(bezel * 0.35));
+  final frame = RRect.fromRectAndRadius(
+    frameRect,
+    Radius.circular(bezel * 0.35),
+  );
   artShadow(canvas, Path()..addRRect(frame.inflate(bezel * 0.1)), bezel * 0.45);
   canvas.drawRRect(
     frame,
@@ -391,25 +512,44 @@ void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool d
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Colors.white.withValues(alpha: 0.3), Colors.black.withValues(alpha: 0.5)],
+        colors: [
+          Colors.white.withValues(alpha: 0.3),
+          Colors.black.withValues(alpha: 0.5),
+        ],
       ).createShader(frameRect),
   );
 
   // Worn hazard stripes on the strip under the glass.
-  final band = Rect.fromLTRB(screen.left, screen.bottom + bezel * 0.34, screen.right, frameRect.bottom - bezel * 0.16);
+  final band = Rect.fromLTRB(
+    screen.left,
+    screen.bottom + bezel * 0.34,
+    screen.right,
+    frameRect.bottom - bezel * 0.16,
+  );
   canvas.save();
   canvas.clipRect(band);
   canvas.drawRect(band, Paint()..color = const Color(0xFFD9A915));
   final stripe = Paint()
     ..color = const Color(0xFF16150F)
     ..strokeWidth = u * 1.6;
-  for (var x = band.left - band.height; x < band.right + band.height; x += u * 3.6) {
-    canvas.drawLine(Offset(x, band.bottom + u), Offset(x + band.height + u * 2, band.top - u), stripe);
+  for (
+    var x = band.left - band.height;
+    x < band.right + band.height;
+    x += u * 3.6
+  ) {
+    canvas.drawLine(
+      Offset(x, band.bottom + u),
+      Offset(x + band.height + u * 2, band.top - u),
+      stripe,
+    );
   }
   final wear = Random(5);
   for (var i = 0; i < (band.width / u * 0.9).round(); i++) {
     canvas.drawCircle(
-      Offset(band.left + wear.nextDouble() * band.width, band.top + wear.nextDouble() * band.height),
+      Offset(
+        band.left + wear.nextDouble() * band.width,
+        band.top + wear.nextDouble() * band.height,
+      ),
       u * (0.1 + wear.nextDouble() * 0.4),
       Paint()..color = const Color(0xFF3A3A33).withValues(alpha: 0.6),
     );
@@ -417,7 +557,10 @@ void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool d
   canvas.restore();
 
   canvas.drawRRect(
-    RRect.fromRectAndRadius(screen.inflate(bezel * 0.12), Radius.circular(bezel * 0.3)),
+    RRect.fromRectAndRadius(
+      screen.inflate(bezel * 0.12),
+      Radius.circular(bezel * 0.3),
+    ),
     Paint()..color = const Color(0xFF0B0B08),
   );
   final r = max(2.0, bezel * 0.13);
@@ -439,13 +582,22 @@ void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool d
   final cx = pillar / 2;
   final centre = Offset(cx, size.height * 0.42);
   final radius = pillar * 0.3;
-  final plate = RRect.fromRectAndRadius(Rect.fromCircle(center: centre, radius: radius * 1.28), Radius.circular(u * 0.8));
-  canvas.drawRRect(plate.shift(Offset(u * 0.3, u * 0.4)), Paint()..color = Colors.black.withValues(alpha: 0.45));
+  final plate = RRect.fromRectAndRadius(
+    Rect.fromCircle(center: centre, radius: radius * 1.28),
+    Radius.circular(u * 0.8),
+  );
+  canvas.drawRRect(
+    plate.shift(Offset(u * 0.3, u * 0.4)),
+    Paint()..color = Colors.black.withValues(alpha: 0.45),
+  );
   canvas.drawRRect(plate, Paint()..color = const Color(0xFF4A4937));
-  canvas.drawRRect(plate, Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 1.5
-    ..color = Colors.black.withValues(alpha: 0.6));
+  canvas.drawRRect(
+    plate,
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = Colors.black.withValues(alpha: 0.6),
+  );
   canvas.drawCircle(centre, radius, Paint()..color = const Color(0xFF14140F));
   final hole = Paint()..color = const Color(0xFF4A4937);
   for (var ring = 1; ring <= 4; ring++) {
@@ -453,7 +605,11 @@ void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool d
     final holes = ring * 7;
     for (var i = 0; i < holes; i++) {
       final a = i / holes * pi * 2 + ring * 0.4;
-      canvas.drawCircle(centre + Offset(cos(a), sin(a)) * distance, radius * 0.055, hole);
+      canvas.drawCircle(
+        centre + Offset(cos(a), sin(a)) * distance,
+        radius * 0.055,
+        hole,
+      );
     }
   }
   canvas.drawCircle(centre, radius * 0.07, hole);
@@ -463,22 +619,56 @@ void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool d
     }
   }
   const stencil = Color(0xFFE8DFB6);
-  artText(canvas, 'UNIT 13', Offset(cx, size.height * 0.79), u * 3.3, stencil.withValues(alpha: 0.62), angle: -0.06, spacing: u * 0.5);
-  artText(canvas, 'SALVAGE', Offset(cx, size.height * 0.845), u * 1.8, stencil.withValues(alpha: 0.5), angle: -0.06, spacing: u * 0.6);
+  artText(
+    canvas,
+    'UNIT 13',
+    Offset(cx, size.height * 0.79),
+    u * 3.3,
+    stencil.withValues(alpha: 0.62),
+    angle: -0.06,
+    spacing: u * 0.5,
+  );
+  artText(
+    canvas,
+    'SALVAGE',
+    Offset(cx, size.height * 0.845),
+    u * 1.8,
+    stencil.withValues(alpha: 0.5),
+    angle: -0.06,
+    spacing: u * 0.6,
+  );
 
   // Right pillar, above the buttons: a strip of tape and a scratched tally.
   canvas.save();
   canvas.translate(frameRect.right + pillar * 0.5, size.height * 0.17);
   canvas.rotate(-0.13);
-  final tape = Rect.fromCenter(center: Offset.zero, width: pillar * 0.78, height: u * 5.2);
-  canvas.drawRect(tape.shift(Offset(u * 0.2, u * 0.3)), Paint()..color = Colors.black.withValues(alpha: 0.35));
+  final tape = Rect.fromCenter(
+    center: Offset.zero,
+    width: pillar * 0.78,
+    height: u * 5.2,
+  );
+  canvas.drawRect(
+    tape.shift(Offset(u * 0.2, u * 0.3)),
+    Paint()..color = Colors.black.withValues(alpha: 0.35),
+  );
   canvas.drawRect(tape, Paint()..color = const Color(0xFF9A9A92));
   for (var y = tape.top + u * 0.5; y < tape.bottom; y += u * 0.55) {
-    canvas.drawLine(Offset(tape.left, y), Offset(tape.right, y), Paint()
-      ..strokeWidth = 1
-      ..color = Colors.black.withValues(alpha: 0.1));
+    canvas.drawLine(
+      Offset(tape.left, y),
+      Offset(tape.right, y),
+      Paint()
+        ..strokeWidth = 1
+        ..color = Colors.black.withValues(alpha: 0.1),
+    );
   }
-  artText(canvas, 'DO NOT FIX', Offset.zero, u * 2.1, const Color(0xFF1B1B17).withValues(alpha: 0.85), spacing: u * 0.2);
+  artText(
+    canvas,
+    'DO NOT FIX',
+    Offset.zero,
+    u * 2.1,
+    const Color(0xFF1B1B17).withValues(alpha: 0.85),
+    spacing: u * 0.2,
+  );
   canvas.restore();
 
   final tally = Paint()
@@ -488,9 +678,17 @@ void paintWasteland(Canvas canvas, Size size, Rect? screen, double bezel, bool d
   final tx = frameRect.right + pillar * 0.3;
   final ty = size.height * 0.29;
   for (var i = 0; i < 4; i++) {
-    canvas.drawLine(Offset(tx + i * u * 1.5, ty), Offset(tx + i * u * 1.5 + u * 0.3, ty + u * 5), tally);
+    canvas.drawLine(
+      Offset(tx + i * u * 1.5, ty),
+      Offset(tx + i * u * 1.5 + u * 0.3, ty + u * 5),
+      tally,
+    );
   }
-  canvas.drawLine(Offset(tx - u, ty + u * 4), Offset(tx + u * 5.6, ty + u * 1), tally);
+  canvas.drawLine(
+    Offset(tx - u, ty + u * 4),
+    Offset(tx + u * 5.6, ty + u * 1),
+    tally,
+  );
 }
 
 // -----------------------------------------------------------------------------
@@ -508,21 +706,44 @@ void _starburst(Canvas canvas, Offset centre, double length, Color color) {
     final reach = i.isEven ? length : length * 0.52;
     canvas.drawPath(
       Path()
-        ..moveTo(centre.dx + across.dx * reach * 0.1, centre.dy + across.dy * reach * 0.1)
-        ..lineTo(centre.dx + direction.dx * reach, centre.dy + direction.dy * reach)
-        ..lineTo(centre.dx - across.dx * reach * 0.1, centre.dy - across.dy * reach * 0.1)
+        ..moveTo(
+          centre.dx + across.dx * reach * 0.1,
+          centre.dy + across.dy * reach * 0.1,
+        )
+        ..lineTo(
+          centre.dx + direction.dx * reach,
+          centre.dy + direction.dy * reach,
+        )
+        ..lineTo(
+          centre.dx - across.dx * reach * 0.1,
+          centre.dy - across.dy * reach * 0.1,
+        )
         ..close(),
       fill,
     );
   }
-  canvas.drawCircle(centre, length * 0.14, Paint()..color = const Color(0xFFFFF6E0));
-  canvas.drawCircle(centre, length * 0.14, Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = max(1.0, length * 0.03)
-    ..color = color);
+  canvas.drawCircle(
+    centre,
+    length * 0.14,
+    Paint()..color = const Color(0xFFFFF6E0),
+  );
+  canvas.drawCircle(
+    centre,
+    length * 0.14,
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(1.0, length * 0.03)
+      ..color = color,
+  );
 }
 
-void paintAtomic(Canvas canvas, Size size, Rect? screen, double bezel, bool dressed) {
+void paintAtomic(
+  Canvas canvas,
+  Size size,
+  Rect? screen,
+  double bezel,
+  bool dressed,
+) {
   final rect = Offset.zero & size;
   final u = size.height / 100;
   canvas.drawRect(
@@ -537,7 +758,12 @@ void paintAtomic(Canvas canvas, Size size, Rect? screen, double bezel, bool dres
   // A two-tone sweep across the bottom, with a pinstripe riding above it.
   Path sweep(double lift) => Path()
     ..moveTo(0, size.height * 0.82 - lift)
-    ..quadraticBezierTo(size.width * 0.5, size.height * 0.62 - lift, size.width, size.height * 0.96 - lift);
+    ..quadraticBezierTo(
+      size.width * 0.5,
+      size.height * 0.62 - lift,
+      size.width,
+      size.height * 0.96 - lift,
+    );
   final lower = sweep(0)
     ..lineTo(size.width, size.height)
     ..lineTo(0, size.height)
@@ -545,23 +771,37 @@ void paintAtomic(Canvas canvas, Size size, Rect? screen, double bezel, bool dres
   canvas.drawPath(
     lower,
     Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFF3BB8AF), Color(0xFF1B837C)],
-      ).createShader(Rect.fromLTRB(0, size.height * 0.5, size.width, size.height)),
+      ..shader =
+          const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF3BB8AF), Color(0xFF1B837C)],
+          ).createShader(
+            Rect.fromLTRB(0, size.height * 0.5, size.width, size.height),
+          ),
   );
-  canvas.drawPath(sweep(u * 1.6), Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = u * 0.55
-    ..color = _orange);
-  canvas.drawPath(sweep(u * 2.9), Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = u * 0.22
-    ..color = const Color(0xFF17524E));
+  canvas.drawPath(
+    sweep(u * 1.6),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = u * 0.55
+      ..color = _orange,
+  );
+  canvas.drawPath(
+    sweep(u * 2.9),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = u * 0.22
+      ..color = const Color(0xFF17524E),
+  );
   // Gloss: a soft highlight falling across the top left.
   canvas.drawOval(
-    Rect.fromLTWH(-size.width * 0.2, -size.height * 0.55, size.width * 0.9, size.height * 0.9),
+    Rect.fromLTWH(
+      -size.width * 0.2,
+      -size.height * 0.55,
+      size.width * 0.9,
+      size.height * 0.9,
+    ),
     Paint()
       ..color = Colors.white.withValues(alpha: 0.22)
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, u * 6),
@@ -570,7 +810,10 @@ void paintAtomic(Canvas canvas, Size size, Rect? screen, double bezel, bool dres
 
   final frameRect = screen.inflate(bezel);
   final pillar = frameRect.left;
-  final frame = RRect.fromRectAndRadius(frameRect, Radius.circular(bezel * 2.0));
+  final frame = RRect.fromRectAndRadius(
+    frameRect,
+    Radius.circular(bezel * 2.0),
+  );
   canvas.drawRRect(
     frame.inflate(bezel * 0.08),
     Paint()
@@ -584,14 +827,23 @@ void paintAtomic(Canvas canvas, Size size, Rect? screen, double bezel, bool dres
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xFFFFFFFF), Color(0xFFB4BAC1), Color(0xFFF2F4F6), Color(0xFF858C95), Color(0xFFDDE1E5)],
+        colors: [
+          Color(0xFFFFFFFF),
+          Color(0xFFB4BAC1),
+          Color(0xFFF2F4F6),
+          Color(0xFF858C95),
+          Color(0xFFDDE1E5),
+        ],
         stops: [0.0, 0.3, 0.52, 0.8, 1.0],
       ).createShader(frameRect),
   );
-  canvas.drawRRect(frame, Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 1.2
-    ..color = const Color(0xFF6C737B));
+  canvas.drawRRect(
+    frame,
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..color = const Color(0xFF6C737B),
+  );
   final insetRect = screen.inflate(bezel * 0.5);
   canvas.drawRRect(
     RRect.fromRectAndRadius(insetRect, Radius.circular(bezel * 1.45)),
@@ -603,7 +855,10 @@ void paintAtomic(Canvas canvas, Size size, Rect? screen, double bezel, bool dres
       ).createShader(insetRect),
   );
   canvas.drawRRect(
-    RRect.fromRectAndRadius(screen.inflate(bezel * 0.1), Radius.circular(bezel * 0.9)),
+    RRect.fromRectAndRadius(
+      screen.inflate(bezel * 0.1),
+      Radius.circular(bezel * 0.9),
+    ),
     Paint()..color = const Color(0xFF07100F),
   );
   artText(
@@ -621,7 +876,12 @@ void paintAtomic(Canvas canvas, Size size, Rect? screen, double bezel, bool dres
   final cx = pillar / 2;
   _starburst(canvas, Offset(cx * 0.92, size.height * 0.15), u * 7.5, _orange);
   _starburst(canvas, Offset(cx * 1.45, size.height * 0.29), u * 4.2, _teal);
-  _starburst(canvas, Offset(cx * 0.55, size.height * 0.33), u * 3.0, const Color(0xFFE0A526));
+  _starburst(
+    canvas,
+    Offset(cx * 0.55, size.height * 0.33),
+    u * 3.0,
+    const Color(0xFFE0A526),
+  );
   // Speaker: a stack of chrome fins.
   for (var i = 0; i < 6; i++) {
     final fin = Rect.fromCenter(
@@ -630,7 +890,10 @@ void paintAtomic(Canvas canvas, Size size, Rect? screen, double bezel, bool dres
       height: u * 1.7,
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(fin.shift(Offset(0, u * 0.45)), Radius.circular(u)),
+      RRect.fromRectAndRadius(
+        fin.shift(Offset(0, u * 0.45)),
+        Radius.circular(u),
+      ),
       Paint()..color = Colors.black.withValues(alpha: 0.28),
     );
     canvas.drawRRect(
@@ -644,8 +907,18 @@ void paintAtomic(Canvas canvas, Size size, Rect? screen, double bezel, bool dres
     );
   }
   final rx = frameRect.right;
-  _starburst(canvas, Offset(rx + pillar * 0.24, size.height * 0.085), u * 2.6, const Color(0xFFE0A526));
-  _starburst(canvas, Offset(rx + pillar * 0.76, size.height * 0.07), u * 4.0, _orange);
+  _starburst(
+    canvas,
+    Offset(rx + pillar * 0.24, size.height * 0.085),
+    u * 2.6,
+    const Color(0xFFE0A526),
+  );
+  _starburst(
+    canvas,
+    Offset(rx + pillar * 0.76, size.height * 0.07),
+    u * 4.0,
+    _orange,
+  );
 }
 
 // -----------------------------------------------------------------------------
@@ -660,7 +933,14 @@ const memphisColours = [
   Color(0xFF2D7FF9),
 ];
 
-void _memphisShapes(Canvas canvas, Rect area, Random random, double u, {Offset? avoid, double avoidRadius = 0}) {
+void _memphisShapes(
+  Canvas canvas,
+  Rect area,
+  Random random,
+  double u, {
+  Offset? avoid,
+  double avoidRadius = 0,
+}) {
   if (area.width < u * 6 || area.height < u * 6) return;
   final columns = max(1, (area.width / (u * 9)).floor());
   final cell = area.width / columns;
@@ -681,7 +961,10 @@ void _memphisShapes(Canvas canvas, Rect area, Random random, double u, {Offset? 
       final s = cell * (0.22 + random.nextDouble() * 0.1);
       final colour = memphisColours[random.nextInt(memphisColours.length)];
       final turn = random.nextDouble() * pi;
-      if (kind == 6 || (avoid != null && (centre - avoid).distance < avoidRadius)) continue;
+      if (kind == 6 ||
+          (avoid != null && (centre - avoid).distance < avoidRadius)) {
+        continue;
+      }
       canvas.save();
       canvas.translate(centre.dx, centre.dy);
       canvas.rotate(turn);
@@ -689,7 +972,10 @@ void _memphisShapes(Canvas canvas, Rect area, Random random, double u, {Offset? 
         case 0: // Squiggle.
           final path = Path()..moveTo(-s * 1.2, 0);
           for (var i = 0; i < 4; i++) {
-            path.lineTo(-s * 1.2 + (i + 0.5) * s * 0.6, i.isEven ? -s * 0.45 : s * 0.45);
+            path.lineTo(
+              -s * 1.2 + (i + 0.5) * s * 0.6,
+              i.isEven ? -s * 0.45 : s * 0.45,
+            );
           }
           path.lineTo(s * 1.2, 0);
           canvas.drawPath(path, outline);
@@ -699,25 +985,40 @@ void _memphisShapes(Canvas canvas, Rect area, Random random, double u, {Offset? 
             ..lineTo(s * 0.9, s * 0.7)
             ..lineTo(-s * 0.9, s * 0.7)
             ..close();
-          canvas.drawPath(path.shift(Offset(u * 0.5, u * 0.5)), Paint()..color = _ink);
+          canvas.drawPath(
+            path.shift(Offset(u * 0.5, u * 0.5)),
+            Paint()..color = _ink,
+          );
           canvas.drawPath(path, Paint()..color = colour);
           canvas.drawPath(path, outline);
         case 2: // Ring.
-          canvas.drawCircle(Offset.zero, s * 0.8, Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = s * 0.34
-            ..color = colour);
+          canvas.drawCircle(
+            Offset.zero,
+            s * 0.8,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = s * 0.34
+              ..color = colour,
+          );
           canvas.drawCircle(Offset.zero, s * 0.97, outline);
           canvas.drawCircle(Offset.zero, s * 0.63, outline);
         case 3: // Dot grid.
           for (var i = -1; i <= 1; i++) {
             for (var j = -1; j <= 1; j++) {
-              canvas.drawCircle(Offset(i * s * 0.62, j * s * 0.62), s * 0.15, Paint()..color = _ink);
+              canvas.drawCircle(
+                Offset(i * s * 0.62, j * s * 0.62),
+                s * 0.15,
+                Paint()..color = _ink,
+              );
             }
           }
         case 4: // Confetti bar.
           final bar = RRect.fromRectAndRadius(
-            Rect.fromCenter(center: Offset.zero, width: s * 2.2, height: s * 0.55),
+            Rect.fromCenter(
+              center: Offset.zero,
+              width: s * 2.2,
+              height: s * 0.55,
+            ),
             Radius.circular(s * 0.28),
           );
           canvas.drawRRect(bar, Paint()..color = colour);
@@ -726,7 +1027,10 @@ void _memphisShapes(Canvas canvas, Rect area, Random random, double u, {Offset? 
           final half = Path()
             ..addArc(Rect.fromCircle(center: Offset.zero, radius: s), 0, pi)
             ..close();
-          canvas.drawPath(half.shift(Offset(u * 0.5, u * 0.5)), Paint()..color = _ink);
+          canvas.drawPath(
+            half.shift(Offset(u * 0.5, u * 0.5)),
+            Paint()..color = _ink,
+          );
           canvas.drawPath(half, Paint()..color = colour);
           canvas.drawPath(half, outline);
       }
@@ -735,7 +1039,13 @@ void _memphisShapes(Canvas canvas, Rect area, Random random, double u, {Offset? 
   }
 }
 
-void paintMemphis(Canvas canvas, Size size, Rect? screen, double bezel, bool dressed) {
+void paintMemphis(
+  Canvas canvas,
+  Size size,
+  Rect? screen,
+  double bezel,
+  bool dressed,
+) {
   final rect = Offset.zero & size;
   final u = size.height / 100;
   canvas.drawRect(
@@ -778,42 +1088,85 @@ void paintMemphis(Canvas canvas, Size size, Rect? screen, double bezel, bool dre
       avoidRadius: speakerRadius * 1.55,
     );
     // Only above the buttons on the right, so the controls stay readable.
-    _memphisShapes(canvas, Rect.fromLTRB(frameRect.right + u, u, size.width - u, size.height * 0.4), Random(91), u);
+    _memphisShapes(
+      canvas,
+      Rect.fromLTRB(frameRect.right + u, u, size.width - u, size.height * 0.4),
+      Random(91),
+      u,
+    );
     final plate = RRect.fromRectAndRadius(
-      Rect.fromLTRB(frameRect.right + pillar * 0.09, size.height * 0.405, size.width - pillar * 0.09, size.height * 0.968),
+      Rect.fromLTRB(
+        frameRect.right + pillar * 0.09,
+        size.height * 0.405,
+        size.width - pillar * 0.09,
+        size.height * 0.968,
+      ),
       Radius.circular(u * 1.6),
     );
-    canvas.drawRRect(plate.shift(Offset(u * 0.9, u * 0.9)), Paint()..color = _ink);
+    canvas.drawRRect(
+      plate.shift(Offset(u * 0.9, u * 0.9)),
+      Paint()..color = _ink,
+    );
     canvas.drawRRect(plate, Paint()..color = const Color(0xFFFFFBF0));
-    canvas.drawRRect(plate, Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = max(2.0, u * 0.42)
-      ..color = _ink);
+    canvas.drawRRect(
+      plate,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(2.0, u * 0.42)
+        ..color = _ink,
+    );
   }
 
-  final frame = RRect.fromRectAndRadius(frameRect, Radius.circular(bezel * 0.7));
-  canvas.drawRRect(frame.shift(Offset(u * 1.3, u * 1.3)), Paint()..color = memphisColours[0]);
+  final frame = RRect.fromRectAndRadius(
+    frameRect,
+    Radius.circular(bezel * 0.7),
+  );
+  canvas.drawRRect(
+    frame.shift(Offset(u * 1.3, u * 1.3)),
+    Paint()..color = memphisColours[0],
+  );
   canvas.drawRRect(frame, Paint()..color = memphisColours[1]);
   // Terrazzo chips scattered round the frame.
   canvas.save();
   canvas.clipRRect(frame);
   final chips = Random(40);
-  for (var i = 0; i < ((frameRect.width + frameRect.height) / u * 0.6).round(); i++) {
+  for (
+    var i = 0;
+    i < ((frameRect.width + frameRect.height) / u * 0.6).round();
+    i++
+  ) {
     // Keep to the ring: pick a side, then a spot along it.
     final along = chips.nextDouble();
     final depth = (0.15 + chips.nextDouble() * 0.6) * bezel;
     final at = switch (chips.nextInt(4)) {
-      0 => Offset(frameRect.left + along * frameRect.width, frameRect.top + depth),
-      1 => Offset(frameRect.left + along * frameRect.width, frameRect.bottom - depth),
-      2 => Offset(frameRect.left + depth, frameRect.top + along * frameRect.height),
-      _ => Offset(frameRect.right - depth, frameRect.top + along * frameRect.height),
+      0 => Offset(
+        frameRect.left + along * frameRect.width,
+        frameRect.top + depth,
+      ),
+      1 => Offset(
+        frameRect.left + along * frameRect.width,
+        frameRect.bottom - depth,
+      ),
+      2 => Offset(
+        frameRect.left + depth,
+        frameRect.top + along * frameRect.height,
+      ),
+      _ => Offset(
+        frameRect.right - depth,
+        frameRect.top + along * frameRect.height,
+      ),
     };
     final s = u * (0.35 + chips.nextDouble() * 0.6);
     canvas.save();
     canvas.translate(at.dx, at.dy);
     canvas.rotate(chips.nextDouble() * pi);
     final chip = Paint()
-      ..color = [_ink, memphisColours[0], memphisColours[2], memphisColours[4]][chips.nextInt(4)];
+      ..color = [
+        _ink,
+        memphisColours[0],
+        memphisColours[2],
+        memphisColours[4],
+      ][chips.nextInt(4)];
     if (chips.nextBool()) {
       canvas.drawPath(
         Path()
@@ -824,36 +1177,69 @@ void paintMemphis(Canvas canvas, Size size, Rect? screen, double bezel, bool dre
         chip,
       );
     } else {
-      canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: s * 2, height: s * 0.9), chip);
+      canvas.drawRect(
+        Rect.fromCenter(center: Offset.zero, width: s * 2, height: s * 0.9),
+        chip,
+      );
     }
     canvas.restore();
   }
   canvas.restore();
-  canvas.drawRRect(frame, Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = max(2.0, u * 0.5)
-    ..color = _ink);
   canvas.drawRRect(
-    RRect.fromRectAndRadius(screen.inflate(bezel * 0.2), Radius.circular(bezel * 0.4)),
+    frame,
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(2.0, u * 0.5)
+      ..color = _ink,
+  );
+  canvas.drawRRect(
+    RRect.fromRectAndRadius(
+      screen.inflate(bezel * 0.2),
+      Radius.circular(bezel * 0.4),
+    ),
     Paint()..color = _ink,
   );
   if (!dressed) return;
 
   // Speaker: a pink disc of polka dots.
-  canvas.drawCircle(speakerCentre.translate(u * 0.9, u * 0.9), speakerRadius, Paint()..color = _ink);
-  canvas.drawCircle(speakerCentre, speakerRadius, Paint()..color = memphisColours[0]);
+  canvas.drawCircle(
+    speakerCentre.translate(u * 0.9, u * 0.9),
+    speakerRadius,
+    Paint()..color = _ink,
+  );
+  canvas.drawCircle(
+    speakerCentre,
+    speakerRadius,
+    Paint()..color = memphisColours[0],
+  );
   canvas.save();
-  canvas.clipPath(Path()..addOval(Rect.fromCircle(center: speakerCentre, radius: speakerRadius * 0.9)));
+  canvas.clipPath(
+    Path()..addOval(
+      Rect.fromCircle(center: speakerCentre, radius: speakerRadius * 0.9),
+    ),
+  );
   final step = speakerRadius / 3.2;
   var row = 0;
-  for (var y = speakerCentre.dy - speakerRadius; y <= speakerCentre.dy + speakerRadius; y += step * 0.87, row++) {
-    for (var x = speakerCentre.dx - speakerRadius + (row.isOdd ? step / 2 : 0); x <= speakerCentre.dx + speakerRadius; x += step) {
+  for (
+    var y = speakerCentre.dy - speakerRadius;
+    y <= speakerCentre.dy + speakerRadius;
+    y += step * 0.87, row++
+  ) {
+    for (
+      var x = speakerCentre.dx - speakerRadius + (row.isOdd ? step / 2 : 0);
+      x <= speakerCentre.dx + speakerRadius;
+      x += step
+    ) {
       canvas.drawCircle(Offset(x, y), step * 0.26, Paint()..color = _ink);
     }
   }
   canvas.restore();
-  canvas.drawCircle(speakerCentre, speakerRadius, Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = max(2.0, u * 0.45)
-    ..color = _ink);
+  canvas.drawCircle(
+    speakerCentre,
+    speakerRadius,
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(2.0, u * 0.45)
+      ..color = _ink,
+  );
 }

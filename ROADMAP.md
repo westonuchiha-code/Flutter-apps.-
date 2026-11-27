@@ -170,7 +170,11 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
        emulator-closed question, the transfer); the standalone
        `apps/pokeville_app` ✅ with its own Cross-Save sync (Pokéville + the
        Pokémon saves it found).
-    6. ⬜ CRT TV (from the PC suite's `apps/crt_tv`).
+    6. 🔨 CRT TV (from the PC suite's `apps/crt_tv`): the owner's app
+       brought in as `apps/crt_tv` (Android, Windows, Linux) ✅, made to work
+       on Android (All files access, `XMB Frontend/TV` folder with a guide,
+       Retroid buttons as the controller, My Files folder names) ✅, first
+       Android build and a try on the Retroid ⬜, the XMB's TV item ⬜.
 
 ## On hold · needs AI (voices or a language model)
 

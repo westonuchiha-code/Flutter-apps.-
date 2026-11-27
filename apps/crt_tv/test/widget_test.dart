@@ -27,8 +27,9 @@ ChannelEngine engineWith({
   return engine;
 }
 
-List<QueueItem> playN(ChannelEngine engine, int n) =>
-    [for (var i = 0; i < n; i++) engine.advance()!];
+List<QueueItem> playN(ChannelEngine engine, int n) => [
+  for (var i = 0; i < n; i++) engine.advance()!,
+];
 
 void main() {
   group('channel folder names', () {
@@ -38,12 +39,18 @@ void main() {
       expect(parseChannelFolder('channel12 Movies'), (12, 'Movies'));
       expect(parseChannelFolder('Ch 07'), (7, ''));
       expect(parseChannelFolder('4 Sitcoms'), (4, 'Sitcoms'));
-      expect(parseChannelFolder('Channel 4 (Saturday Mornings)'), (4, 'Saturday Mornings'));
+      expect(parseChannelFolder('Channel 4 (Saturday Mornings)'), (
+        4,
+        'Saturday Mornings',
+      ));
     });
 
     test('reads channel folders that have a name but no number', () {
       expect(parseChannelFolder('Channel Gojira'), (null, 'Gojira'));
-      expect(parseChannelFolder('Channel Tonami (Anime)'), (null, 'Tonami (Anime)'));
+      expect(parseChannelFolder('Channel Tonami (Anime)'), (
+        null,
+        'Tonami (Anime)',
+      ));
       expect(parseChannelFolder('z Other'), isNull);
       expect(parseChannelFolder('msdownld.tmp'), isNull);
       expect(parseChannelFolder('Channel'), isNull);
@@ -64,8 +71,14 @@ void main() {
   });
 
   test('titles are cleaned up from file names', () {
-    expect(titleFromPath('/tv/Channel 3/Show.Name.S01E02.mkv'), 'Show Name S01E02');
-    expect(titleFromPath(r'C:\TV\Channel 3\My Movie (1985).mp4'), 'My Movie (1985)');
+    expect(
+      titleFromPath('/tv/Channel 3/Show.Name.S01E02.mkv'),
+      'Show Name S01E02',
+    );
+    expect(
+      titleFromPath(r'C:\TV\Channel 3\My Movie (1985).mp4'),
+      'My Movie (1985)',
+    );
   });
 
   group('schedule', () {
@@ -76,8 +89,18 @@ void main() {
         perBreak: 2,
       );
       final played = playN(engine, 10);
-      expect(played.map((q) => q.isCommercial ? 'C' : q.path).toList(),
-          ['a', 'C', 'C', 'b', 'C', 'C', 'c', 'C', 'C', 'a']);
+      expect(played.map((q) => q.isCommercial ? 'C' : q.path).toList(), [
+        'a',
+        'C',
+        'C',
+        'b',
+        'C',
+        'C',
+        'c',
+        'C',
+        'C',
+        'a',
+      ]);
     });
 
     test('a break never repeats the same commercial', () {
@@ -96,13 +119,26 @@ void main() {
     });
 
     test('no commercials when breaks are off', () {
-      final engine = engineWith(programs: ['a', 'b'], commercials: ['x'], perBreak: 0);
+      final engine = engineWith(
+        programs: ['a', 'b'],
+        commercials: ['x'],
+        perBreak: 0,
+      );
       expect(playN(engine, 4).any((q) => q.isCommercial), isFalse);
     });
 
     test('a break is never longer than the number of commercials', () {
-      final engine = engineWith(programs: ['a', 'b'], commercials: ['x'], perBreak: 3);
-      expect(playN(engine, 4).map((q) => q.path).toList(), ['a', 'x', 'b', 'x']);
+      final engine = engineWith(
+        programs: ['a', 'b'],
+        commercials: ['x'],
+        perBreak: 3,
+      );
+      expect(playN(engine, 4).map((q) => q.path).toList(), [
+        'a',
+        'x',
+        'b',
+        'x',
+      ]);
     });
 
     test('shuffle plays everything once before repeating', () {
@@ -113,30 +149,51 @@ void main() {
     });
 
     test('a channel with only commercials plays them back to back', () {
-      final engine = engineWith(programs: [], commercials: ['x', 'y'], perBreak: 2);
+      final engine = engineWith(
+        programs: [],
+        commercials: ['x', 'y'],
+        perBreak: 2,
+      );
       expect(playN(engine, 4).every((q) => q.isCommercial), isTrue);
     });
 
     test('live channels move on while you are away', () async {
-      final engine = engineWith(programs: ['a', 'b'], commercials: ['x', 'y'], perBreak: 2);
+      final engine = engineWith(
+        programs: ['a', 'b'],
+        commercials: ['x', 'y'],
+        perBreak: 2,
+      );
       engine.advance(); // 'a' starts
-      Future<Duration> length(QueueItem q) async =>
-          q.isCommercial ? const Duration(minutes: 1) : const Duration(minutes: 20);
+      Future<Duration> length(QueueItem q) async => q.isCommercial
+          ? const Duration(minutes: 1)
+          : const Duration(minutes: 20);
       // 25 minutes later: a (20) + two commercials (2) = 22, so 3 minutes into 'b'.
       await engine.catchUp(const Duration(minutes: 25), length);
       expect(engine.state.current!.path, 'b');
-      expect(engine.state.positionMs, const Duration(minutes: 3).inMilliseconds);
+      expect(
+        engine.state.positionMs,
+        const Duration(minutes: 3).inMilliseconds,
+      );
     });
 
     test('a deleted video is dropped from the schedule', () {
       final engine = engineWith(programs: ['a', 'b', 'c']);
       engine.advance();
-      engine.configure(programs: ['a', 'c'], commercialPool: const [], shuffle: false, perBreak: 0);
+      engine.configure(
+        programs: ['a', 'c'],
+        commercialPool: const [],
+        shuffle: false,
+        perBreak: 0,
+      );
       expect(engine.advance()!.path, 'c');
     });
 
     test('progress survives saving and loading', () {
-      final engine = engineWith(programs: ['a', 'b'], commercials: ['x'], perBreak: 1);
+      final engine = engineWith(
+        programs: ['a', 'b'],
+        commercials: ['x'],
+        perBreak: 1,
+      );
       engine.advance();
       engine.state.positionMs = 1234;
       engine.state.updatedAtMs = 99;
@@ -190,7 +247,11 @@ void main() {
     touch('z Other/ignored.mp4');
 
     final lib = scanLibrarySync(root.path);
-    expect(lib.channels.map((c) => '${c.number} ${c.name}').toList(),
-        ['1 Anime Movies', '2 Saturday Mornings', '3 Gojira', '4 Robo']);
+    expect(lib.channels.map((c) => '${c.number} ${c.name}').toList(), [
+      '1 Anime Movies',
+      '2 Saturday Mornings',
+      '3 Gojira',
+      '4 Robo',
+    ]);
   });
 }

@@ -52,19 +52,24 @@ class ChannelState {
   }
 
   Map<String, Object?> toJson() => {
-        'order': order,
-        'cursor': cursor,
-        'current': current?.toJson(),
-        'upcoming': [for (final q in upcoming) q.toJson()],
-        'positionMs': positionMs,
-        'updatedAtMs': updatedAtMs,
-      };
+    'order': order,
+    'cursor': cursor,
+    'current': current?.toJson(),
+    'upcoming': [for (final q in upcoming) q.toJson()],
+    'positionMs': positionMs,
+    'updatedAtMs': updatedAtMs,
+  };
 
   static ChannelState fromJson(Object? json) {
     final state = ChannelState();
     if (json is! Map) return state;
     final order = json['order'];
-    if (order is List) state.order = [for (final p in order) if (p is String) p];
+    if (order is List) {
+      state.order = [
+        for (final p in order)
+          if (p is String) p,
+      ];
+    }
     final cursor = json['cursor'];
     if (cursor is num) state.cursor = cursor.toInt();
     state.current = QueueItem.fromJson(json['current']);
@@ -118,7 +123,8 @@ class ChannelEngine {
     required int perBreak,
   }) {
     final shuffleChanged = _configured && shuffle != _shuffle;
-    final breakChanged = _configured &&
+    final breakChanged =
+        _configured &&
         (perBreak != _perBreak || !_sameList(commercialPool, _commercialPool));
 
     _programs = List.unmodifiable(programs);
@@ -134,9 +140,12 @@ class ChannelEngine {
 
     // Forget queued items that were deleted, or a break planned with old settings.
     final programSet = programs.toSet();
-    bool exists(QueueItem q) =>
-        q.isCommercial ? commercialSet.contains(q.path) : programSet.contains(q.path);
-    state.upcoming.removeWhere((q) => !exists(q) || (breakChanged && q.isCommercial));
+    bool exists(QueueItem q) => q.isCommercial
+        ? commercialSet.contains(q.path)
+        : programSet.contains(q.path);
+    state.upcoming.removeWhere(
+      (q) => !exists(q) || (breakChanged && q.isCommercial),
+    );
     final current = state.current;
     if (current != null && !exists(current)) {
       state.current = null;
@@ -167,9 +176,12 @@ class ChannelEngine {
       final available = _programs.toSet();
       final kept = state.order.where(available.contains).toList();
       final keptSet = kept.toSet();
-      final added = _programs.where((p) => !keptSet.contains(p)).toList()..shuffle(_random);
+      final added = _programs.where((p) => !keptSet.contains(p)).toList()
+        ..shuffle(_random);
       for (final p in added) {
-        final start = cursorProgram == null ? 0 : kept.indexOf(cursorProgram) + 1;
+        final start = cursorProgram == null
+            ? 0
+            : kept.indexOf(cursorProgram) + 1;
         final insertAt = start + _random.nextInt(kept.length - start + 1);
         kept.insert(insertAt, p);
       }
@@ -264,7 +276,9 @@ class ChannelEngine {
         return c;
       }
     }
-    final fallback = _commercialPool.where((c) => !exclude.contains(c)).toList();
+    final fallback = _commercialPool
+        .where((c) => !exclude.contains(c))
+        .toList();
     if (fallback.isEmpty) return null;
     final c = fallback[_random.nextInt(fallback.length)];
     _lastCommercial = c;

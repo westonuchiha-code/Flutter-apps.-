@@ -4,7 +4,15 @@ Your own retro TV. Point it at a folder of shows, movies and commercials, and
 it turns them into channels that play around the clock, with commercial
 breaks between videos, static when you change channels, and a 4:3 tube look.
 
-Runs on **Windows, Linux and Android** from the same code. (iPhone and Mac
+Runs on **Windows, Linux and Android** from the same code.
+
+**In this repo:** CI builds it on every push (Android APK, Windows zip, Linux
+tarball as the `crt_tv-latest` pre-release; see the repo's CLAUDE.md). On
+Android it makes and uses `Internal storage › XMB Frontend › TV` (next to
+the XMB Frontend's ROMs and Comics, with a `HOW TO ADD SHOWS.txt` in it)
+once it's allowed **All files access**; another folder can still be chosen
+in Menu → TV FOLDER. Screenshots of every screen at TV, Retroid Pocket
+Classic and phone sizes: `flutter test tool/shot_test.dart --dart-define=OUT=<folder>`. (iPhone and Mac
 can build it too, but they haven't been set up for yet; see the end.)
 
 ---
@@ -99,6 +107,9 @@ front. On Linux your user needs to be able to read `/dev/input/js*` (it
 normally can). These are the
 defaults; **Menu (S) → Controls** lets you change any key or button (and
 reset them). Number keys, Enter, Esc and F1 always stay as they are.
+On Android (the Retroid Pocket's own buttons too) the d-pad and buttons
+arrive as key presses and work the same way; the system Back button closes
+the menu (or video only) before it leaves the app.
 
 | PlayStation / Xbox | On the TV | In menus |
 |---|---|---|
@@ -140,10 +151,10 @@ folder, separate from your videos. Your videos are never changed.
 
 * **Linux: "Choose folder" does nothing.** The picker uses the desktop's
   file portal. Install `xdg-desktop-portal-gtk` (or `-kde`), or use **Type a path**.
-* **Android: no videos show up.** Allow the permission pop-up. If videos
-  are still missing, open Settings in the app and tap **Allow access to files**.
-  Keep the TV folder somewhere like `Movies/TV`, because Android's
-  folder picker can't open folders inside `Download`.
+* **Android: no videos show up.** The TV needs **All files access** (the
+  video player opens files by their path). Menu → TV FOLDER →
+  **ALLOW ACCESS TO FILES** opens Android's page for it; switch it on and
+  come back.
 * **A video is skipped.** If a file won't play within a few seconds, the TV moves
   on to the next one. Check that the file plays in a normal player like VLC.
 * **Live channels take a moment the first time.** The app checks each
@@ -157,8 +168,9 @@ folder, separate from your videos. Your videos are never changed.
 
 * **Name:** change `CRT TV` in `lib/main.dart` and in
   `android/app/src/main/AndroidManifest.xml` (`android:label`).
-* **Icon:** replace the images in `android/app/src/main/res/mipmap-*` and
-  `windows/runner/resources/app_icon.ico`, or use the `flutter_launcher_icons` package.
+* **Icon:** a 16×16 pixel picture drawn in the repo's
+  `tool/icons/bin/make_icons.dart` (`crt_tv` entry); run
+  `dart run tool/icons/bin/make_icons.dart crt_tv` from the repo root.
 * **Look:** cabinet colors are in `lib/src/ui/skins.dart`, the green
   on-screen text in `lib/src/ui/osd.dart`, and the scanlines in
   `lib/src/ui/crt_overlay.dart`.
@@ -183,8 +195,8 @@ the iPhone version still needs extra work before it can read a TV folder.
 ## Licenses
 
 All of the code in `lib/` and `test/` is yours, and it doesn't have to be open source.
-The Flutter libraries it uses (media_kit, file_picker, path_provider,
-permission_handler) are MIT or BSD licensed. Those licenses let you keep
+The Flutter libraries it uses (media_kit, path_provider, ffi, and the
+repo's app_shell) are MIT or BSD licensed. Those licenses let you keep
 the app closed. They only ask that their license notices travel with the app,
 and Flutter includes those automatically. Video playback uses the mpv player
 library, which is loaded as a separate file. For your own use there's

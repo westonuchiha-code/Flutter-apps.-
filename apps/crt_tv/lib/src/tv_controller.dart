@@ -32,11 +32,10 @@ class TvController extends ChangeNotifier {
   TvController._(
     this.store, {
     required this.android,
-    AndroidStorage storage = const AndroidStorage(),
-    PlatformPlayer Function()? testPlayer,
+    this._storage = const AndroidStorage(),
+    this._testPlayer,
     this.pictureStandIn,
-  })  : _storage = storage,
-        _testPlayer = testPlayer;
+  });
 
   final AppStore store;
 
@@ -150,8 +149,7 @@ class TvController extends ChangeNotifier {
 
   /// A TV whose player is [player] and which has no video output, for
   /// tests and screenshots. [storage] answers the Android questions when
-  /// [android] is true.
-  @visibleForTesting
+  /// [android] is true. Not for the app itself.
   static Future<TvController> forTesting({
     required AppStore store,
     required PlatformPlayer Function() player,
@@ -172,11 +170,14 @@ class TvController extends ChangeNotifier {
 
   /// [path] as the user knows it: on Android the way My Files shows it
   /// ("Internal storage › XMB Frontend › TV").
-  String folderLabel(String path) => android ? myFilesPath(path) : path;
+  String folderLabel(String path) =>
+      android ? myFilesPath(path, roots: storageRoots) : path;
 
   Player _newPlayer(PlayerConfiguration configuration) {
     final fake = _testPlayer;
-    return fake == null ? Player(configuration: configuration) : Player(platformPlayer: fake());
+    return fake == null
+        ? Player(configuration: configuration)
+        : Player(platformPlayer: fake());
   }
 
   Future<void> _init() async {
@@ -189,7 +190,9 @@ class TvController extends ChangeNotifier {
     if (_testPlayer == null) {
       video = VideoController(
         player,
-        configuration: VideoControllerConfiguration(enableHardwareAcceleration: !softwareVideo),
+        configuration: VideoControllerConfiguration(
+          enableHardwareAcceleration: !softwareVideo,
+        ),
       );
     }
     // Awaiting here deadlocks: the player waits for its video surface, which needs the first frame.
@@ -198,10 +201,18 @@ class TvController extends ChangeNotifier {
     _subs.add(player.stream.position.listen(_onPosition));
     _subs.add(player.stream.error.listen(_onError));
     if (diagOn) {
-      diag('video drawn by: ${softwareVideo ? 'the processor (software)' : 'the graphics card (hardware)'}');
-      _subs.add(player.stream.videoParams.listen((p) {
-        if (p.w != null) diag('video: ${p.w}x${p.h}, format ${p.pixelformat}, shown at ${p.dw}x${p.dh}');
-      }));
+      diag(
+        'video drawn by: ${softwareVideo ? 'the processor (software)' : 'the graphics card (hardware)'}',
+      );
+      _subs.add(
+        player.stream.videoParams.listen((p) {
+          if (p.w != null) {
+            diag(
+              'video: ${p.w}x${p.h}, format ${p.pixelformat}, shown at ${p.dw}x${p.dh}',
+            );
+          }
+        }),
+      );
       // How the player itself thinks playback is going.
       final native = player.platform;
       if (native is NativePlayer) {
@@ -228,9 +239,11 @@ class TvController extends ChangeNotifier {
       }
     }
     _subs.add(player.stream.tracks.listen(_onTracks));
-    _subs.add(player.stream.track.listen((_) {
-      if (!_disposed) notifyListeners();
-    }));
+    _subs.add(
+      player.stream.track.listen((_) {
+        if (!_disposed) notifyListeners();
+      }),
+    );
     _progressTimer = Timer.periodic(
       const Duration(seconds: 15),
       (_) => _recordProgress(save: true),
@@ -266,10 +279,13 @@ class TvController extends ChangeNotifier {
 
   /// Whether [path] is the TV's own folder in `XMB Frontend`.
   bool isDefaultFolder(String? path) =>
-      path != null && storageRoots.isNotEmpty && path == defaultTvFolder(storageRoots.first);
+      path != null &&
+      storageRoots.isNotEmpty &&
+      path == defaultTvFolder(storageRoots.first);
 
   /// The TV's own folder, `Internal storage › XMB Frontend › TV` (Android).
-  String? get defaultFolder => storageRoots.isEmpty ? null : defaultTvFolder(storageRoots.first);
+  String? get defaultFolder =>
+      storageRoots.isEmpty ? null : defaultTvFolder(storageRoots.first);
 
   /// Back in front (Android): access may have been given in Settings.
   Future<void> onResumed() async {
@@ -325,8 +341,9 @@ class TvController extends ChangeNotifier {
 
   bool get hasLibrary => settings.libraryPath != null;
 
-  List<String> commercialsFor(Channel c) =>
-      c.commercials.isNotEmpty ? c.commercials : (library?.globalCommercials ?? const []);
+  List<String> commercialsFor(Channel c) => c.commercials.isNotEmpty
+      ? c.commercials
+      : (library?.globalCommercials ?? const []);
 
   /// Scanned in a static method so the background isolate only gets the path.
   static Future<TvLibrary> _scanInBackground(String path) =>
@@ -423,7 +440,9 @@ class TvController extends ChangeNotifier {
       _unprobeable.add(item.path);
     }
     // Couldn't tell; assume a typical length.
-    return item.isCommercial ? const Duration(seconds: 30) : const Duration(minutes: 22);
+    return item.isCommercial
+        ? const Duration(seconds: 30)
+        : const Duration(minutes: 22);
   }
 
   /// Checks every video's length in the background so live channels can
@@ -447,7 +466,8 @@ class TvController extends ChangeNotifier {
       var sinceSave = 0;
       for (final path in missing) {
         if (_disposed || generation != _probeGeneration) return;
-        if (!store.durations.containsKey(path) && !_unprobeable.contains(path)) {
+        if (!store.durations.containsKey(path) &&
+            !_unprobeable.contains(path)) {
           final d = await _prober.probe(path);
           if (_disposed) return;
           if (d != null) {
@@ -472,7 +492,8 @@ class TvController extends ChangeNotifier {
   // ---------------------------------------------------------------------------
   // Tuning
 
-  static String channelText(int number) => 'CH ${number.toString().padLeft(2, '0')}';
+  static String channelText(int number) =>
+      'CH ${number.toString().padLeft(2, '0')}';
 
   /// Brings a channel's schedule up to the present moment.
   Future<void> _bringUpToDate(ChannelEngine engine, String key) {
@@ -493,9 +514,13 @@ class TvController extends ChangeNotifier {
       final item = state.current;
       // A shuffled live channel you've never watched starts somewhere in the
       // middle of a show, like flipping to it on a real TV.
-      if (item != null && settings.liveMode && engine.shuffle && !item.isCommercial) {
+      if (item != null &&
+          settings.liveMode &&
+          engine.shuffle &&
+          !item.isCommercial) {
         final length = await durationOf(item);
-        state.positionMs = (length.inMilliseconds * _random.nextDouble() * 0.6).round();
+        state.positionMs = (length.inMilliseconds * _random.nextDouble() * 0.6)
+            .round();
       }
     } else if (settings.liveMode) {
       final elapsed = DateTime.now().millisecondsSinceEpoch - state.updatedAtMs;
@@ -519,7 +544,9 @@ class TvController extends ChangeNotifier {
     _troubleTimer?.cancel();
     troubleVisible = false;
     final current = channel;
-    if (current != null && current.number != number) _previousChannel = current.number;
+    if (current != null && current.number != number) {
+      _previousChannel = current.number;
+    }
     _recordProgress();
     // The old channel goes quiet the moment the dial moves, as on a real
     // set. Working out what the new channel is showing can take a while
@@ -539,7 +566,11 @@ class TvController extends ChangeNotifier {
     final showStatic = withStatic && settings.staticOnChange;
     staticVisible = showStatic;
     if (showStatic) _playStaticSound();
-    _showOsd(channelText(number), target.name.isEmpty ? null : target.name, null);
+    _showOsd(
+      channelText(number),
+      target.name.isEmpty ? null : target.name,
+      null,
+    );
     notifyListeners();
 
     final engine = _engines[target.folderName];
@@ -567,7 +598,11 @@ class TvController extends ChangeNotifier {
       return;
     }
 
-    await _openItem(item, Duration(milliseconds: engine.state.positionMs), generation);
+    await _openItem(
+      item,
+      Duration(milliseconds: engine.state.positionMs),
+      generation,
+    );
     if (generation != _tuneGeneration) return;
 
     if (showStatic) {
@@ -589,7 +624,9 @@ class TvController extends ChangeNotifier {
   Future<void> _openItem(QueueItem item, Duration from, int generation) async {
     // A saved position past the end of the video would open onto nothing.
     final length = store.durations[item.path];
-    final start = length != null && from.inMilliseconds > length - 2000 ? Duration.zero : from;
+    final start = length != null && from.inMilliseconds > length - 2000
+        ? Duration.zero
+        : from;
     nowPlaying = item;
     _openedAt = DateTime.now();
     _openedFrom = start;
@@ -600,7 +637,9 @@ class TvController extends ChangeNotifier {
       // recorded against this one. These three are queued, not awaited.
       _prepareLevel(item);
       _tracksPending = true;
-      if (player.state.track.audio.id != 'auto') _quietly(player.setAudioTrack(AudioTrack.auto()));
+      if (player.state.track.audio.id != 'auto') {
+        _quietly(player.setAudioTrack(AudioTrack.auto()));
+      }
       if (player.state.track.subtitle.id != 'auto') {
         _quietly(player.setSubtitleTrack(SubtitleTrack.auto()));
       }
@@ -614,8 +653,16 @@ class TvController extends ChangeNotifier {
     if (generation != _tuneGeneration) return;
     // A video that failed earlier gets less patience the next time round.
     final knownBad = _unplayable.contains(item.path);
-    _watchForTrouble(item, generation, Duration(milliseconds: knownBad ? 400 : 2500));
-    _checkForStall(item, generation, after: Duration(seconds: knownBad ? 3 : 6));
+    _watchForTrouble(
+      item,
+      generation,
+      Duration(milliseconds: knownBad ? 400 : 2500),
+    );
+    _checkForStall(
+      item,
+      generation,
+      after: Duration(seconds: knownBad ? 3 : 6),
+    );
     notifyListeners();
   }
 
@@ -630,7 +677,11 @@ class TvController extends ChangeNotifier {
   void _watchForTrouble(QueueItem item, int generation, Duration after) {
     _troubleTimer?.cancel();
     _troubleTimer = Timer(after, () {
-      if (_disposed || generation != _tuneGeneration || !identical(nowPlaying, item)) return;
+      if (_disposed ||
+          generation != _tuneGeneration ||
+          !identical(nowPlaying, item)) {
+        return;
+      }
       if (paused || !powerOn || troubleVisible) return;
       if (_position - _openedFrom >= const Duration(milliseconds: 300)) return;
       troubleVisible = true;
@@ -652,7 +703,12 @@ class TvController extends ChangeNotifier {
       if (moved >= const Duration(milliseconds: 300)) return; // Playing fine.
       if (player.state.buffering && retries > 0) {
         // Slow drive or network share: give it a little longer.
-        _checkForStall(item, generation, after: const Duration(seconds: 4), retries: retries - 1);
+        _checkForStall(
+          item,
+          generation,
+          after: const Duration(seconds: 4),
+          retries: retries - 1,
+        );
         return;
       }
       _skipBroken(item, generation);
@@ -664,12 +720,23 @@ class TvController extends ChangeNotifier {
     // check that the video is actually moving.
     final item = nowPlaying;
     if (item == null) return;
-    if (DateTime.now().difference(_openedAt) > const Duration(seconds: 10)) return;
-    _checkForStall(item, _tuneGeneration, after: const Duration(milliseconds: 2500), retries: 1);
+    if (DateTime.now().difference(_openedAt) > const Duration(seconds: 10)) {
+      return;
+    }
+    _checkForStall(
+      item,
+      _tuneGeneration,
+      after: const Duration(milliseconds: 2500),
+      retries: 1,
+    );
   }
 
   void _skipBroken(QueueItem item, int generation) {
-    if (generation != _tuneGeneration || _advancing || !identical(nowPlaying, item)) return;
+    if (generation != _tuneGeneration ||
+        _advancing ||
+        !identical(nowPlaying, item)) {
+      return;
+    }
     _consecutiveFailures++;
     _unplayable.add(item.path);
     if (_consecutiveFailures > 8) {
@@ -689,19 +756,26 @@ class TvController extends ChangeNotifier {
 
   void _onPosition(Duration position) {
     _position = position;
-    if (troubleVisible && position - _openedFrom > const Duration(milliseconds: 300)) {
+    if (troubleVisible &&
+        position - _openedFrom > const Duration(milliseconds: 300)) {
       troubleVisible = false;
       notifyListeners();
     }
-    if (_consecutiveFailures > 0 && position - _openedFrom > const Duration(seconds: 3)) {
+    if (_consecutiveFailures > 0 &&
+        position - _openedFrom > const Duration(seconds: 3)) {
       _consecutiveFailures = 0;
     }
   }
 
   void _onCompleted(bool done) {
-    if (!done || _switching || _advancing || !powerOn || channel == null) return;
+    if (!done || _switching || _advancing || !powerOn || channel == null) {
+      return;
+    }
     // Ignore a leftover "finished" signal from the video we just replaced.
-    if (DateTime.now().difference(_openedAt) < const Duration(milliseconds: 300)) return;
+    if (DateTime.now().difference(_openedAt) <
+        const Duration(milliseconds: 300)) {
+      return;
+    }
     unawaited(_playNext(_tuneGeneration));
   }
 
@@ -723,8 +797,14 @@ class TvController extends ChangeNotifier {
         return;
       }
       await _openItem(item, Duration.zero, generation);
-      if (!item.isCommercial && settings.showTitles && generation == _tuneGeneration) {
-        _showOsd(channelText(ch.number), ch.name.isEmpty ? null : ch.name, titleFromPath(item.path));
+      if (!item.isCommercial &&
+          settings.showTitles &&
+          generation == _tuneGeneration) {
+        _showOsd(
+          channelText(ch.number),
+          ch.name.isEmpty ? null : ch.name,
+          titleFromPath(item.path),
+        );
       }
     } finally {
       _advancing = false;
@@ -759,7 +839,9 @@ class TvController extends ChangeNotifier {
     final list = channels;
     if (list.isEmpty || !powerOn) return;
     final current = channel?.number;
-    final index = current == null ? -1 : list.indexWhere((c) => c.number == current);
+    final index = current == null
+        ? -1
+        : list.indexWhere((c) => c.number == current);
     int next;
     if (index < 0) {
       next = direction > 0 ? 0 : list.length - 1;
@@ -824,12 +906,16 @@ class TvController extends ChangeNotifier {
   Future<void> _setGain(double decibels) async {
     final native = player.platform;
     if (native is NativePlayer) {
-      await native.setProperty('replaygain-fallback', decibels.toStringAsFixed(1));
+      await native.setProperty(
+        'replaygain-fallback',
+        decibels.toStringAsFixed(1),
+      );
     }
   }
 
   /// Lets a player call run on its own, ignoring a failure.
-  static void _quietly(Future<void> call) => unawaited(call.catchError((Object _) {}));
+  static void _quietly(Future<void> call) =>
+      unawaited(call.catchError((Object _) {}));
 
   final Set<String> _measuring = {};
   double _gain = 0;
@@ -851,26 +937,37 @@ class TvController extends ChangeNotifier {
     }
     final measured = store.loudness[item.path];
     _useGain(measured == null ? 0 : levelingGain(measured));
-    if (measured != null || _unmeasurable.contains(item.path) || !_measuring.add(item.path)) return;
+    if (measured != null ||
+        _unmeasurable.contains(item.path) ||
+        !_measuring.add(item.path)) {
+      return;
+    }
 
     final known = store.durations[item.path];
     // Flipping through channels shouldn't leave a queue of videos to
     // measure that are no longer on.
     bool wanted() => !_disposed && identical(nowPlaying, item);
-    unawaited(_leveler
-        .measure(item.path, length: known == null ? null : Duration(milliseconds: known), stillWanted: wanted)
-        .then((result) {
-      _measuring.remove(item.path);
-      if (result == null) {
-        if (wanted()) _unmeasurable.add(item.path);
-        return;
-      }
-      store.loudness[item.path] = result;
-      store.scheduleSave();
-      if (wanted() && settings.levelSound) _useGain(levelingGain(result));
-    }).catchError((Object _) {
-      _measuring.remove(item.path);
-    }));
+    unawaited(
+      _leveler
+          .measure(
+            item.path,
+            length: known == null ? null : Duration(milliseconds: known),
+            stillWanted: wanted,
+          )
+          .then((result) {
+            _measuring.remove(item.path);
+            if (result == null) {
+              if (wanted()) _unmeasurable.add(item.path);
+              return;
+            }
+            store.loudness[item.path] = result;
+            store.scheduleSave();
+            if (wanted() && settings.levelSound) _useGain(levelingGain(result));
+          })
+          .catchError((Object _) {
+            _measuring.remove(item.path);
+          }),
+    );
   }
 
   /// Applies a change to the Level Volume setting to the video that's on.
@@ -904,8 +1001,10 @@ class TvController extends ChangeNotifier {
   List<SubtitleTrack> get subtitleTracks =>
       player.state.tracks.subtitle.where((t) => _isRealTrack(t.id)).toList();
 
-  static TrackInfo _audioInfo(AudioTrack t) => TrackInfo(t.id, language: t.language, title: t.title);
-  static TrackInfo _subtitleInfo(SubtitleTrack t) => TrackInfo(t.id, language: t.language, title: t.title);
+  static TrackInfo _audioInfo(AudioTrack t) =>
+      TrackInfo(t.id, language: t.language, title: t.title);
+  static TrackInfo _subtitleInfo(SubtitleTrack t) =>
+      TrackInfo(t.id, language: t.language, title: t.title);
 
   /// What the menu shows for the sound track in use.
   String get audioTrackLabel {
@@ -913,7 +1012,9 @@ class TvController extends ChangeNotifier {
     if (tracks.isEmpty) return 'NONE';
     final i = tracks.indexWhere((t) => t.id == player.state.track.audio.id);
     if (i >= 0) return trackName(i, _audioInfo(tracks[i]));
-    return tracks.length == 1 ? trackName(0, _audioInfo(tracks[0])) : 'FILE DEFAULT';
+    return tracks.length == 1
+        ? trackName(0, _audioInfo(tracks[0]))
+        : 'FILE DEFAULT';
   }
 
   String get subtitleTrackLabel {
@@ -932,7 +1033,10 @@ class TvController extends ChangeNotifier {
       showMessage('AUDIO', tracks.isEmpty ? 'NONE' : 'ONLY ONE TRACK');
       return;
     }
-    final i = max(0, tracks.indexWhere((t) => t.id == player.state.track.audio.id));
+    final i = max(
+      0,
+      tracks.indexWhere((t) => t.id == player.state.track.audio.id),
+    );
     final next = (i + delta) % tracks.length;
     unawaited(player.setAudioTrack(tracks[next]));
     showMessage('AUDIO', trackName(next, _audioInfo(tracks[next])));
@@ -946,15 +1050,24 @@ class TvController extends ChangeNotifier {
       return;
     }
     // Position 0 is "off"; "file default" counts as off for stepping.
-    final i = tracks.indexWhere((t) => t.id == player.state.track.subtitle.id) + 1;
+    final i =
+        tracks.indexWhere((t) => t.id == player.state.track.subtitle.id) + 1;
     final next = (i + delta) % (tracks.length + 1);
-    unawaited(player.setSubtitleTrack(next == 0 ? SubtitleTrack.no() : tracks[next - 1]));
-    showMessage('SUBTITLES', next == 0 ? 'OFF' : trackName(next - 1, _subtitleInfo(tracks[next - 1])));
+    unawaited(
+      player.setSubtitleTrack(
+        next == 0 ? SubtitleTrack.no() : tracks[next - 1],
+      ),
+    );
+    showMessage(
+      'SUBTITLES',
+      next == 0 ? 'OFF' : trackName(next - 1, _subtitleInfo(tracks[next - 1])),
+    );
   }
 
   void _onTracks(Tracks tracks) {
     if (_disposed) return;
-    final known = tracks.audio.any((t) => _isRealTrack(t.id)) ||
+    final known =
+        tracks.audio.any((t) => _isRealTrack(t.id)) ||
         tracks.subtitle.any((t) => _isRealTrack(t.id));
     if (_tracksPending && known) {
       _tracksPending = false;
@@ -981,7 +1094,9 @@ class TvController extends ChangeNotifier {
       unawaited(player.setSubtitleTrack(SubtitleTrack.no()));
     } else {
       for (final track in subtitles) {
-        if (track.id == choice.subtitleId) unawaited(player.setSubtitleTrack(track));
+        if (track.id == choice.subtitleId) {
+          unawaited(player.setSubtitleTrack(track));
+        }
       }
     }
   }
@@ -993,12 +1108,15 @@ class TvController extends ChangeNotifier {
     _showOsd(
       channelText(ch.number),
       ch.name.isEmpty ? null : ch.name,
-      item == null ? null : (item.isCommercial ? 'Commercial break' : titleFromPath(item.path)),
+      item == null
+          ? null
+          : (item.isCommercial ? 'Commercial break' : titleFromPath(item.path)),
     );
   }
 
   /// Flashes a short two-line note on the screen.
-  void showMessage(String headline, String? detail) => _showOsd(headline, detail, null);
+  void showMessage(String headline, String? detail) =>
+      _showOsd(headline, detail, null);
 
   void _showOsd(String channelLabel, String? name, String? title) {
     osdChannel = channelLabel;
@@ -1021,7 +1139,8 @@ class TvController extends ChangeNotifier {
     _flashVolume();
   }
 
-  void volumeStep(int direction) => unawaited(setVolume(settings.volume + direction * 5));
+  void volumeStep(int direction) =>
+      unawaited(setVolume(settings.volume + direction * 5));
 
   Future<void> toggleMute() async {
     settings.muted = !settings.muted;
@@ -1077,7 +1196,12 @@ class TvController extends ChangeNotifier {
   void _playStaticSound() {
     final sfx = _sfx;
     final path = _staticSoundPath;
-    if (sfx == null || path == null || !settings.staticSound || settings.muted) return;
+    if (sfx == null ||
+        path == null ||
+        !settings.staticSound ||
+        settings.muted) {
+      return;
+    }
     unawaited(() async {
       try {
         await sfx.setVolume(settings.volume * 0.5);
@@ -1147,9 +1271,13 @@ class TvController extends ChangeNotifier {
       return (title: null, commercial: false, remaining: null);
     }
     final watching = channel?.folderName == c.folderName;
-    final position = watching ? _position : Duration(milliseconds: engine.state.positionMs);
+    final position = watching
+        ? _position
+        : Duration(milliseconds: engine.state.positionMs);
     final length = store.durations[item.path];
-    final remaining = length == null ? null : Duration(milliseconds: max(0, length - position.inMilliseconds));
+    final remaining = length == null
+        ? null
+        : Duration(milliseconds: max(0, length - position.inMilliseconds));
     return (
       title: item.isCommercial ? null : titleFromPath(item.path),
       commercial: item.isCommercial,

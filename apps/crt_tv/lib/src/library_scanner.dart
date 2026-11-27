@@ -7,13 +7,38 @@ import 'season.dart';
 /// File types the player can handle. mpv plays almost anything, so this
 /// list is generous.
 const Set<String> kVideoExtensions = {
-  'mp4', 'm4v', 'mkv', 'avi', 'mov', 'wmv', 'webm', 'mpg', 'mpeg', 'mpe',
-  'm2v', 'm2ts', 'mts', 'ts', 'flv', '3gp', 'ogv', 'vob', 'divx', 'asf',
-  'rm', 'rmvb', 'f4v', 'qt',
+  'mp4',
+  'm4v',
+  'mkv',
+  'avi',
+  'mov',
+  'wmv',
+  'webm',
+  'mpg',
+  'mpeg',
+  'mpe',
+  'm2v',
+  'm2ts',
+  'mts',
+  'ts',
+  'flv',
+  '3gp',
+  'ogv',
+  'vob',
+  'divx',
+  'asf',
+  'rm',
+  'rmvb',
+  'f4v',
+  'qt',
 };
 
 const Set<String> _commercialFolderNames = {
-  'commercials', 'commercial', 'ads', 'adverts', 'advertisements',
+  'commercials',
+  'commercial',
+  'ads',
+  'adverts',
+  'advertisements',
 };
 
 final RegExp _channelPattern = RegExp(
@@ -75,8 +100,14 @@ bool _isDigit(int codeUnit) => codeUnit >= 48 && codeUnit <= 57;
 
 /// Compares strings so that "Episode 2" sorts before "Episode 10".
 int naturalCompare(String a, String b) {
-  final ca = _chunk.allMatches(a.toLowerCase()).map((m) => m.group(0)!).toList();
-  final cb = _chunk.allMatches(b.toLowerCase()).map((m) => m.group(0)!).toList();
+  final ca = _chunk
+      .allMatches(a.toLowerCase())
+      .map((m) => m.group(0)!)
+      .toList();
+  final cb = _chunk
+      .allMatches(b.toLowerCase())
+      .map((m) => m.group(0)!)
+      .toList();
   final n = math.min(ca.length, cb.length);
   for (var i = 0; i < n; i++) {
     final x = ca[i];
@@ -176,8 +207,10 @@ TvLibrary scanLibrarySync(String rootPath) {
     }
     final existing = usedNumbers[number];
     if (existing != null) {
-      warnings.add('"$existing" and "$folderName" are both channel $number. '
-          'Only "$existing" is used.');
+      warnings.add(
+        '"$existing" and "$folderName" are both channel $number. '
+        'Only "$existing" is used.',
+      );
       continue;
     }
     usedNumbers[number] = folderName;
@@ -186,8 +219,12 @@ TvLibrary scanLibrarySync(String rootPath) {
 
   // Folders without a number take the lowest free ones, in name order.
   // Seasonal ones go last, so adding one never renumbers the usual lineup.
-  bool seasonal((Directory, String) folder) => seasons[baseName(folder.$1.path)]?.isNotEmpty ?? false;
-  final inOrder = [...unnumbered.where((f) => !seasonal(f)), ...unnumbered.where(seasonal)];
+  bool seasonal((Directory, String) folder) =>
+      seasons[baseName(folder.$1.path)]?.isNotEmpty ?? false;
+  final inOrder = [
+    ...unnumbered.where((f) => !seasonal(f)),
+    ...unnumbered.where(seasonal),
+  ];
   var next = 1;
   for (final (entry, name) in inOrder) {
     while (usedNumbers.containsKey(next)) {
@@ -209,15 +246,17 @@ TvLibrary scanLibrarySync(String rootPath) {
     }
     programs.sort(naturalCompare);
 
-    channels.add(Channel(
-      number: number,
-      name: name,
-      folderName: folderName,
-      folderPath: entry.path,
-      programs: programs,
-      commercials: commercials,
-      months: seasons[folderName] ?? const {},
-    ));
+    channels.add(
+      Channel(
+        number: number,
+        name: name,
+        folderName: folderName,
+        folderPath: entry.path,
+        programs: programs,
+        commercials: commercials,
+        months: seasons[folderName] ?? const {},
+      ),
+    );
   }
 
   channels.sort((a, b) => a.number.compareTo(b.number));

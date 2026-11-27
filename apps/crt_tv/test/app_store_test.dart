@@ -25,7 +25,11 @@ void main() {
       store.scheduleSave();
       await Future<void>.delayed(step);
     }
-    expect(file.existsSync(), isTrue, reason: 'nothing was written while changes kept coming');
+    expect(
+      file.existsSync(),
+      isTrue,
+      reason: 'nothing was written while changes kept coming',
+    );
     final saved = jsonDecode(file.readAsStringSync()) as Map;
     expect((saved['durations'] as Map).length, greaterThanOrEqualTo(5));
   });

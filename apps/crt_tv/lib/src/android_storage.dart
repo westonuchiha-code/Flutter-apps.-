@@ -103,7 +103,19 @@ String? startFolder({
 /// Google) shows it: `/storage/emulated/0/XMB Frontend/TV` is
 /// "Internal storage › XMB Frontend › TV", an SD card's
 /// `/storage/1234-ABCD/TV` is "SD card › TV". Anything else stays as is.
-String myFilesPath(String dir) {
+/// [roots] are the device's storage roots (internal storage first), when
+/// known.
+String myFilesPath(String dir, {List<String> roots = const []}) {
+  for (var i = 0; i < roots.length; i++) {
+    final root = roots[i];
+    if (dir == root || dir.startsWith('$root/') || dir.startsWith('$root\\')) {
+      final rest = dir
+          .substring(root.length)
+          .split(RegExp(r'[/\\]'))
+          .where((s) => s.isNotEmpty);
+      return [i == 0 ? 'Internal storage' : 'SD card', ...rest].join(' › ');
+    }
+  }
   final parts = dir
       .replaceAll(r'\', '/')
       .split('/')

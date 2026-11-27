@@ -13,20 +13,33 @@ void main() {
     menu = OsdMenuCore();
     log = [];
     sub = OsdPage('SUB', () => [OsdLink('DO IT', () => log.add('did'))]);
-    root = OsdPage('ROOT', () => [
-          const OsdInfo('JUST TEXT'),
-          OsdChoice('CHOICE', 'A', (d) => log.add('choice $d')),
-          OsdMeter('METER', 0.5, (d) => log.add('meter $d')),
-          OsdLink('SUB', () => menu.push(sub), value: '►'),
-        ]);
+    root = OsdPage(
+      'ROOT',
+      () => [
+        const OsdInfo('JUST TEXT'),
+        OsdChoice('CHOICE', 'A', (d) => log.add('choice $d')),
+        OsdMeter('METER', 0.5, (d) => log.add('meter $d')),
+        OsdLink('SUB', () => menu.push(sub), value: '►'),
+      ],
+    );
   });
 
   test('the cursor skips plain text and wraps around', () {
     menu.open(root);
-    expect(menu.rows.map((r) => r.label), ['JUST TEXT', 'CHOICE', 'METER', 'SUB', 'CLOSE MENU']);
+    expect(menu.rows.map((r) => r.label), [
+      'JUST TEXT',
+      'CHOICE',
+      'METER',
+      'SUB',
+      'CLOSE MENU',
+    ]);
     expect(menu.cursor, 1);
     menu.move(-1);
-    expect(menu.cursor, 4, reason: 'up from the first line goes to the last line, not the text');
+    expect(
+      menu.cursor,
+      4,
+      reason: 'up from the first line goes to the last line, not the text',
+    );
     menu.move(1);
     expect(menu.cursor, 1);
   });
@@ -67,16 +80,41 @@ void main() {
   });
 
   testWidgets('every kind of line fits its panel at TV sizes', (tester) async {
-    final long = OsdPage('A VERY LONG TITLE THAT WILL NOT FIT ON ONE LINE OF THE MENU', () => [
-          const OsdInfo('SOME EXPLANATION THAT RUNS ON FAR LONGER THAN THE PANEL IS WIDE, SO IT MUST CUT OFF'),
-          OsdChoice('VIDEO ONLY (NO CABINET) AND THEN SOME', 'A LONG VALUE NAME', (_) {}),
-          OsdMeter('VOLUME', 0.7, (_) {}),
-          for (var i = 0; i < 30; i++) OsdLink('07 SATURDAY MORNING CARTOONS $i', () {}, value: 'A SHOW WITH A LONG NAME S01E0$i'),
-        ]);
-    for (final size in const [Size(1440, 1080), Size(640, 480), Size(320, 240)]) {
-      await tester.pumpWidget(MaterialApp(
-        home: Center(child: SizedBox.fromSize(size: size, child: OsdMenuView(menu: menu))),
-      ));
+    final long = OsdPage(
+      'A VERY LONG TITLE THAT WILL NOT FIT ON ONE LINE OF THE MENU',
+      () => [
+        const OsdInfo(
+          'SOME EXPLANATION THAT RUNS ON FAR LONGER THAN THE PANEL IS WIDE, SO IT MUST CUT OFF',
+        ),
+        OsdChoice(
+          'VIDEO ONLY (NO CABINET) AND THEN SOME',
+          'A LONG VALUE NAME',
+          (_) {},
+        ),
+        OsdMeter('VOLUME', 0.7, (_) {}),
+        for (var i = 0; i < 30; i++)
+          OsdLink(
+            '07 SATURDAY MORNING CARTOONS $i',
+            () {},
+            value: 'A SHOW WITH A LONG NAME S01E0$i',
+          ),
+      ],
+    );
+    for (final size in const [
+      Size(1440, 1080),
+      Size(640, 480),
+      Size(320, 240),
+    ]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: SizedBox.fromSize(
+              size: size,
+              child: OsdMenuView(menu: menu),
+            ),
+          ),
+        ),
+      );
       menu.open(long);
       await tester.pump();
       expect(tester.takeException(), isNull, reason: 'list at $size');
@@ -87,7 +125,9 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), isNull, reason: 'capture prompt at $size');
       menu.cancelCapture();
-      menu.flash('SOMETHING NOW HAS NO KEY, WHICH IS A FAIRLY LONG THING TO SAY IN A SMALL BOX');
+      menu.flash(
+        'SOMETHING NOW HAS NO KEY, WHICH IS A FAIRLY LONG THING TO SAY IN A SMALL BOX',
+      );
       await tester.pump();
       expect(tester.takeException(), isNull, reason: 'notice at $size');
       menu.close();

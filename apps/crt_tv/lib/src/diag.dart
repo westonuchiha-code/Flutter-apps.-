@@ -20,7 +20,11 @@ void diag(String message) {
 void startFrameReport() {
   if (!diagOn) return;
   var frames = 0;
-  var buildTotal = 0, buildWorst = 0, rasterTotal = 0, rasterWorst = 0, slow = 0;
+  var buildTotal = 0,
+      buildWorst = 0,
+      rasterTotal = 0,
+      rasterWorst = 0,
+      slow = 0;
   var since = DateTime.now();
   WidgetsBinding.instance.addTimingsCallback((List<FrameTiming> timings) {
     for (final t in timings) {
@@ -41,14 +45,18 @@ void startFrameReport() {
     final seconds = now.difference(since).inMilliseconds / 1000;
     since = now;
     if (frames == 0) {
-      diag('interface frames: none in the last ${seconds.toStringAsFixed(0)}s (nothing on screen changed)');
+      diag(
+        'interface frames: none in the last ${seconds.toStringAsFixed(0)}s (nothing on screen changed)',
+      );
       return;
     }
     String ms(num micros) => (micros / 1000).toStringAsFixed(1);
-    diag('interface frames: $frames in ${seconds.toStringAsFixed(0)}s; '
-        'build avg ${ms(buildTotal / frames)} worst ${ms(buildWorst)} ms; '
-        'raster avg ${ms(rasterTotal / frames)} worst ${ms(rasterWorst)} ms; '
-        '$slow took longer than one screen refresh');
+    diag(
+      'interface frames: $frames in ${seconds.toStringAsFixed(0)}s; '
+      'build avg ${ms(buildTotal / frames)} worst ${ms(buildWorst)} ms; '
+      'raster avg ${ms(rasterTotal / frames)} worst ${ms(rasterWorst)} ms; '
+      '$slow took longer than one screen refresh',
+    );
     frames = 0;
     buildTotal = buildWorst = rasterTotal = rasterWorst = slow = 0;
   });

@@ -65,7 +65,10 @@ class TvLibrary {
   }
 
   int get videoCount =>
-      channels.fold<int>(0, (sum, c) => sum + c.programs.length + c.commercials.length) +
+      channels.fold<int>(
+        0,
+        (sum, c) => sum + c.programs.length + c.commercials.length,
+      ) +
       globalCommercials.length;
 
   bool get isEmpty => channels.isEmpty;
@@ -120,9 +123,9 @@ class ChannelOverride {
   int? commercialsPerBreak;
 
   Map<String, Object?> toJson() => {
-        'shuffle': shuffle,
-        if (commercialsPerBreak != null) 'perBreak': commercialsPerBreak,
-      };
+    'shuffle': shuffle,
+    if (commercialsPerBreak != null) 'perBreak': commercialsPerBreak,
+  };
 
   static ChannelOverride fromJson(Object? json) {
     if (json is! Map) return ChannelOverride();
@@ -185,27 +188,27 @@ class AppSettings {
   bool shuffleFor(String folderName) => overrides[folderName]?.shuffle ?? false;
 
   Map<String, Object?> toJson() => {
-        'libraryPath': libraryPath,
-        'commercialsPerBreak': commercialsPerBreak,
-        'liveMode': liveMode,
-        'crtEffect': crtEffect.name,
-        'skin': skin.name,
-        'videoFit': videoFit.name,
-        'staticOnChange': staticOnChange,
-        'staticSound': staticSound,
-        'showTitles': showTitles,
-        'audioLanguage': audioLanguage,
-        'subtitleLanguage': subtitleLanguage,
-        'subtitleMode': subtitleMode.name,
-        'levelSound': levelSound,
-        'seasonalAlways': seasonalAlways,
-        'volume': volume,
-        'muted': muted,
-        'lastChannel': lastChannel,
-        'overrides': {for (final e in overrides.entries) e.key: e.value.toJson()},
-        'keyOverrides': keyOverrides,
-        'padOverrides': padOverrides,
-      };
+    'libraryPath': libraryPath,
+    'commercialsPerBreak': commercialsPerBreak,
+    'liveMode': liveMode,
+    'crtEffect': crtEffect.name,
+    'skin': skin.name,
+    'videoFit': videoFit.name,
+    'staticOnChange': staticOnChange,
+    'staticSound': staticSound,
+    'showTitles': showTitles,
+    'audioLanguage': audioLanguage,
+    'subtitleLanguage': subtitleLanguage,
+    'subtitleMode': subtitleMode.name,
+    'levelSound': levelSound,
+    'seasonalAlways': seasonalAlways,
+    'volume': volume,
+    'muted': muted,
+    'lastChannel': lastChannel,
+    'overrides': {for (final e in overrides.entries) e.key: e.value.toJson()},
+    'keyOverrides': keyOverrides,
+    'padOverrides': padOverrides,
+  };
 
   void loadJson(Object? json) {
     if (json is! Map) return;
@@ -214,7 +217,11 @@ class AppSettings {
     final perBreak = json['commercialsPerBreak'];
     if (perBreak is num) commercialsPerBreak = perBreak.toInt();
     liveMode = json['liveMode'] != false;
-    crtEffect = _enumFrom(CrtEffect.values, json['crtEffect'], CrtEffect.subtle);
+    crtEffect = _enumFrom(
+      CrtEffect.values,
+      json['crtEffect'],
+      CrtEffect.subtle,
+    );
     skin = _enumFrom(SkinStyle.values, json['skin'], SkinStyle.wood);
     videoFit = _enumFrom(VideoFit.values, json['videoFit'], VideoFit.fit);
     staticOnChange = json['staticOnChange'] != false;
@@ -224,7 +231,11 @@ class AppSettings {
     audioLanguage = audioLang is String ? audioLang : '';
     final subtitleLang = json['subtitleLanguage'];
     subtitleLanguage = subtitleLang is String ? subtitleLang : '';
-    subtitleMode = _enumFrom(SubtitleMode.values, json['subtitleMode'], SubtitleMode.fileDefault);
+    subtitleMode = _enumFrom(
+      SubtitleMode.values,
+      json['subtitleMode'],
+      SubtitleMode.fileDefault,
+    );
     levelSound = json['levelSound'] == true;
     seasonalAlways = json['seasonalAlways'] == true;
     final vol = json['volume'];

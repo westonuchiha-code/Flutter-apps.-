@@ -39,7 +39,10 @@ class AppStore {
   static Future<AppStore> open() async {
     final dir = await getApplicationSupportDirectory();
     if (!dir.existsSync()) dir.createSync(recursive: true);
-    final store = AppStore._(File('${dir.path}${Platform.pathSeparator}tv_data.json'), dir);
+    final store = AppStore._(
+      File('${dir.path}${Platform.pathSeparator}tv_data.json'),
+      dir,
+    );
     await store._load();
     return store;
   }
@@ -100,7 +103,9 @@ class AppStore {
       final json = jsonEncode({
         'version': 1,
         'settings': settings.toJson(),
-        'channels': {for (final e in channelStates.entries) e.key: e.value.toJson()},
+        'channels': {
+          for (final e in channelStates.entries) e.key: e.value.toJson(),
+        },
         'durations': durations,
         'loudness': {for (final e in loudness.entries) e.key: e.value.toJson()},
       });

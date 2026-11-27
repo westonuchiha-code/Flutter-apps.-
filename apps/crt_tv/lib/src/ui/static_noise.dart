@@ -17,7 +17,8 @@ class StaticNoise extends StatefulWidget {
   State<StaticNoise> createState() => _StaticNoiseState();
 }
 
-class _StaticNoiseState extends State<StaticNoise> with SingleTickerProviderStateMixin {
+class _StaticNoiseState extends State<StaticNoise>
+    with SingleTickerProviderStateMixin {
   // A handful of noise frames, made once and shared. Flipping them at random
   // every frame looks like endless fresh snow.
   static List<ui.Image>? _frames;
@@ -69,7 +70,13 @@ class _StaticNoiseState extends State<StaticNoise> with SingleTickerProviderStat
         }
       }
       final done = Completer<ui.Image>();
-      ui.decodeImageFromPixels(pixels, width, height, ui.PixelFormat.rgba8888, done.complete);
+      ui.decodeImageFromPixels(
+        pixels,
+        width,
+        height,
+        ui.PixelFormat.rgba8888,
+        done.complete,
+      );
       frames.add(await done.future);
     }
     return frames;
@@ -90,7 +97,9 @@ class _StaticNoiseState extends State<StaticNoise> with SingleTickerProviderStat
       children: [
         CustomPaint(
           painter: _NoisePainter(
-            frames == null || frames.isEmpty ? null : frames[_pick % frames.length],
+            frames == null || frames.isEmpty
+                ? null
+                : frames[_pick % frames.length],
             _pick >> 8,
             _band,
           ),
@@ -112,7 +121,11 @@ class _StaticNoiseState extends State<StaticNoise> with SingleTickerProviderStat
                     fontWeight: FontWeight.bold,
                     letterSpacing: 3,
                     fontFamily: 'monospace',
-                    fontFamilyFallback: const ['Consolas', 'Courier New', 'DejaVu Sans Mono'],
+                    fontFamilyFallback: const [
+                      'Consolas',
+                      'Courier New',
+                      'DejaVu Sans Mono',
+                    ],
                   ),
                 ),
               ),

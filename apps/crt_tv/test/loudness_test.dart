@@ -8,8 +8,9 @@ const rate = 22050;
 
 /// A steady tone at [amplitude] (0..1) for [seconds].
 List<int> tone(double amplitude, double seconds) => [
-      for (var i = 0; i < (rate * seconds).round(); i++) (sin(i * 2 * pi * 440 / rate) * amplitude * 32767).round(),
-    ];
+  for (var i = 0; i < (rate * seconds).round(); i++)
+    (sin(i * 2 * pi * 440 / rate) * amplitude * 32767).round(),
+];
 
 void main() {
   test('a steady tone measures at its real level and peak', () {
@@ -20,9 +21,16 @@ void main() {
   });
 
   test('silence between the loud parts does not drag the level down', () {
-    final talky = Int16List.fromList([...tone(0.5, 2), ...List.filled(rate * 6, 0), ...tone(0.5, 2)]);
+    final talky = Int16List.fromList([
+      ...tone(0.5, 2),
+      ...List.filled(rate * 6, 0),
+      ...tone(0.5, 2),
+    ]);
     final solid = Int16List.fromList(tone(0.5, 4));
-    expect(analyseLoudness(talky, rate)!.level, closeTo(analyseLoudness(solid, rate)!.level, 0.3));
+    expect(
+      analyseLoudness(talky, rate)!.level,
+      closeTo(analyseLoudness(solid, rate)!.level, 0.3),
+    );
   });
 
   test('pure silence has no level', () {
@@ -37,12 +45,19 @@ void main() {
     expect(quiet.level + levelingGain(quiet), closeTo(kTargetLevel, 0.01));
   });
 
-  test('a quiet video with loud peaks is only turned up as far as is clean', () {
-    const dynamic = Loudness(-32, -2);
-    final gain = levelingGain(dynamic);
-    expect(gain, closeTo(1.0, 0.01), reason: 'peak plus gain stays 1 dB under full scale');
-    expect(dynamic.peak + gain, lessThan(0));
-  });
+  test(
+    'a quiet video with loud peaks is only turned up as far as is clean',
+    () {
+      const dynamic = Loudness(-32, -2);
+      final gain = levelingGain(dynamic);
+      expect(
+        gain,
+        closeTo(1.0, 0.01),
+        reason: 'peak plus gain stays 1 dB under full scale',
+      );
+      expect(dynamic.peak + gain, lessThan(0));
+    },
+  );
 
   test('odd measurements cannot move the volume wildly', () {
     expect(levelingGain(const Loudness(-70, -60)), 12);

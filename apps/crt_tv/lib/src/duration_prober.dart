@@ -25,7 +25,9 @@ class DurationProber {
     try {
       // vo defaults to 'null', so this player never opens a window.
       // ignore: prefer_const_constructors
-      final player = _player ??= Player(configuration: PlayerConfiguration(muted: true));
+      final player = _player ??= Player(
+        configuration: PlayerConfiguration(muted: true),
+      );
       final found = Completer<Duration?>();
       durationSub = player.stream.duration.listen((d) {
         if (d > Duration.zero && !found.isCompleted) found.complete(d);

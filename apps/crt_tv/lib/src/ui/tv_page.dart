@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui' show AppExitResponse;
 
 import 'package:material_ui/material_ui.dart';
@@ -9,7 +10,6 @@ import 'package:media_kit_video/media_kit_video.dart';
 import '../bindings.dart';
 import '../diag.dart';
 import '../gamepad.dart';
-import '../models.dart';
 import '../tv_controller.dart';
 import 'controls.dart';
 import 'osd_menu.dart';
@@ -18,7 +18,11 @@ import 'tv_screen.dart';
 
 /// The main screen: the 4:3 picture, the cabinet around it, and the remote.
 class TvPage extends StatefulWidget {
-  const TvPage({super.key, required this.controller, this.startFullscreen = false});
+  const TvPage({
+    super.key,
+    required this.controller,
+    this.startFullscreen = false,
+  });
 
   final TvController controller;
 
@@ -39,6 +43,7 @@ class _TvPageState extends State<TvPage> {
   Timer? _hideTimer;
   bool _fullscreen = false;
   bool _videoOnly = false;
+
   /// True while a system window (folder picker, path box) is in front.
   bool _inMenu = false;
   late final OsdMenu _menu;
@@ -54,29 +59,30 @@ class _TvPageState extends State<TvPage> {
   bool _fullscreenBeforeVideoOnly = false;
 
   static const List<LogicalKeyboardKey> _digitKeys = [
-    LogicalKeyboardKey.digit0, LogicalKeyboardKey.digit1, LogicalKeyboardKey.digit2,
-    LogicalKeyboardKey.digit3, LogicalKeyboardKey.digit4, LogicalKeyboardKey.digit5,
-    LogicalKeyboardKey.digit6, LogicalKeyboardKey.digit7, LogicalKeyboardKey.digit8,
+    LogicalKeyboardKey.digit0,
+    LogicalKeyboardKey.digit1,
+    LogicalKeyboardKey.digit2,
+    LogicalKeyboardKey.digit3,
+    LogicalKeyboardKey.digit4,
+    LogicalKeyboardKey.digit5,
+    LogicalKeyboardKey.digit6,
+    LogicalKeyboardKey.digit7,
+    LogicalKeyboardKey.digit8,
     LogicalKeyboardKey.digit9,
   ];
-  static final Map<LogicalKeyboardKey, PadButton> _gameKeys = {
-    LogicalKeyboardKey.gameButtonA: PadButton.south,
-    LogicalKeyboardKey.gameButtonB: PadButton.east,
-    LogicalKeyboardKey.gameButtonX: PadButton.west,
-    LogicalKeyboardKey.gameButtonY: PadButton.north,
-    LogicalKeyboardKey.gameButtonLeft1: PadButton.l1,
-    LogicalKeyboardKey.gameButtonRight1: PadButton.r1,
-    LogicalKeyboardKey.gameButtonLeft2: PadButton.l2,
-    LogicalKeyboardKey.gameButtonRight2: PadButton.r2,
-    LogicalKeyboardKey.gameButtonSelect: PadButton.select,
-    LogicalKeyboardKey.gameButtonStart: PadButton.start,
-    LogicalKeyboardKey.gameButtonThumbLeft: PadButton.l3,
-    LogicalKeyboardKey.gameButtonThumbRight: PadButton.r3,
-  };
+
+  /// Controller buttons that arrive as keys (all of them on Android).
+  late final PadKeys _padKeys = PadKeys(android: tv.android);
   static const List<LogicalKeyboardKey> _numpadKeys = [
-    LogicalKeyboardKey.numpad0, LogicalKeyboardKey.numpad1, LogicalKeyboardKey.numpad2,
-    LogicalKeyboardKey.numpad3, LogicalKeyboardKey.numpad4, LogicalKeyboardKey.numpad5,
-    LogicalKeyboardKey.numpad6, LogicalKeyboardKey.numpad7, LogicalKeyboardKey.numpad8,
+    LogicalKeyboardKey.numpad0,
+    LogicalKeyboardKey.numpad1,
+    LogicalKeyboardKey.numpad2,
+    LogicalKeyboardKey.numpad3,
+    LogicalKeyboardKey.numpad4,
+    LogicalKeyboardKey.numpad5,
+    LogicalKeyboardKey.numpad6,
+    LogicalKeyboardKey.numpad7,
+    LogicalKeyboardKey.numpad8,
     LogicalKeyboardKey.numpad9,
   ];
 
@@ -87,12 +93,15 @@ class _TvPageState extends State<TvPage> {
       onStateChange: (state) => diag('window state: ${state.name}'),
       onHide: () => unawaited(tv.saveForExit()),
       onPause: () => unawaited(tv.saveForExit()),
+      // Android: "All files" access may have just been given in Settings.
+      onResume: () => unawaited(tv.onResumed()),
       onExitRequested: () async {
         await tv.saveForExit();
         return AppExitResponse.exit;
       },
     );
-    _menu = OsdMenu(tv, runDialog: _runDialog, onQuit: isDesktop ? _quit : null)..addListener(_onMenuChanged);
+    _menu = OsdMenu(tv, runDialog: _runDialog, onQuit: isDesktop ? _quit : null)
+      ..addListener(_onMenuChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (widget.startFullscreen) {
@@ -114,7 +123,9 @@ class _TvPageState extends State<TvPage> {
       onChanged: () {
         tv.setControllers(_gamepad.kind, _gamepad.connected);
         // Hints already on screen switch to the new controller's symbols.
-        if (mounted && _padHints != null) setState(() => _padHints = _gamepad.kind);
+        if (mounted && _padHints != null) {
+          setState(() => _padHints = _gamepad.kind);
+        }
       },
       isActive: () {
         if (!mounted) return false;
@@ -123,14 +134,19 @@ class _TvPageState extends State<TvPage> {
         // thing on screen, and the window manager there doesn't always say
         // the window has focus. Waiting to be told left the controller dead.
         if (Platform.isLinux && widget.startFullscreen) return true;
-        return WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+        return WidgetsBinding.instance.lifecycleState ==
+            AppLifecycleState.resumed;
       },
     )..start();
-    diag('window state at start: ${WidgetsBinding.instance.lifecycleState?.name ?? 'not reported'}');
+    diag(
+      'window state at start: ${WidgetsBinding.instance.lifecycleState?.name ?? 'not reported'}',
+    );
   }
 
   void _onPad(PadButton button) {
     tv.setControllers(_gamepad.kind, _gamepad.connected);
+    // The menu's hint line names controller buttons from now on.
+    _menu.usingPad = true;
     if (_menu.isOpen && !_inMenu) {
       _onPadInOsd(button);
       return;
@@ -201,7 +217,8 @@ class _TvPageState extends State<TvPage> {
   /// highlight, ✕/A presses what's highlighted and ○/B goes back.
   void _onPadInMenu(PadButton button) {
     // Makes the highlight visible even though no keyboard is in use.
-    FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTraditional;
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
     final focused = FocusManager.instance.primaryFocus;
     void move(TraversalDirection direction) {
       if (focused == null) return;
@@ -287,14 +304,17 @@ class _TvPageState extends State<TvPage> {
         key == LogicalKeyboardKey.select ||
         key == LogicalKeyboardKey.space) {
       _menu.select();
-    } else if (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.backspace) {
+    } else if (key == LogicalKeyboardKey.escape ||
+        key == LogicalKeyboardKey.backspace) {
       _menu.back();
     }
     return KeyEventResult.handled;
   }
 
   /// For the few things that still need a system window.
-  Future<void> _runDialog(Future<void> Function(BuildContext context) body) async {
+  Future<void> _runDialog(
+    Future<void> Function(BuildContext context) body,
+  ) async {
     if (_inMenu) return;
     _inMenu = true;
     try {
@@ -363,17 +383,23 @@ class _TvPageState extends State<TvPage> {
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    // Android hands a controller's buttons over as keys (releases too, so
+    // a held d-pad stops repeating).
+    final pad = _padKeys.read(event);
+    if (pad != null) {
+      if (tv.android) {
+        // No other way to see it's there: a pad key means a controller.
+        _gamepad
+          ..kind = PadKind.xbox
+          ..connected = max(1, _gamepad.connected);
+      }
+      if (pad.fire) _onPad(pad.button);
+      return KeyEventResult.handled;
+    }
     final down = event is KeyDownEvent;
     final repeat = event is KeyRepeatEvent;
     if (!down && !repeat) return KeyEventResult.ignored;
     final key = event.logicalKey;
-
-    // Android hands a controller's buttons over as keys.
-    final padButton = _gameKeys[key];
-    if (padButton != null) {
-      if (down) _onPad(padButton);
-      return KeyEventResult.handled;
-    }
     if (_menu.isOpen) return _onKeyInOsd(key, repeat);
 
     // Keys the TV keeps for itself (see Bindings.isReserved).
@@ -383,7 +409,8 @@ class _TvPageState extends State<TvPage> {
         tv.enterDigit(digit);
         return KeyEventResult.handled;
       }
-      if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter) {
+      if (key == LogicalKeyboardKey.enter ||
+          key == LogicalKeyboardKey.numpadEnter) {
         tv.commitDigits();
         return KeyEventResult.handled;
       }
@@ -402,7 +429,9 @@ class _TvPageState extends State<TvPage> {
     }
 
     final action = tv.bindings.actionForKey(key);
-    if (action == null || (repeat && !action.repeats)) return KeyEventResult.ignored;
+    if (action == null || (repeat && !action.repeats)) {
+      return KeyEventResult.ignored;
+    }
     _perform(action);
     return KeyEventResult.handled;
   }
@@ -416,18 +445,28 @@ class _TvPageState extends State<TvPage> {
           focusNode: _focus,
           autofocus: true,
           onKeyEvent: _onKey,
-          // A phone's back button closes the menu before it leaves the app.
+          // A phone's back button closes the menu (or video only) before
+          // it leaves the app.
           child: PopScope(
-            canPop: !_menu.isOpen,
+            canPop: !_menu.isOpen && !_videoOnly,
             onPopInvokedWithResult: (didPop, _) {
-              if (!didPop) _menu.back();
+              if (didPop) return;
+              if (_menu.isOpen) {
+                _menu.back();
+              } else if (_videoOnly) {
+                unawaited(_toggleVideoOnly());
+              }
             },
             child: Scaffold(
               backgroundColor: Colors.black,
-              body: LayoutBuilder(builder: (context, constraints) {
-                final size = constraints.biggest;
-                return size.height > size.width ? _portrait() : _landscape(size);
-              }),
+              body: LayoutBuilder(
+                builder: (context, constraints) {
+                  final size = constraints.biggest;
+                  return size.height > size.width
+                      ? _portrait()
+                      : _landscape(size);
+                },
+              ),
             ),
           ),
         );
@@ -446,7 +485,9 @@ class _TvPageState extends State<TvPage> {
     final decorate = layout.decorate && !_videoOnly;
 
     return MouseRegion(
-      cursor: _controlsVisible || !_fullscreen ? SystemMouseCursors.basic : SystemMouseCursors.none,
+      cursor: _controlsVisible || !_fullscreen
+          ? SystemMouseCursors.basic
+          : SystemMouseCursors.none,
       onHover: (_) => _pokeControls(),
       child: Stack(
         children: [
@@ -463,7 +504,10 @@ class _TvPageState extends State<TvPage> {
               ),
             ),
           if (!_videoOnly && layout.clock != null)
-            Positioned.fromRect(rect: layout.clock!, child: const IgnorePointer(child: VcrClock())),
+            Positioned.fromRect(
+              rect: layout.clock!,
+              child: const IgnorePointer(child: VcrClock()),
+            ),
           if (decorate)
             Positioned(
               left: screenRect.right + bezel,
@@ -515,17 +559,27 @@ class _TvPageState extends State<TvPage> {
   Widget _portrait() {
     return SafeArea(
       bottom: false,
-      child: LayoutBuilder(builder: (context, box) {
-        final width = box.maxWidth;
-        return Column(
-          children: [
-            SizedBox(width: width, height: width * 3 / 4, child: _screen(showBar: false)),
-            Expanded(
-              child: RemotePanel(controller: tv, onGuide: _openGuide, onSettings: _openSettings),
-            ),
-          ],
-        );
-      }),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final width = box.maxWidth;
+          return Column(
+            children: [
+              SizedBox(
+                width: width,
+                height: width * 3 / 4,
+                child: _screen(showBar: false),
+              ),
+              Expanded(
+                child: RemotePanel(
+                  controller: tv,
+                  onGuide: _openGuide,
+                  onSettings: _openSettings,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -550,7 +604,11 @@ class _TvPageState extends State<TvPage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          TvScreen(controller: tv, menu: _menu),
+          TvScreen(
+            controller: tv,
+            menu: _menu,
+            controlsShown: _controlsVisible,
+          ),
           if (showBar)
             Positioned(
               left: 0,

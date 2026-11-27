@@ -1,0 +1,27 @@
+{
+ "kind": "pixel_sprite",
+ "version": 1,
+ "width": 16,
+ "height": 16,
+ "layers": [
+  {
+   "name": "Tile",
+   "visible": true,
+   "opacity": 1.0
+  },
+  {
+   "name": "Picture",
+   "visible": true,
+   "opacity": 1.0
+  }
+ ],
+ "frames": [
+  {
+   "duration": 100,
+   "cels": [
+    "AAAAACA7Gv8gOxr/IDsa/yA7Gv8gOxr/IDsa/yA7Gv8gOxr/IDsa/yA7Gv8gOxr/IDsa/yA7Gv8gOxr/AAAAACA7Gv9Dezb/S4s9/0uLPf9Liz3/S4s9/0uLPf9Liz3/S4s9/0uLPf9Liz3/S4s9/0uLPf9Liz3/S4s9/yA7Gv8gOxr/Q3s2/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/8gOxr/IDsa/0N7Nv86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//IDsa/yA7Gv9Dezb/Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/yA7Gv8gOxr/Q3s2/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/8gOxr/IDsa/0N7Nv86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//IDsa/yA7Gv9Dezb/Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/yA7Gv8gOxr/Q3s2/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/8gOxr/IDsa/0N7Nv86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//IDsa/yA7Gv9Dezb/Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/yA7Gv8gOxr/Q3s2/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/8gOxr/IDsa/0N7Nv86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//IDsa/yA7Gv9Dezb/Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/yA7Gv8gOxr/Q3s2/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/86ay//Omsv/zprL/8gOxr/AAAAACA7Gv8gOxr/IDsa/yA7Gv8gOxr/IDsa/yA7Gv8gOxr/IDsa/yA7Gv8gOxr/IDsa/yA7Gv8gOxr/AAAAAA==",
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHRYW/wAAAAAAAAAAAAAAAAAAAAAdFhb/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHRYW/9TMyP8dFhb/AAAAAAAAAAAdFhb/1MzI/x0WFv8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAdFhb/1MzI/x0WFv8dFhb/1MzI/x0WFv8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHRYW/x0WFv8dFhb/HRYW/x0WFv/UzMj/1MzI/x0WFv8dFhb/HRYW/x0WFv8dFhb/AAAAAAAAAAAAAAAAHRYW/zRimv80Ypr/NGKa/zRimv80Ypr/NGKa/zRimv80Ypr/NGKa/zRimv80Ypr/NGKa/x0WFv8AAAAAAAAAAB0WFv80Ypr/LCIi/ywiIv8sIiL/LCIi/ywiIv8sIiL/LCIi/ywiIv80Ypr/NGKa/zRimv8dFhb/AAAAAAAAAAAdFhb/NGKa/ywiIv/o6Oj/INjo/+DQIP9AwDD/yEDQ/zA44P8sIiL/oNjo/6DY6P80Ypr/HRYW/wAAAAAAAAAAHRYW/zRimv8sIiL/6Ojo/yDY6P/g0CD/QMAw/8hA0P8wOOD/LCIi/zRimv80Ypr/NGKa/x0WFv8AAAAAAAAAAB0WFv80Ypr/LCIi/+jo6P8g2Oj/4NAg/0DAMP/IQND/MDjg/ywiIv8YNFr/GDRa/zRimv8dFhb/AAAAAAAAAAAdFhb/NGKa/ywiIv/o6Oj/INjo/+DQIP9AwDD/yEDQ/zA44P8sIiL/NGKa/zRimv80Ypr/HRYW/wAAAAAAAAAAHRYW/zRimv8sIiL/yEAo/8hAKP/IQCj/yEAo/8hAKP/IQCj/LCIi/xg0Wv8YNFr/NGKa/x0WFv8AAAAAAAAAAB0WFv80Ypr/LCIi/ywiIv8sIiL/LCIi/ywiIv8sIiL/LCIi/ywiIv80Ypr/NGKa/zRimv8dFhb/AAAAAAAAAAAdFhb/IkJu/yJCbv8iQm7/IkJu/yJCbv8iQm7/IkJu/yJCbv8iQm7/IkJu/yJCbv8iQm7/HRYW/wAAAAAAAAAAAAAAAB0WFv8dFhb/HRYW/x0WFv8dFhb/HRYW/x0WFv8dFhb/HRYW/x0WFv8dFhb/HRYW/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+   ]
+  }
+ ]
+}

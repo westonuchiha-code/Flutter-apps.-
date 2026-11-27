@@ -223,6 +223,12 @@ apps/        # one folder per Flutter application
              #                      Pokeville folder + its own Cross-Save sync (pokeville/ + only
              #                      the Pokémon saves it found under saves/retroarch);
              #                      Windows = the PC menu's own folder (XMB Pokemon Box)
+             #   crt_tv           - the owner's CRT TV (from the PC suite): folders of shows
+             #                      become channels around the clock, commercial breaks, static,
+             #                      13 cabinet skins, OSD menu, controller/keyboard rebinding;
+             #                      media_kit (libmpv; third_party/media_kit_video is patched,
+             #                      Linux-only changes); Android: All files access, default
+             #                      folder XMB Frontend/TV, Retroid buttons arrive as keys
              #   texture_capture  - photo -> game texture: perspective corners, even lighting,
              #                      seamless tiling, photo checks, PS1/N64/PS2/GameCube/Dreamcast
              #                      formats (CLUT, S3TC, VQ) with their memory limits

@@ -11,11 +11,22 @@ void main() {
     const keyboardOnly = {TvAction.audioTrack};
     for (final action in TvAction.values) {
       expect(b.keysFor(action), isNotEmpty, reason: action.name);
-      expect(b.padFor(action), keyboardOnly.contains(action) ? isNull : isNotNull, reason: action.name);
+      expect(
+        b.padFor(action),
+        keyboardOnly.contains(action) ? isNull : isNotNull,
+        reason: action.name,
+      );
     }
-    expect(Bindings.defaultPad.values.toSet().length, TvAction.values.length - keyboardOnly.length);
+    expect(
+      Bindings.defaultPad.values.toSet().length,
+      TvAction.values.length - keyboardOnly.length,
+    );
     final allKeys = [for (final keys in Bindings.defaultKeys.values) ...keys];
-    expect(allKeys.toSet().length, allKeys.length, reason: 'a key is used twice');
+    expect(
+      allKeys.toSet().length,
+      allKeys.length,
+      reason: 'a key is used twice',
+    );
     expect(allKeys.where(Bindings.isReserved), isEmpty);
     expect(b.actionForKey(LogicalKeyboardKey.keyR), TvAction.restart);
     expect(b.actionForPad(PadButton.north), TvAction.restart);

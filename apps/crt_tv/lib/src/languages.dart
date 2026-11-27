@@ -52,7 +52,8 @@ class TrackInfo {
     final base = tag.split(RegExp('[-_]')).first;
     if (wanted.tags.contains(base)) return true;
     // Untagged tracks are often just named: "English 5.1".
-    return !hasLanguage && (title?.toLowerCase().contains(wanted.name.toLowerCase()) ?? false);
+    return !hasLanguage &&
+        (title?.toLowerCase().contains(wanted.name.toLowerCase()) ?? false);
   }
 }
 
@@ -119,12 +120,20 @@ TrackChoice chooseTracks({
       show = true;
     case SubtitleMode.auto:
       // Untagged sound can't be judged, so it doesn't count as "foreign".
-      show = audioLanguage != null && sound == null && audio.any((t) => t.hasLanguage);
+      show =
+          audioLanguage != null &&
+          sound == null &&
+          audio.any((t) => t.hasLanguage);
   }
-  if (!show) return TrackChoice(audioId: sound?.id, subtitleId: TrackChoice.noSubtitles);
+  if (!show) {
+    return TrackChoice(audioId: sound?.id, subtitleId: TrackChoice.noSubtitles);
+  }
 
   final text = subtitleLanguage == null
       ? (subtitles.isEmpty ? null : subtitles.first)
       : first(subtitles, subtitleLanguage);
-  return TrackChoice(audioId: sound?.id, subtitleId: text?.id ?? TrackChoice.noSubtitles);
+  return TrackChoice(
+    audioId: sound?.id,
+    subtitleId: text?.id ?? TrackChoice.noSubtitles,
+  );
 }

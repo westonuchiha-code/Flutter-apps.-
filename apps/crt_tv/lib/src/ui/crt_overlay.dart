@@ -23,7 +23,8 @@ class CrtOverlay extends StatelessWidget {
 }
 
 /// Corner rounding for the screen glass, as a fraction of its height.
-double screenCornerRadius(CrtEffect effect, double screenHeight) => switch (effect) {
+double screenCornerRadius(CrtEffect effect, double screenHeight) =>
+    switch (effect) {
       CrtEffect.off => 0.0,
       CrtEffect.subtle => screenHeight * 0.035,
       CrtEffect.strong => screenHeight * 0.07,
@@ -44,7 +45,8 @@ class _CrtPainter extends CustomPainter {
     // whatever the window size, like a standard-definition picture.
     final spacing = max(2.0, size.height / (strong ? 240 : 300));
     final thickness = spacing * (strong ? 0.5 : 0.4);
-    final linePaint = Paint()..color = Colors.black.withValues(alpha: strong ? 0.32 : 0.18);
+    final linePaint = Paint()
+      ..color = Colors.black.withValues(alpha: strong ? 0.32 : 0.18);
     for (var y = 0.0; y < size.height; y += spacing) {
       canvas.drawRect(Rect.fromLTWH(0, y, size.width, thickness), linePaint);
     }

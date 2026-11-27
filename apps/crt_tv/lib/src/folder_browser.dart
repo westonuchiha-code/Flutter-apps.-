@@ -11,7 +11,11 @@ import 'season.dart';
 
 /// The folder above [path], '' for the list of drives or storage roots, or
 /// null at the top.
-String? parentFolder(String path, {required bool windows, List<String> roots = const []}) {
+String? parentFolder(
+  String path, {
+  required bool windows,
+  List<String> roots = const [],
+}) {
   if (path.isEmpty) return null;
   final separator = windows ? r'\' : '/';
   var trimmed = path;
@@ -41,7 +45,8 @@ String childFolder(String folder, String name, {required bool windows}) {
 }
 
 /// Whether a folder with this name would become a channel.
-bool isChannelFolderName(String name) => parseChannelFolder(splitSeasonTag(name).$1) != null;
+bool isChannelFolderName(String name) =>
+    parseChannelFolder(splitSeasonTag(name).$1) != null;
 
 /// The folders inside [path], in name order, without hidden ones. For '',
 /// the storage [roots] if given (Android), else the drives (Windows).
@@ -51,7 +56,8 @@ List<String>? listFolders(String path, {List<String> roots = const []}) {
   if (path.isEmpty) {
     return [
       for (var letter = 0x41; letter <= 0x5A; letter++)
-        if (Directory('${String.fromCharCode(letter)}:\\').existsSync()) '${String.fromCharCode(letter)}:\\',
+        if (Directory('${String.fromCharCode(letter)}:\\').existsSync())
+          '${String.fromCharCode(letter)}:\\',
     ];
   }
   try {
@@ -72,10 +78,16 @@ List<String>? listFolders(String path, {List<String> roots = const []}) {
 /// Where browsing starts: the TV folder already in use, else wherever
 /// videos usually live on this kind of system. On Android ([roots] given)
 /// the TV's own folder ([defaultFolder]), else internal storage.
-String browseStart(String? current, {List<String> roots = const [], String? defaultFolder}) {
+String browseStart(
+  String? current, {
+  List<String> roots = const [],
+  String? defaultFolder,
+}) {
   if (current != null && Directory(current).existsSync()) return current;
   if (roots.isNotEmpty) {
-    if (defaultFolder != null && Directory(defaultFolder).existsSync()) return defaultFolder;
+    if (defaultFolder != null && Directory(defaultFolder).existsSync()) {
+      return defaultFolder;
+    }
     return Directory(roots.first).existsSync() ? roots.first : '';
   }
   if (Platform.isWindows) return '';
@@ -86,7 +98,9 @@ String browseStart(String? current, {List<String> roots = const [], String? defa
     Platform.environment['HOME'] ?? '',
   ];
   for (final candidate in candidates) {
-    if (candidate.isNotEmpty && Directory(candidate).existsSync()) return candidate;
+    if (candidate.isNotEmpty && Directory(candidate).existsSync()) {
+      return candidate;
+    }
   }
   return '/';
 }

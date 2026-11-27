@@ -26,36 +26,36 @@ enum TvAction {
 
 extension TvActionInfo on TvAction {
   String get label => switch (this) {
-        TvAction.channelUp => 'Channel up',
-        TvAction.channelDown => 'Channel down',
-        TvAction.volumeUp => 'Volume up',
-        TvAction.volumeDown => 'Volume down',
-        TvAction.pause => 'Pause / play',
-        TvAction.lastChannel => 'Last channel',
-        TvAction.mute => 'Mute',
-        TvAction.restart => 'Start this video over',
-        TvAction.subtitles => 'Subtitles',
-        TvAction.audioTrack => 'Audio track',
-        TvAction.info => "What's on",
-        TvAction.guide => 'Guide',
-        TvAction.videoOnly => 'Video only (no cabinet)',
-        TvAction.fullscreen => 'Full screen',
-        TvAction.settings => 'Settings',
-        TvAction.themes => 'Themes',
-        TvAction.power => 'Power',
-      };
+    TvAction.channelUp => 'Channel up',
+    TvAction.channelDown => 'Channel down',
+    TvAction.volumeUp => 'Volume up',
+    TvAction.volumeDown => 'Volume down',
+    TvAction.pause => 'Pause / play',
+    TvAction.lastChannel => 'Last channel',
+    TvAction.mute => 'Mute',
+    TvAction.restart => 'Start this video over',
+    TvAction.subtitles => 'Subtitles',
+    TvAction.audioTrack => 'Audio track',
+    TvAction.info => "What's on",
+    TvAction.guide => 'Guide',
+    TvAction.videoOnly => 'Video only (no cabinet)',
+    TvAction.fullscreen => 'Full screen',
+    TvAction.settings => 'Settings',
+    TvAction.themes => 'Themes',
+    TvAction.power => 'Power',
+  };
 
   /// A few words, for the pop-up controller hints.
   String get shortLabel => switch (this) {
-        TvAction.channelUp => 'Channel +',
-        TvAction.channelDown => 'Channel −',
-        TvAction.volumeUp => 'Volume +',
-        TvAction.volumeDown => 'Volume −',
-        TvAction.pause => 'Pause',
-        TvAction.restart => 'Start over',
-        TvAction.videoOnly => 'Video only',
-        _ => label,
-      };
+    TvAction.channelUp => 'Channel +',
+    TvAction.channelDown => 'Channel −',
+    TvAction.volumeUp => 'Volume +',
+    TvAction.volumeDown => 'Volume −',
+    TvAction.pause => 'Pause',
+    TvAction.restart => 'Start over',
+    TvAction.videoOnly => 'Video only',
+    _ => label,
+  };
 
   /// Whether holding the key or button down keeps doing it.
   bool get repeats =>
@@ -73,8 +73,16 @@ class Bindings {
   final AppSettings _settings;
 
   static final Map<TvAction, List<LogicalKeyboardKey>> defaultKeys = {
-    TvAction.channelUp: [LogicalKeyboardKey.arrowUp, LogicalKeyboardKey.pageUp, LogicalKeyboardKey.channelUp],
-    TvAction.channelDown: [LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.pageDown, LogicalKeyboardKey.channelDown],
+    TvAction.channelUp: [
+      LogicalKeyboardKey.arrowUp,
+      LogicalKeyboardKey.pageUp,
+      LogicalKeyboardKey.channelUp,
+    ],
+    TvAction.channelDown: [
+      LogicalKeyboardKey.arrowDown,
+      LogicalKeyboardKey.pageDown,
+      LogicalKeyboardKey.channelDown,
+    ],
     TvAction.volumeUp: [
       LogicalKeyboardKey.arrowRight,
       LogicalKeyboardKey.equal,
@@ -87,9 +95,18 @@ class Bindings {
       LogicalKeyboardKey.numpadSubtract,
       LogicalKeyboardKey.audioVolumeDown,
     ],
-    TvAction.pause: [LogicalKeyboardKey.space, LogicalKeyboardKey.mediaPlayPause],
-    TvAction.lastChannel: [LogicalKeyboardKey.keyL, LogicalKeyboardKey.backspace],
-    TvAction.mute: [LogicalKeyboardKey.keyM, LogicalKeyboardKey.audioVolumeMute],
+    TvAction.pause: [
+      LogicalKeyboardKey.space,
+      LogicalKeyboardKey.mediaPlayPause,
+    ],
+    TvAction.lastChannel: [
+      LogicalKeyboardKey.keyL,
+      LogicalKeyboardKey.backspace,
+    ],
+    TvAction.mute: [
+      LogicalKeyboardKey.keyM,
+      LogicalKeyboardKey.audioVolumeMute,
+    ],
     TvAction.restart: [LogicalKeyboardKey.keyR],
     TvAction.subtitles: [LogicalKeyboardKey.keyC],
     TvAction.audioTrack: [LogicalKeyboardKey.keyA],
@@ -140,7 +157,9 @@ class Bindings {
     final saved = _settings.keyOverrides[action.name];
     if (saved == null) return defaultKeys[action]!;
     if (saved == _noKey) return const [];
-    return [LogicalKeyboardKey.findKeyByKeyId(saved) ?? LogicalKeyboardKey(saved)];
+    return [
+      LogicalKeyboardKey.findKeyByKeyId(saved) ?? LogicalKeyboardKey(saved),
+    ];
   }
 
   PadButton? padFor(TvAction action) {
@@ -166,7 +185,8 @@ class Bindings {
     return null;
   }
 
-  bool get isCustom => _settings.keyOverrides.isNotEmpty || _settings.padOverrides.isNotEmpty;
+  bool get isCustom =>
+      _settings.keyOverrides.isNotEmpty || _settings.padOverrides.isNotEmpty;
 
   /// Gives [key] to [action]. Returns the action that was left with no key
   /// at all because of it, if any.
@@ -177,7 +197,9 @@ class Bindings {
       final keys = keysFor(other);
       if (!keys.contains(key)) continue;
       final rest = keys.where((k) => k != key).toList();
-      _settings.keyOverrides[other.name] = rest.isEmpty ? _noKey : rest.first.keyId;
+      _settings.keyOverrides[other.name] = rest.isEmpty
+          ? _noKey
+          : rest.first.keyId;
       if (rest.isEmpty) emptied = other;
     }
     _settings.keyOverrides[action.name] = key.keyId;

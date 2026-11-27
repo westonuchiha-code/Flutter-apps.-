@@ -47,6 +47,34 @@ final icons = <String, Art>{
       c.plot(12, 6, 0xFFE04A4A);
     },
   ),
+  'crt_tv': (
+    0xFF2F6B3A,
+    (c) {
+      // A wood-grain CRT set with rabbit ears, showing colour bars.
+      c.line(7, 4, 5, 2, 0xFFC8CCD4);
+      c.line(8, 4, 10, 2, 0xFFC8CCD4);
+      c.rect(2, 5, 13, 13, 0xFF9A6234, filled: true);
+      c.line(2, 13, 13, 13, 0xFF6E4222);
+      c.rect(3, 6, 10, 12, 0xFF22222C, filled: true);
+      const bars = [
+        0xFFE8E8E8,
+        0xFFE8D820,
+        0xFF20D0E0,
+        0xFF30C040,
+        0xFFD040C8,
+        0xFFE03830,
+      ];
+      for (var i = 0; i < bars.length; i++) {
+        c.line(4 + i, 7, 4 + i, 10, bars[i]);
+      }
+      c.line(4, 11, 9, 11, 0xFF2840C8);
+      c.plot(11, 7, 0xFFE8D8A0);
+      c.plot(12, 7, 0xFFE8D8A0);
+      for (final y in [9, 11]) {
+        c.line(11, y, 12, y, 0xFF5A3418);
+      }
+    },
+  ),
   'dev_dashboard': (
     0xFF2E3A4E,
     (c) {
@@ -253,7 +281,13 @@ final icons = <String, Art>{
       c.rect(3, 1, 12, 14, 0xFF16161E, filled: true);
       c.rect(4, 2, 11, 13, 0xFF3A3C4C, filled: true);
       c.line(12, 2, 12, 13, 0xFF56586C);
-      const paint = [0xFFE5483C, 0xFFF2B51C, 0xFF3BB54A, 0xFF4A7AE0, 0xFFB04AE0];
+      const paint = [
+        0xFFE5483C,
+        0xFFF2B51C,
+        0xFF3BB54A,
+        0xFF4A7AE0,
+        0xFFB04AE0,
+      ];
       for (var i = 0; i < 5; i++) {
         c.line(5, 3 + i, 10, 3 + i, paint[i]);
       }

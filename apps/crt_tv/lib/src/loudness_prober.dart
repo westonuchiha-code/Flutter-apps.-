@@ -25,7 +25,11 @@ class LoudnessProber {
   /// very start, which is often a logo or silence. [stillWanted] is asked
   /// when this request's turn comes; if it says no (the channel has moved
   /// on), nothing is measured and the result is null.
-  Future<Loudness?> measure(String path, {Duration? length, bool Function()? stillWanted}) {
+  Future<Loudness?> measure(
+    String path, {
+    Duration? length,
+    bool Function()? stillWanted,
+  }) {
     final result = _queue.then((_) async {
       if (stillWanted != null && !stillWanted()) return null;
       return _measureNow(path, length);
@@ -36,7 +40,9 @@ class LoudnessProber {
 
   Future<Loudness?> _measureNow(String path, Duration? length) async {
     // Two alternating files, in case the previous one is still being let go.
-    final scratch = File('${_scratchDir.path}${Platform.pathSeparator}level_probe_${_count++ % 2}.pcm');
+    final scratch = File(
+      '${_scratchDir.path}${Platform.pathSeparator}level_probe_${_count++ % 2}.pcm',
+    );
     StreamSubscription<bool>? finished;
     try {
       final player = _player ??= Player();
@@ -63,18 +69,26 @@ class LoudnessProber {
       var start = Duration.zero;
       if (length != null && length > const Duration(minutes: 2)) {
         start = length * 0.1;
-        if (start > const Duration(minutes: 2)) start = const Duration(minutes: 2);
+        if (start > const Duration(minutes: 2)) {
+          start = const Duration(minutes: 2);
+        }
       }
       final done = Completer<void>();
       finished = player.stream.completed.listen((completed) {
         if (completed && !done.isCompleted) done.complete();
       });
-      await player.open(Media(path, start: start > Duration.zero ? start : null), play: true);
+      await player.open(
+        Media(path, start: start > Duration.zero ? start : null),
+        play: true,
+      );
       await done.future.timeout(const Duration(seconds: 20), onTimeout: () {});
       await player.stop();
       if (!scratch.existsSync()) return null;
       final bytes = await scratch.readAsBytes();
-      return analyseLoudness(Int16List.sublistView(bytes, 0, bytes.length - bytes.length % 2), _sampleRate);
+      return analyseLoudness(
+        Int16List.sublistView(bytes, 0, bytes.length - bytes.length % 2),
+        _sampleRate,
+      );
     } catch (_) {
       return null;
     } finally {

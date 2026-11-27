@@ -20,14 +20,30 @@ void main() {
     expect(const TrackInfo('1', language: 'ENG').isIn(english), isTrue);
     expect(const TrackInfo('1', language: 'en-US').isIn(english), isTrue);
     expect(const TrackInfo('1', title: 'English 5.1').isIn(english), isTrue);
-    expect(const TrackInfo('1', language: 'und', title: 'English').isIn(english), isTrue);
-    expect(const TrackInfo('1', language: 'jpn', title: 'English staff commentary').isIn(english), isFalse);
+    expect(
+      const TrackInfo('1', language: 'und', title: 'English').isIn(english),
+      isTrue,
+    );
+    expect(
+      const TrackInfo(
+        '1',
+        language: 'jpn',
+        title: 'English staff commentary',
+      ).isIn(english),
+      isFalse,
+    );
     expect(const TrackInfo('1').isIn(english), isFalse);
   });
 
   test('tracks are named for the menu', () {
-    expect(trackName(1, const TrackInfo('2', language: 'eng', title: 'Dub')), '2 ENGLISH');
-    expect(trackName(0, const TrackInfo('1', title: 'Commentary')), '1 COMMENTARY');
+    expect(
+      trackName(1, const TrackInfo('2', language: 'eng', title: 'Dub')),
+      '2 ENGLISH',
+    );
+    expect(
+      trackName(0, const TrackInfo('1', title: 'Commentary')),
+      '1 COMMENTARY',
+    );
     expect(trackName(0, const TrackInfo('1', language: 'swe')), '1 SWE');
     expect(trackName(2, const TrackInfo('3')), '3');
   });
@@ -41,7 +57,11 @@ void main() {
       mode: SubtitleMode.fileDefault,
     );
     expect(choice.audioId, '2');
-    expect(choice.subtitleId, isNull, reason: 'file default leaves subtitles alone');
+    expect(
+      choice.subtitleId,
+      isNull,
+      reason: 'file default leaves subtitles alone',
+    );
 
     final none = chooseTracks(
       audio: japaneseOnly,
@@ -50,40 +70,77 @@ void main() {
       subtitleLanguage: null,
       mode: SubtitleMode.off,
     );
-    expect(none.audioId, isNull, reason: 'no English sound, so keep what the file plays');
+    expect(
+      none.audioId,
+      isNull,
+      reason: 'no English sound, so keep what the file plays',
+    );
     expect(none.subtitleId, TrackChoice.noSubtitles);
   });
 
-  test('subtitles on: the preferred language, or off if the video lacks it', () {
-    expect(
-      chooseTracks(audio: dual, subtitles: subs, audioLanguage: null, subtitleLanguage: english, mode: SubtitleMode.on)
-          .subtitleId,
-      '2',
-    );
-    expect(
-      chooseTracks(audio: dual, subtitles: subs, audioLanguage: null, subtitleLanguage: japanese, mode: SubtitleMode.on)
-          .subtitleId,
-      TrackChoice.noSubtitles,
-    );
-    expect(
-      chooseTracks(audio: dual, subtitles: subs, audioLanguage: null, subtitleLanguage: null, mode: SubtitleMode.on)
-          .subtitleId,
-      '1',
-      reason: 'no language chosen means the first one',
-    );
-  });
-
-  test('automatic subtitles appear only when the sound is in another language', () {
-    TrackChoice auto(List<TrackInfo> audio) => chooseTracks(
-          audio: audio,
+  test(
+    'subtitles on: the preferred language, or off if the video lacks it',
+    () {
+      expect(
+        chooseTracks(
+          audio: dual,
           subtitles: subs,
-          audioLanguage: english,
+          audioLanguage: null,
           subtitleLanguage: english,
-          mode: SubtitleMode.auto,
-        );
-    expect(auto(dual).subtitleId, TrackChoice.noSubtitles, reason: 'English dub is there');
-    expect(auto(dual).audioId, '2');
-    expect(auto(japaneseOnly).subtitleId, '2', reason: 'Japanese only: show English subtitles');
-    expect(auto(untagged).subtitleId, TrackChoice.noSubtitles, reason: "can't tell, so don't guess");
-  });
+          mode: SubtitleMode.on,
+        ).subtitleId,
+        '2',
+      );
+      expect(
+        chooseTracks(
+          audio: dual,
+          subtitles: subs,
+          audioLanguage: null,
+          subtitleLanguage: japanese,
+          mode: SubtitleMode.on,
+        ).subtitleId,
+        TrackChoice.noSubtitles,
+      );
+      expect(
+        chooseTracks(
+          audio: dual,
+          subtitles: subs,
+          audioLanguage: null,
+          subtitleLanguage: null,
+          mode: SubtitleMode.on,
+        ).subtitleId,
+        '1',
+        reason: 'no language chosen means the first one',
+      );
+    },
+  );
+
+  test(
+    'automatic subtitles appear only when the sound is in another language',
+    () {
+      TrackChoice auto(List<TrackInfo> audio) => chooseTracks(
+        audio: audio,
+        subtitles: subs,
+        audioLanguage: english,
+        subtitleLanguage: english,
+        mode: SubtitleMode.auto,
+      );
+      expect(
+        auto(dual).subtitleId,
+        TrackChoice.noSubtitles,
+        reason: 'English dub is there',
+      );
+      expect(auto(dual).audioId, '2');
+      expect(
+        auto(japaneseOnly).subtitleId,
+        '2',
+        reason: 'Japanese only: show English subtitles',
+      );
+      expect(
+        auto(untagged).subtitleId,
+        TrackChoice.noSubtitles,
+        reason: "can't tell, so don't guess",
+      );
+    },
+  );
 }

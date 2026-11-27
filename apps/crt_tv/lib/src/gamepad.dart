@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/services.dart';
 
 import 'diag.dart';
 
@@ -29,12 +30,98 @@ enum PadButton {
   r3,
 }
 
+/// What a key press from a controller means: [button], and whether to act
+/// on it now ([fire]; false for a release, or a held key between repeats).
+typedef PadKey = ({PadButton button, bool fire});
+
+/// Controller buttons that arrive as key presses. Android delivers every
+/// controller this way (the Retroid Pocket's built-in one too): the face,
+/// shoulder, Start and Select buttons as game-button keys, the d-pad as
+/// arrow keys. Turning them into [PadButton]s means they follow the
+/// controller settings, and the d-pad repeats at [GamepadInput]'s pace
+/// instead of Android's much faster key repeat.
+class PadKeys {
+  PadKeys({required this.android});
+
+  /// On Android the arrow keys (and a remote's centre/select key) are the
+  /// controller's d-pad. Elsewhere they stay keyboard keys.
+  final bool android;
+
+  static final Map<LogicalKeyboardKey, PadButton> buttons = {
+    LogicalKeyboardKey.gameButtonA: PadButton.south,
+    LogicalKeyboardKey.gameButtonB: PadButton.east,
+    LogicalKeyboardKey.gameButtonX: PadButton.west,
+    LogicalKeyboardKey.gameButtonY: PadButton.north,
+    LogicalKeyboardKey.gameButtonLeft1: PadButton.l1,
+    LogicalKeyboardKey.gameButtonRight1: PadButton.r1,
+    LogicalKeyboardKey.gameButtonLeft2: PadButton.l2,
+    LogicalKeyboardKey.gameButtonRight2: PadButton.r2,
+    LogicalKeyboardKey.gameButtonSelect: PadButton.select,
+    LogicalKeyboardKey.gameButtonStart: PadButton.start,
+    LogicalKeyboardKey.gameButtonThumbLeft: PadButton.l3,
+    LogicalKeyboardKey.gameButtonThumbRight: PadButton.r3,
+  };
+
+  static final Map<LogicalKeyboardKey, PadButton> androidKeys = {
+    LogicalKeyboardKey.arrowUp: PadButton.up,
+    LogicalKeyboardKey.arrowDown: PadButton.down,
+    LogicalKeyboardKey.arrowLeft: PadButton.left,
+    LogicalKeyboardKey.arrowRight: PadButton.right,
+    // A TV remote's or d-pad's centre button.
+    LogicalKeyboardKey.select: PadButton.south,
+  };
+
+  static const _directions = {
+    PadButton.up,
+    PadButton.down,
+    PadButton.left,
+    PadButton.right,
+  };
+
+  /// When the held direction may fire again (in the events' own time).
+  Duration? _nextRepeat;
+
+  /// The controller button [key] is, or null for a keyboard key.
+  PadButton? buttonFor(LogicalKeyboardKey key) =>
+      buttons[key] ?? (android ? androidKeys[key] : null);
+
+  /// What [event] means, or null if it isn't a controller key. A press
+  /// fires once; a held direction fires again after
+  /// [GamepadInput.firstRepeat], then every [GamepadInput.nextRepeat];
+  /// other held buttons don't repeat.
+  PadKey? read(KeyEvent event) {
+    final button = buttonFor(event.logicalKey);
+    if (button == null) return null;
+    final direction = _directions.contains(button);
+    final at = event.timeStamp;
+    switch (event) {
+      case KeyDownEvent():
+        if (direction) _nextRepeat = at + GamepadInput.firstRepeat;
+        return (button: button, fire: true);
+      case KeyRepeatEvent():
+        final next = _nextRepeat;
+        if (!direction || next == null || at < next) {
+          return (button: button, fire: false);
+        }
+        _nextRepeat = at + GamepadInput.nextRepeat;
+        return (button: button, fire: true);
+      default:
+        if (direction) _nextRepeat = null;
+        return (button: button, fire: false);
+    }
+  }
+}
+
 /// Which symbols are printed on the controller in use.
 enum PadKind { playstation, xbox }
 
-typedef _ReadNative =Uint32 Function(Uint32 index, Pointer<Uint8> state);
+typedef _ReadNative = Uint32 Function(Uint32 index, Pointer<Uint8> state);
 typedef _ReadDart = int Function(int index, Pointer<Uint8> state);
-typedef _CapsNative = Uint32 Function(IntPtr index, Pointer<Uint8> caps, Uint32 size);
+typedef _CapsNative = Uint32 Function(
+  IntPtr index,
+  Pointer<Uint8> caps,
+  Uint32 size,
+);
 typedef _CapsDart = int Function(int index, Pointer<Uint8> caps, int size);
 
 /// Reads game controllers on desktop. Windows: Xbox-style ones through
@@ -43,7 +130,12 @@ typedef _CapsDart = int Function(int index, Pointer<Uint8> caps, int size);
 /// (/dev/input/js*). Android delivers controller buttons as key presses, so
 /// those are handled with the keyboard instead.
 class GamepadInput {
-  GamepadInput({required this.onButton, required this.isActive, this.onChanged, this.onQuitHold});
+  GamepadInput({
+    required this.onButton,
+    required this.isActive,
+    this.onChanged,
+    this.onQuitHold,
+  });
 
   /// Called once per press; the four directions repeat while held.
   final void Function(PadButton button) onButton;
@@ -53,9 +145,16 @@ class GamepadInput {
   final bool Function() isActive;
 
   static const _tick = Duration(milliseconds: 50);
-  static const _firstRepeat = Duration(milliseconds: 450);
-  static const _nextRepeat = Duration(milliseconds: 220);
-  static const _directions = [PadButton.up, PadButton.down, PadButton.left, PadButton.right];
+
+  /// How long a direction is held before it repeats, then how often.
+  static const firstRepeat = Duration(milliseconds: 450);
+  static const nextRepeat = Duration(milliseconds: 220);
+  static const _directions = [
+    PadButton.up,
+    PadButton.down,
+    PadButton.left,
+    PadButton.right,
+  ];
 
   static const _xinputSlots = 4;
   static const _xinputSize = 16;
@@ -147,8 +246,8 @@ class GamepadInput {
     if (!Platform.isWindows) return;
     for (final name in const ['xinput1_4.dll', 'xinput9_1_0.dll']) {
       try {
-        _xinputGetState =
-            DynamicLibrary.open(name).lookupFunction<_ReadNative, _ReadDart>('XInputGetState');
+        _xinputGetState = DynamicLibrary.open(name)
+            .lookupFunction<_ReadNative, _ReadDart>('XInputGetState');
         break;
       } catch (_) {
         // Try the older library.
@@ -156,8 +255,12 @@ class GamepadInput {
     }
     try {
       final winmm = DynamicLibrary.open('winmm.dll');
-      _joyGetPosEx = winmm.lookupFunction<_ReadNative, _ReadDart>('joyGetPosEx');
-      _joyGetDevCaps = winmm.lookupFunction<_CapsNative, _CapsDart>('joyGetDevCapsW');
+      _joyGetPosEx = winmm.lookupFunction<_ReadNative, _ReadDart>(
+        'joyGetPosEx',
+      );
+      _joyGetDevCaps = winmm.lookupFunction<_CapsNative, _CapsDart>(
+        'joyGetDevCapsW',
+      );
     } catch (_) {
       // No joystick interface; XInput alone still works.
     }
@@ -202,7 +305,8 @@ class GamepadInput {
 
     final active = isActive();
     final now = DateTime.now();
-    if (pressed.contains(PadButton.select) && pressed.contains(PadButton.start)) {
+    if (pressed.contains(PadButton.select) &&
+        pressed.contains(PadButton.start)) {
       _quitSince ??= now;
       if (!_quitFired && active && now.difference(_quitSince!) >= _quitHold) {
         _quitFired = true;
@@ -223,11 +327,11 @@ class GamepadInput {
 
     if (direction != _heldDirection) {
       _heldDirection = direction;
-      _nextFire = now.add(_firstRepeat);
+      _nextFire = now.add(firstRepeat);
     } else if (direction == null || now.isBefore(_nextFire)) {
       return;
     } else {
-      _nextFire = now.add(_nextRepeat);
+      _nextFire = now.add(nextRepeat);
     }
     if (direction != null && active) onButton(direction);
   }
@@ -245,7 +349,10 @@ class GamepadInput {
       final microsoft = _joyMakers.values.where((m) => m == _microsoft).length;
       final xinput = _xinputConnected.length;
       // With XInput active, Microsoft joysticks are those same pads again.
-      others = xinput + (_joyMakers.length - sony - microsoft) + (xinput == 0 ? microsoft : 0);
+      others =
+          xinput +
+          (_joyMakers.length - sony - microsoft) +
+          (xinput == 0 ? microsoft : 0);
     }
     connected = sony + others;
     kind = kindFromConnected(sony: sony, others: others) ?? kind;
@@ -261,10 +368,15 @@ class GamepadInput {
     if (!Platform.isWindows) return true;
     try {
       final user32 = DynamicLibrary.open('user32.dll');
-      _foregroundWindow ??=
-          user32.lookupFunction<IntPtr Function(), int Function()>('GetForegroundWindow');
-      _windowProcess ??= user32.lookupFunction<Uint32 Function(IntPtr, Pointer<Uint32>),
-          int Function(int, Pointer<Uint32>)>('GetWindowThreadProcessId');
+      _foregroundWindow ??= user32
+          .lookupFunction<IntPtr Function(), int Function()>(
+            'GetForegroundWindow',
+          );
+      _windowProcess ??= user32
+          .lookupFunction<
+            Uint32 Function(IntPtr, Pointer<Uint32>),
+            int Function(int, Pointer<Uint32>)
+          >('GetWindowThreadProcessId');
       final owner = calloc<Uint32>();
       try {
         _windowProcess!(_foregroundWindow!(), owner);
@@ -305,7 +417,11 @@ class GamepadInput {
     }
   }
 
-  void _readJoysticks(Pointer<Uint8> buffer, bool rescan, Set<PadButton> pressed) {
+  void _readJoysticks(
+    Pointer<Uint8> buffer,
+    bool rescan,
+    Set<PadButton> pressed,
+  ) {
     final getPos = _joyGetPosEx;
     if (getPos == null) return;
     for (var i = 0; i < _joySlots; i++) {
@@ -380,7 +496,9 @@ class GamepadInput {
       if (!_jsDevice.hasMatch(name) || _linuxPads.containsKey(name)) continue;
       var sony = false;
       try {
-        final vendor = File('/sys/class/input/$name/device/id/vendor').readAsStringSync().trim();
+        final vendor = File('/sys/class/input/$name/device/id/vendor')
+            .readAsStringSync()
+            .trim();
         sony = vendor.toLowerCase() == '054c';
       } catch (_) {
         // Unknown maker: treat it as an Xbox-style pad.
@@ -394,27 +512,29 @@ class GamepadInput {
       // The device hands over whatever events have arrived; it closes or
       // errors when the controller is unplugged.
       pad.input = File(entry.path).openRead().listen(
-            (bytes) {
-              applyJsEvents(bytes, pad.pending, pad.buttons, pad.axes);
-              if (!heard) {
-                heard = true;
-                diag('controller $name: first ${bytes.length} bytes read');
-              }
-              if (!pressedOnce && pad.buttons.isNotEmpty) {
-                pressedOnce = true;
-                diag('controller $name: first button press seen (button ${pad.buttons.first})');
-              }
-            },
-            onError: (Object error) {
-              diag('controller $name: read failed: $error');
-              drop();
-            },
-            onDone: () {
-              diag('controller $name: closed');
-              drop();
-            },
-            cancelOnError: true,
-          );
+        (bytes) {
+          applyJsEvents(bytes, pad.pending, pad.buttons, pad.axes);
+          if (!heard) {
+            heard = true;
+            diag('controller $name: first ${bytes.length} bytes read');
+          }
+          if (!pressedOnce && pad.buttons.isNotEmpty) {
+            pressedOnce = true;
+            diag(
+              'controller $name: first button press seen (button ${pad.buttons.first})',
+            );
+          }
+        },
+        onError: (Object error) {
+          diag('controller $name: read failed: $error');
+          drop();
+        },
+        onDone: () {
+          diag('controller $name: closed');
+          drop();
+        },
+        cancelOnError: true,
+      );
     }
   }
 
@@ -426,7 +546,8 @@ class GamepadInput {
     final caps = _caps;
     if (getCaps == null || caps == null) return 0;
     if (getCaps(index, caps, _joyCapsSize) != 0) return 0;
-    return ByteData.sublistView(caps.asTypedList(2)).getUint16(0, Endian.little);
+    return ByteData.sublistView(caps.asTypedList(2))
+        .getUint16(0, Endian.little);
   }
 
   /// [x] grows to the right and [y] grows upward.
@@ -459,7 +580,12 @@ class _LinuxPad {
 /// bytes: a time (4), a value (2, signed), a type (1: 1 = button, 2 = axis,
 /// plus 0x80 for "this is the starting state") and a button or axis number.
 /// [pending] carries a half-received event over to the next call.
-void applyJsEvents(List<int> bytes, List<int> pending, Set<int> buttons, Map<int, int> axes) {
+void applyJsEvents(
+  List<int> bytes,
+  List<int> pending,
+  Set<int> buttons,
+  Map<int, int> axes,
+) {
   pending.addAll(bytes);
   var offset = 0;
   for (; offset + 8 <= pending.length; offset += 8) {
@@ -478,9 +604,18 @@ void applyJsEvents(List<int> bytes, List<int> pending, Set<int> buttons, Map<int
 
 /// Which buttons a Linux joystick's state means. Linux numbers buttons in a
 /// fixed order per driver; PlayStation pads differ from Xbox-style ones.
-Set<PadButton> linuxPadPressed(Set<int> buttons, Map<int, int> axes, {required bool sony}) {
+Set<PadButton> linuxPadPressed(
+  Set<int> buttons,
+  Map<int, int> axes, {
+  required bool sony,
+}) {
   const threshold = 16000;
-  const shared = {0: PadButton.south, 1: PadButton.east, 4: PadButton.l1, 5: PadButton.r1};
+  const shared = {
+    0: PadButton.south,
+    1: PadButton.east,
+    4: PadButton.l1,
+    5: PadButton.r1,
+  };
   const xbox = {
     2: PadButton.west,
     3: PadButton.north,
@@ -517,7 +652,9 @@ Set<PadButton> linuxPadPressed(Set<int> buttons, Map<int, int> axes, {required b
     return x > 0 ? PadButton.right : PadButton.left;
   }
 
-  final way = direction(axes[6] ?? 0, axes[7] ?? 0) ?? direction(axes[0] ?? 0, axes[1] ?? 0);
+  final way =
+      direction(axes[6] ?? 0, axes[7] ?? 0) ??
+      direction(axes[0] ?? 0, axes[1] ?? 0);
   if (way != null) pressed.add(way);
   return pressed;
 }

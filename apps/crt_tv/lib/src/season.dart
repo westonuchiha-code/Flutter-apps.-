@@ -1,10 +1,21 @@
 /// Seasonal channels: a tag in square brackets in a channel's folder name
 /// says which months it's on the air, e.g. "Channel Halloween [Oct]" or
 /// "Channel Beach Episodes [Jun-Aug]". No tag means all year.
+library;
 
 const List<String> _monthNames = [
-  'january', 'february', 'march', 'april', 'may', 'june',
-  'july', 'august', 'september', 'october', 'november', 'december',
+  'january',
+  'february',
+  'march',
+  'april',
+  'may',
+  'june',
+  'july',
+  'august',
+  'september',
+  'october',
+  'november',
+  'december',
 ];
 
 const Map<String, List<int>> _seasonWords = {
@@ -49,7 +60,7 @@ Set<int>? parseSeason(String text) {
     final to = _month(ends.last);
     if (from == null || to == null) return null;
     // A range may run over New Year: Nov-Jan is November, December, January.
-    for (var m = from;; m = m % 12 + 1) {
+    for (var m = from; ; m = m % 12 + 1) {
       months.add(m);
       if (m == to) break;
     }
@@ -63,7 +74,9 @@ Set<int>? parseSeason(String text) {
   for (final match in _tag.allMatches(folderName)) {
     final months = parseSeason(match.group(1)!);
     if (months != null) {
-      final cleaned = folderName.replaceRange(match.start, match.end, ' ').trim();
+      final cleaned = folderName
+          .replaceRange(match.start, match.end, ' ')
+          .trim();
       return (cleaned.replaceAll(RegExp(r'\s+'), ' '), months);
     }
   }
@@ -71,7 +84,8 @@ Set<int>? parseSeason(String text) {
 }
 
 /// Whether a channel with these [months] is on the air on [date].
-bool inSeason(Set<int> months, DateTime date) => months.isEmpty || months.contains(date.month);
+bool inSeason(Set<int> months, DateTime date) =>
+    months.isEmpty || months.contains(date.month);
 
 /// "OCT", "JUN-AUG", "DEC-FEB", "OCT, DEC"; '' for all year.
 String seasonLabel(Set<int> months) {

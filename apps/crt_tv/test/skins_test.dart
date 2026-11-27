@@ -27,14 +27,18 @@ Widget cabinet(SkinStyle skin, Size size, Key key) {
               ),
             ),
           ),
-          if (layout.clock != null) Positioned.fromRect(rect: layout.clock!, child: const VcrClock()),
+          if (layout.clock != null)
+            Positioned.fromRect(rect: layout.clock!, child: const VcrClock()),
           if (layout.decorate)
             Positioned(
               left: layout.screenRect.right + layout.bezel,
               top: 0,
               bottom: 0,
               width: layout.pillar,
-              child: SidePanel(state: PanelState(skin: skin, channelNumber: 4, volume: 70), width: layout.pillar),
+              child: SidePanel(
+                state: PanelState(skin: skin, channelNumber: 4, volume: 70),
+                width: layout.pillar,
+              ),
             ),
         ],
       ),
@@ -48,10 +52,17 @@ void main() {
   testWidgets('every cabinet lays out at any window size', (tester) async {
     tester.view.devicePixelRatio = 1;
     // Wide, small, nearly square (pillars too thin to dress) and tall.
-    for (final size in const [Size(1920, 1080), Size(640, 360), Size(820, 600), Size(400, 700)]) {
+    for (final size in const [
+      Size(1920, 1080),
+      Size(640, 360),
+      Size(820, 600),
+      Size(400, 700),
+    ]) {
       tester.view.physicalSize = size;
       for (final skin in skins) {
-        await tester.pumpWidget(MaterialApp(home: Scaffold(body: cabinet(skin, size, UniqueKey()))));
+        await tester.pumpWidget(
+          MaterialApp(home: Scaffold(body: cabinet(skin, size, UniqueKey()))),
+        );
         expect(tester.takeException(), isNull, reason: '${skin.name} at $size');
       }
     }
@@ -63,8 +74,11 @@ void main() {
     tester.view.devicePixelRatio = 1;
     for (final skin in skins) {
       final key = GlobalKey();
-      await tester.pumpWidget(MaterialApp(home: Scaffold(body: cabinet(skin, size, key))));
-      final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: cabinet(skin, size, key))),
+      );
+      final boundary =
+          key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
       final pixels = await tester.runAsync(() async {
         final image = await boundary.toImage();
         return (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
@@ -76,7 +90,11 @@ void main() {
       for (var y = 0; y < size.height; y += 4) {
         for (var x = 0; x < pillar; x += 4) {
           final i = (y * size.width.toInt() + x) * 4;
-          seen.add((pixels!.getUint8(i) >> 4) << 8 | (pixels.getUint8(i + 1) >> 4) << 4 | pixels.getUint8(i + 2) >> 4);
+          seen.add(
+            (pixels!.getUint8(i) >> 4) << 8 |
+                (pixels.getUint8(i + 1) >> 4) << 4 |
+                pixels.getUint8(i + 2) >> 4,
+          );
         }
       }
       // ignore: avoid_print
@@ -84,7 +102,11 @@ void main() {
       // "Black plastic" is one of the original plain cabinets: a bare
       // gradient on purpose. Everything else has to show some material.
       if (skin == SkinStyle.black) continue;
-      expect(seen.length, greaterThan(12), reason: '${skin.name} looks flat: only ${seen.length} colours');
+      expect(
+        seen.length,
+        greaterThan(12),
+        reason: '${skin.name} looks flat: only ${seen.length} colours',
+      );
     }
   });
 
