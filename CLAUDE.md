@@ -215,7 +215,7 @@ apps/        # one folder per Flutter application
              #                      XMB Frontend's companion; starts RetroArch / PPSSPP /
              #                      DuckStation / Dolphin; cross saves, comics, Memory Card row
              #                      (Save Manager + Pokéville; save_screens' SaveManagerHome; Start game uses the XMB's
-             #                      launcher); Pokéville and CRT TV come later (Android only)
+             #                      launcher); Video row opens CRT TV (Android only)
              #   save_manager     - the PC XMB Frontend's save manager, standalone: memory cards of
              #                      PS1/PS2/DC/GC/N64/Saturn/Neo Geo + PS3 saves; copy, move, back up,
              #                      restore, undelete, export/import, favorites, card looks (save_kit)
