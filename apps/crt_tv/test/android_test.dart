@@ -207,7 +207,7 @@ void main() {
       final (tv, storage, dir) = await makeTv(access: true);
       addTearDown(() {
         tv.dispose();
-        dir.deleteSync(recursive: true);
+        _tidy(dir);
       });
       final tvDir = defaultTvFolder(storage.root);
       expect(tv.settings.libraryPath, tvDir);
@@ -222,7 +222,7 @@ void main() {
         final (tv, storage, dir) = await makeTv(access: false);
         addTearDown(() {
           tv.dispose();
-          dir.deleteSync(recursive: true);
+          _tidy(dir);
         });
         expect(tv.settings.libraryPath, isNull);
         expect(tv.allFilesAccess, isFalse);
@@ -237,4 +237,14 @@ void main() {
       },
     );
   });
+}
+
+/// Windows won't delete a file something still has open (the settings
+/// store can still be closing): a temp folder left behind is harmless.
+void _tidy(Directory dir) {
+  try {
+    dir.deleteSync(recursive: true);
+  } on FileSystemException {
+    // left for the system to clear
+  }
 }
