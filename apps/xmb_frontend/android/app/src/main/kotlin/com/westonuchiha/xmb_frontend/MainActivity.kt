@@ -22,19 +22,54 @@ class MainActivity : FlutterActivity() {
     private val io = java.util.concurrent.Executors.newSingleThreadExecutor()
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
     private val comics by lazy { ComicArchives(cacheDir) }
+    private var channel: MethodChannel? = null
+
+    /// Start game from the Save Manager app, waiting for the menu to ask
+    /// ("takeStartRequest"): extras start_game_system / _title / _serial /
+    /// _file. Only a library game the menu matches can start this way.
+    private var startRequest: Map<String, String>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Emulators take games as file paths (file:// data), which Android
         // otherwise refuses to hand to another app.
         StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder().build())
+        // Cold start: the request came with the launching intent (not again
+        // when Android recreates the activity from its history).
+        if (savedInstanceState == null) keepStartRequest(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // Warm: the menu is running; tell it to ask.
+        if (keepStartRequest(intent)) channel?.invokeMethod("startRequest", null)
+    }
+
+    private fun keepStartRequest(intent: Intent?): Boolean {
+        val system = intent?.getStringExtra("start_game_system") ?: return false
+        if (system.isBlank()) return false
+        startRequest = mapOf(
+            "start_game_system" to system,
+            "start_game_title" to (intent.getStringExtra("start_game_title") ?: ""),
+            "start_game_serial" to (intent.getStringExtra("start_game_serial") ?: ""),
+            "start_game_file" to (intent.getStringExtra("start_game_file") ?: ""),
+        )
+        // Taken once: a later recreate doesn't start it again.
+        intent.removeExtra("start_game_system")
+        return true
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "xmb/android")
-            .setMethodCallHandler { call, result ->
+        val ch = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "xmb/android")
+        channel = ch
+        ch.setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "takeStartRequest" -> {
+                        result.success(startRequest)
+                        startRequest = null
+                    }
                     "installed" -> {
                         val pkgs = call.argument<List<String>>("packages") ?: emptyList()
                         result.success(pkgs.filter { isInstalled(it) })

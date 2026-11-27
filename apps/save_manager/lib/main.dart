@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:app_shell/app_shell.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:save_screens/save_screens.dart';
+
+import 'src/xmb_start.dart';
 
 /// Folders to read besides the emulators' usual ones.
 const extraFoldersSetting = TextSetting(
@@ -78,6 +82,9 @@ class HomePage extends StatelessWidget {
         makeConfig: makeConfig,
         runner: runner,
         showHints: showHints,
+        // Android: Start game goes to the XMB Frontend's library.
+        onStartSave: Platform.isAndroid ? startInXmb : null,
+        startSystems: xmbStartSystems,
       ),
     );
   }

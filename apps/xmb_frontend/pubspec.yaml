@@ -43,6 +43,8 @@ dependencies:
     path: ../../packages/pokeville
   save_screens:
     path: ../../packages/save_screens
+  save_kit:
+    path: ../../packages/save_kit
   app_shell:
     path: ../../packages/app_shell
   archive: ^4.7.1

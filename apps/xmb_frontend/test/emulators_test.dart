@@ -54,6 +54,19 @@ void main() {
     );
     final psp = setUpLines(Runner.ppsspp, f).join('\n');
     expect(psp, contains('Internal storage › XMB Frontend › Saves › PPSSPP'));
+    final gc = setUpLines(Runner.dolphin, f).join('\n');
+    expect(
+      gc,
+      contains('Internal storage › XMB Frontend › Saves › Dolphin › GC'),
+    );
+    expect(
+      gc,
+      contains(
+        'Internal storage › XMB Frontend › Saves › Dolphin › Wii › title',
+      ),
+    );
+    expect(gc, contains('GCI Folder'));
+    expect(gc, isNot(contains("don't cross over")));
     final ra = setUpLines(Runner.retroarch, f).join('\n');
     expect(
       ra,

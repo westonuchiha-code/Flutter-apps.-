@@ -60,6 +60,23 @@ class AndroidBridge {
         false;
   }
 
+  /// Start game from the Save Manager app (null: none waiting). Taken
+  /// once: the next call answers null.
+  Future<Map<Object?, Object?>?> takeStartRequest() async {
+    if (!available) return null;
+    return _channel.invokeMethod<Map<Object?, Object?>>('takeStartRequest');
+  }
+
+  /// [onRequest] hears that a start request arrived while the menu runs
+  /// (then ask [takeStartRequest]).
+  void listenForStartRequests(void Function() onRequest) {
+    if (!available) return;
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'startRequest') onRequest();
+      return null;
+    });
+  }
+
   /// Hands the Cross-Save token to the Pokéville app ('' = signed out),
   /// through the menu's signature-protected TokenProvider.
   Future<void> setSharedToken(String token) async {

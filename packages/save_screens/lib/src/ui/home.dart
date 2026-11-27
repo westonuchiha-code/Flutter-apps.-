@@ -30,6 +30,8 @@ class SaveManagerHome extends StatefulWidget {
     this.games = const [],
     this.played = const {},
     this.onGame,
+    this.onStartSave,
+    this.startSystems = const {},
     this.onLeave,
     this.actions = const [],
     this.onTick,
@@ -50,6 +52,13 @@ class SaveManagerHome extends StatefulWidget {
 
   /// Start game: the host starts it (null: a notice says it can't here).
   final void Function(String gameId)? onGame;
+
+  /// Start game for a host with no library (the Save Manager app hands it
+  /// to the XMB Frontend): every save of [startSystems] (empty: any) that
+  /// the library didn't match offers Start game, and this hears the save.
+  /// What it returns, if anything, shows as a notice.
+  final Future<String?> Function(CardSave save)? onStartSave;
+  final Set<String> startSystems;
 
   /// B with nowhere further back.
   final VoidCallback? onLeave;
@@ -147,9 +156,44 @@ class _SaveManagerHomeState extends State<SaveManagerHome>
       },
     );
     c.state.sort = widget.sort;
+    if (widget.onStartSave != null) c.addListener(() => _markStartable(c));
     final old = _c;
     setState(() => _c = c);
     old?.dispose();
+  }
+
+  /// Saves Start game hands to [SaveManagerHome.onStartSave], by the
+  /// stand-in game id they're given.
+  final _startable = <String, CardSave>{};
+  static const _startTag = 'start-save:';
+
+  /// The saves on show get a stand-in game id, so their options offer
+  /// Start game and A hands it to [_game].
+  void _markStartable(SaveManagerController c) {
+    final only = widget.startSystems;
+    _startable.clear();
+    for (final s in c.state.saves) {
+      if (s.gameId.isEmpty && (only.isEmpty || only.contains(s.system))) {
+        s.gameId = '$_startTag${identityHashCode(s)}';
+      }
+      if (s.gameId.startsWith(_startTag)) _startable[s.gameId] = s;
+    }
+  }
+
+  void _game(String gameId) {
+    final save = _startable[gameId];
+    final start = widget.onStartSave;
+    if (save == null || start == null) {
+      widget.onGame?.call(gameId);
+      return;
+    }
+    unawaited(
+      start(save).then((notice) {
+        if (mounted && notice != null && notice.isNotEmpty) {
+          _c?.showNotice(notice);
+        }
+      }),
+    );
   }
 
   @override
@@ -169,7 +213,7 @@ class _SaveManagerHomeState extends State<SaveManagerHome>
         controller: c,
         showHints: widget.showHints,
         actions: widget.actions,
-        onGame: widget.onGame,
+        onGame: widget.onStartSave != null ? _game : widget.onGame,
         onLeave: widget.onLeave,
       );
     }

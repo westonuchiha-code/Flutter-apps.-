@@ -25,6 +25,15 @@ class XmbFolders {
   /// PPSSPP's memory stick (point PPSSPP here once).
   String get ppssppStick => p.join(root, 'Saves', 'PPSSPP');
   String get pspSaves => p.join(ppssppStick, 'PSP', 'SAVEDATA');
+
+  /// Dolphin's saves, laid out like Dolphin's own user folder (and the
+  /// PC's `Dolphin\User`): `GC/<USA|EUR|JAP>/Card A/*.gci` and
+  /// `Wii/title/<hi>/<lo>/data/...`. Dolphin for Android can't be pointed
+  /// here (Android 11+ keeps its user folder in its own app storage), so
+  /// the player copies `GC` and `Wii` between the two (see the set-up).
+  String get dolphin => p.join(root, 'Saves', 'Dolphin');
+  String get dolphinGc => p.join(dolphin, 'GC');
+  String get dolphinWii => p.join(dolphin, 'Wii', 'title');
   String get pokeville => p.join(root, 'Pokeville');
   String get comics => p.join(root, 'Comics');
   String get backups => p.join(root, 'Backups');
@@ -41,6 +50,15 @@ class XmbFolders {
     ),
     SyncMap('saves/duckstation/memcards', duckCards, exts: const ['mcd']),
     SyncMap('saves/ppsspp/SAVEDATA', pspSaves),
+    // As the PC (CrossSave.gd): GCI folder cards or whole-card .raw files
+    // (SRAM.raw is settings: never synced, see skipParts); Wii titles'
+    // save folders without the system titles and channels' content.
+    SyncMap('saves/dolphin/GC', dolphinGc, exts: const ['gci', 'raw']),
+    SyncMap(
+      'saves/dolphin/Wii/title',
+      dolphinWii,
+      skipDirs: const ['00000001', 'content'],
+    ),
     SyncMap('pokeville', pokeville, skipDirs: const ['sent', 'save backups']),
   ];
 
@@ -51,6 +69,8 @@ class XmbFolders {
       raStates,
       duckCards,
       pspSaves,
+      dolphinGc,
+      dolphinWii,
       pokeville,
       comics,
       backups,

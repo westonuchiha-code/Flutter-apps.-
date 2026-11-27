@@ -442,6 +442,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.0"
+  pad_input:
+    dependency: transitive
+    description:
+      path: "../../packages/pad_input"
+      relative: true
+    source: path
+    version: "0.1.0"
   path:
     dependency: "direct main"
     description:
@@ -601,7 +608,7 @@ packages:
     source: hosted
     version: "0.28.0"
   save_kit:
-    dependency: transitive
+    dependency: "direct main"
     description:
       path: "../../packages/save_kit"
       relative: true

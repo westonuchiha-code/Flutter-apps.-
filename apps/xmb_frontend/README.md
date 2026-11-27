@@ -60,14 +60,30 @@ RetroArch settings, `controller.dart` token, state and conflicts).
 
 - Everything lives in `XMB Frontend/` (shared storage): `ROMs/`, `BIOS/`,
   `Saves/RetroArch/<Core>/`, `Saves/DuckStation/memcards/`,
-  `Saves/PPSSPP/PSP/SAVEDATA/`, `Pokeville/`, `Backups/`. RetroArch is started
+  `Saves/PPSSPP/PSP/SAVEDATA/`, `Saves/Dolphin/GC/` + `Saves/Dolphin/Wii/title/`
+  (the PC's `saves/dolphin`: GCI folder cards and `.raw` cards, Wii title
+  saves without system titles and `content`), `Pokeville/`, `Backups/`. RetroArch is started
   with the menu's own `RetroArch/retroarch.cfg` (saves sorted by core, as on
   the PC); PPSSPP's memory stick and DuckStation's memory card folder are set
   once by the player (Settings > Cross Save > Save Folders).
 - Settings > Cross Save: GitHub token (fine-grained, Cross-Save only,
   Contents read/write), Sync Now, Changed on Both Sides (pick a side), This
   Device (`phone` / `retroid`), Save Folders, RetroArch Settings.
+- Dolphin for Android can't be pointed at `Saves/Dolphin`: on Android 11+
+  its user folder is app-private and its path settings are locked ("Due to
+  the Scoped Storage policy..."). Get Emulators › Dolphin › Set It Up tells
+  the player to copy `GC/USA/Card A` by hand through Dolphin's Settings ›
+  Config › User Data › Open User Data Folder (Dolphin's document provider).
+  Next step, if wanted: the menu reaches that provider itself (a one-time
+  folder pick of Dolphin's user folder, then copy before/after a GameCube
+  game).
 - Syncs on start, before a game (12 s at most), after a game, every 10 min.
+- **Start game from the Save Manager app**: it sends an explicit intent to
+  `MainActivity` with `start_game_system` (save_kit's console), `_title`,
+  `_serial`, `_file`; the menu (cold: the launching intent, warm:
+  `onNewIntent` → `startRequest`) takes it with `takeStartRequest`, finds
+  the game like the Memory Card row (`lib/src/save_start.dart`) and starts
+  it, or says "No game in the library matches …".
 - `tool/github_read_test.dart`: a read-only check against the real repo.
 
 ## Next parts

@@ -222,6 +222,19 @@ void main() {
             LogicalKeyboardKey.gameButtonA,
           ]),
     );
+    testWidgets(
+      'xmb_${where}_setup_dolphin',
+      (tester) =>
+          shoot(tester, out, 'xmb_${where}_setup_dolphin', size, dpr, const [
+            LogicalKeyboardKey.gameButtonA,
+            LogicalKeyboardKey.arrowDown,
+            LogicalKeyboardKey.arrowDown,
+            LogicalKeyboardKey.arrowDown,
+            LogicalKeyboardKey.gameButtonY,
+            LogicalKeyboardKey.arrowDown,
+            LogicalKeyboardKey.gameButtonA,
+          ]),
+    );
   }
 }
 

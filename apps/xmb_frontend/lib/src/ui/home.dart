@@ -15,6 +15,7 @@ import '../launch.dart';
 import '../library/emulators.dart';
 import '../library/scanner.dart';
 import '../library/systems.dart';
+import '../save_start.dart';
 import '../state.dart';
 import '../comics/library.dart';
 import '../comics/pdf_book.dart';
@@ -100,6 +101,28 @@ class _HomePageState extends State<HomePage> {
     }
     _bump();
     unawaited(_sync(quiet: true));
+    // Start game from the Save Manager app: one that came with the start,
+    // and any that comes while the menu runs.
+    _a.listenForStartRequests(() => unawaited(_startFromSaveManager()));
+    await _startFromSaveManager();
+  }
+
+  /// Starts the game the Save Manager app asked for (its save's console
+  /// and title, matched like the Memory Card row), or says none matches.
+  Future<void> _startFromSaveManager() async {
+    final SaveStartRequest? r;
+    try {
+      r = SaveStartRequest.fromMap(await _a.takeStartRequest());
+    } catch (_) {
+      return;
+    }
+    if (r == null || !mounted) return;
+    final g = gameForSave(_s.games, r);
+    if (g == null) {
+      _xmb.currentState?.toast(noGameText(r));
+      return;
+    }
+    await _play(g);
   }
 
   /// Makes the menu's `XMB Frontend` folder (ROMs with a folder per
@@ -666,15 +689,6 @@ class _HomePageState extends State<HomePage> {
 
   // ---- Memory Card (the PC's row between Game and the rest) ----
 
-  /// The save manager's own consoles, by this library's system ids.
-  static const _saveSystems = {
-    'ps1': 'PS1',
-    'n64': 'N64',
-    'saturn': 'SATURN',
-    'dreamcast': 'DC',
-    'gamecube': 'GC',
-  };
-
   List<XItem> _memoryRow() => [
     XItem(
       title: 'Save Manager',
@@ -717,7 +731,7 @@ class _HomePageState extends State<HomePage> {
     saves.androidChannel = const MethodChannel('xmb/android');
     final games = [
       for (final g in _s.games)
-        if (_saveSystems[g.system] case final sys?)
+        if (saveSystems[g.system] case final sys?)
           (id: g.id, title: g.title, system: sys, serial: ''),
     ];
     final played = {

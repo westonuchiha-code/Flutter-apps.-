@@ -131,9 +131,16 @@ List<String> setUpLines(
     'PPSSPP makes PSP › SAVEDATA inside it: those saves cross over.',
   ],
   Runner.dolphin => [
-    'Nothing to set: the menu starts GameCube games in Dolphin.',
-    "GameCube saves don't cross over from Android yet: Dolphin keeps them "
-        'in its own folder. (Cross saves here: RetroArch, DuckStation, '
-        'PPSSPP and Pokéville.)',
+    'Games: nothing to set. Saves: in Dolphin, Settings › Config › '
+        'GameCube › GameCube Slot A Device: GCI Folder (its default, as on '
+        'the PC).',
+    "Dolphin can't save into the menu's folder (Android 11+ keeps its "
+        "folder private and it can't be moved), so copy saves by hand:",
+    'Dolphin › Settings › Config › User Data › Open User Data Folder, '
+        'then GC › USA › Card A.',
+    'Before playing, copy in the .gci files from ${filesPath(f.dolphinGc)} '
+        "› USA › Card A; after, copy Dolphin's back there. The menu syncs "
+        'that folder with the PC.',
+    'Wii saves: Wii › title ↔ ${filesPath(f.dolphinWii)}',
   ],
 };

@@ -293,13 +293,23 @@ void main() {
 
   test('the XMB Frontend folder: layout, RetroArch settings, device', () {
     final f = XmbFolders(p.join(root.path, 'XMB Frontend'))..create();
-    for (final d in [f.bios, f.raSaves, f.duckCards, f.pspSaves, f.pokeville]) {
+    for (final d in [
+      f.bios,
+      f.raSaves,
+      f.duckCards,
+      f.pspSaves,
+      f.dolphinGc,
+      f.dolphinWii,
+      f.pokeville,
+    ]) {
       expect(Directory(d).existsSync(), isTrue, reason: d);
     }
     expect(f.maps.map((m) => m.repo), [
       'saves/retroarch',
       'saves/duckstation/memcards',
       'saves/ppsspp/SAVEDATA',
+      'saves/dolphin/GC',
+      'saves/dolphin/Wii/title',
       'pokeville',
     ]);
     // RetroArch's own lines stay; ours are set (and not doubled).
@@ -349,6 +359,64 @@ void main() {
     );
     expect(again.conflicts, isEmpty);
     expect(repo.lastMessage, startsWith('phone: ')); // no model: a phone
+  });
+
+  test("Dolphin: the PC's GC cards and Wii saves, nothing else", () {
+    const f = XmbFolders('/storage/emulated/0/XMB Frontend');
+    final gc = f.maps.singleWhere((m) => m.repo == 'saves/dolphin/GC');
+    final wii = f.maps.singleWhere((m) => m.repo == 'saves/dolphin/Wii/title');
+    expect(
+      gc.local,
+      p.join('/storage/emulated/0/XMB Frontend', 'Saves', 'Dolphin', 'GC'),
+    );
+    expect(wii.local, p.join(f.dolphin, 'Wii', 'title'));
+    // GCI folder cards in every region, as the repo has them.
+    expect(gc.takes('USA/Card A/01-GC6E-pokemon_colosseum.gci'), isTrue);
+    expect(gc.takes('USA/Card A/01-GXXE-PokemonXD.gci'), isTrue);
+    expect(gc.takes('EUR/Card B/01-GZLP-zelda.GCI'), isTrue);
+    expect(gc.takes('JAP/Card A/8P-GALJ-smash.gci'), isTrue);
+    // Whole-card files too; SRAM.raw is settings.
+    expect(gc.takes('MemoryCardA.USA.raw'), isTrue);
+    expect(gc.takes('SRAM.raw'), isFalse);
+    expect(gc.takes('USA/SRAM.raw'), isFalse);
+    // Not saves, and never our own temp files or conflict copies.
+    expect(gc.takes('USA/Card A/desktop.ini'), isFalse);
+    expect(gc.takes('USA/Card A/a.gci.xs-new'), isFalse);
+    expect(gc.takes('USA/Card A/a.from-repo-20261126-101010.gci'), isFalse);
+    expect(gc.takes('USA/Card A/notes.txt'), isFalse);
+    // Wii: each title's save folder; not system titles or channel content.
+    expect(wii.takes('00010002/48414341/data/NigaoeCh.dat'), isTrue);
+    expect(wii.takes('00010000/52534245/data/banner.bin'), isTrue);
+    expect(wii.takes('00000001/00000002/data/setting.txt'), isFalse);
+    expect(wii.takes('00010001/48414241/content/00000001.app'), isFalse);
+  });
+
+  test('Dolphin: the repo\'s GCI cards arrive in the region folders', () async {
+    final repo = FakeRepo()
+      ..pushAs('saves/dolphin/GC/USA/Card A/01-GXXE-PokemonXD.gci', 'xd')
+      ..pushAs('saves/dolphin/GC/SRAM.raw', 'settings')
+      ..pushAs('saves/dolphin/Wii/title/00010002/48414341/data/a.dat', 'mii');
+    final f = XmbFolders(p.join(root.path, 'XMB Frontend'))..create();
+    final rep = await crossSync(
+      repo: repo,
+      maps: f.maps,
+      state: {},
+      device: 'retroid',
+      backups: f.backups,
+    );
+    expect(
+      rep.took,
+      unorderedEquals([
+        'USA/Card A/01-GXXE-PokemonXD.gci',
+        '00010002/48414341/data/a.dat',
+      ]),
+    );
+    expect(
+      File(p.join(f.dolphinGc, 'USA', 'Card A', '01-GXXE-PokemonXD.gci'))
+          .readAsStringSync(),
+      'xd',
+    );
+    expect(File(p.join(f.dolphinGc, 'SRAM.raw')).existsSync(), isFalse);
   });
 
   test('a map limited to some files syncs only those, both ways', () async {
