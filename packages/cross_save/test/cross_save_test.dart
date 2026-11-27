@@ -471,4 +471,162 @@ void main() {
     expect(repo.current.containsKey('saves/retroarch/mGBA/Zelda.srm'), isFalse);
     expect(Directory(f.duckCards).listSync(), isEmpty);
   });
+
+  // ---- data-loss review ------------------------------------------------------
+
+  Future<SyncReport> one(
+    SaveRepo repo,
+    String dir,
+    Map<String, String> st, {
+    String backups = 'bk',
+  }) => crossSync(
+    repo: repo,
+    maps: [
+      SyncMap('saves/retroarch', dir, exts: const ['srm']),
+    ],
+    state: st,
+    device: 'phone',
+    backups: p.join(root.path, backups),
+  );
+
+  test(
+    'a save changed while the repo copy downloads is not overwritten',
+    () async {
+      final repo = _HookRepo();
+      final dir = p.join(root.path, 'a');
+      final save = File(p.join(dir, 'Gambatte', 'Crystal.srm'))
+        ..createSync(recursive: true)
+        ..writeAsStringSync('v1');
+      final st = <String, String>{};
+      await one(repo, dir, st); // sent: v1 is what was last synced
+      repo.pushAs('saves/retroarch/Gambatte/Crystal.srm', 'pc v2');
+      // The game (or the other app on this phone) saves while the sync is
+      // downloading the PC's copy.
+      repo.onBlob = () => save.writeAsStringSync('phone v3, just saved');
+      final r = await one(repo, dir, st);
+      expect(save.readAsStringSync(), 'phone v3, just saved');
+      expect(r.took, isEmpty);
+      expect(r.ok, isFalse);
+      // ...and the next sync calls it what it is: changed on both sides.
+      repo.onBlob = null;
+      final again = await one(repo, dir, st);
+      expect(again.conflicts.length, 1);
+      expect(save.readAsStringSync(), 'phone v3, just saved');
+    },
+  );
+
+  test('a cut-off download never becomes the conflict copy', () async {
+    final repo = _HookRepo();
+    final dir = p.join(root.path, 'a');
+    final save = File(p.join(dir, 'mGBA', 'Emerald.srm'))
+      ..createSync(recursive: true)
+      ..writeAsStringSync('phone');
+    repo.pushAs('saves/retroarch/mGBA/Emerald.srm', 'the whole pc save');
+    repo.cut = true;
+    final st = <String, String>{};
+    final r = await one(repo, dir, st);
+    expect(r.conflicts, isEmpty);
+    expect(r.ok, isFalse);
+    expect(
+      Directory(p.join(dir, 'mGBA')).listSync().map((e) => p.basename(e.path)),
+      ['Emerald.srm'],
+    );
+    // A copy that isn't the repo's any more is never swapped in.
+    repo.cut = false;
+    final good = await one(repo, dir, st);
+    final c = good.conflicts.single;
+    File(c.copy).writeAsStringSync('the whole');
+    await expectLater(
+      keepOther(c, st, p.join(root.path, 'bk'), DateTime(2026)),
+      throwsA(isA<FileSystemException>()),
+    );
+    expect(save.readAsStringSync(), 'phone');
+  });
+
+  test(
+    "an emulator writing its old copy back is a conflict, not sent",
+    () async {
+      final repo = FakeRepo();
+      final dir = p.join(root.path, 'a');
+      final save = File(p.join(dir, 'Gambatte', 'Crystal.srm'))
+        ..createSync(recursive: true)
+        ..writeAsStringSync('phone v1');
+      final st = <String, String>{};
+      await one(repo, dir, st);
+      repo.pushAs('saves/retroarch/Gambatte/Crystal.srm', 'pc v2');
+      expect((await one(repo, dir, st)).took, ['Gambatte/Crystal.srm']);
+      // RetroArch was still open (Home, not quit) and writes its copy back.
+      save.writeAsStringSync('phone v1');
+      final r = await one(repo, dir, st);
+      expect(r.sent, isEmpty);
+      expect(
+        repo.current['saves/retroarch/Gambatte/Crystal.srm'],
+        blobSha('pc v2'.codeUnits),
+      );
+      expect(r.conflicts.length, 1);
+      // The player says the phone's is the one: then it goes.
+      await keepLocal(r.conflicts.single, st, p.join(root.path, 'bk'));
+      expect((await one(repo, dir, st)).sent, ['Gambatte/Crystal.srm']);
+      // A real new save after a take is sent as usual.
+      repo.pushAs('saves/retroarch/Gambatte/Crystal.srm', 'pc v4');
+      expect((await one(repo, dir, st)).took, ['Gambatte/Crystal.srm']);
+      save.writeAsStringSync('phone v5');
+      expect((await one(repo, dir, st)).sent, ['Gambatte/Crystal.srm']);
+    },
+  );
+
+  test(
+    'a save named differently only by case is not sent as a second one',
+    () async {
+      final repo = FakeRepo()
+        ..pushAs('saves/retroarch/Gambatte/Pokemon Red.srm', 'pc red');
+      final dir = p.join(root.path, 'a');
+      File(p.join(dir, 'Gambatte', 'pokemon red.srm'))
+        ..createSync(recursive: true)
+        ..writeAsStringSync('phone red');
+      final r = await one(repo, dir, {});
+      expect(r.sent, isEmpty);
+      expect(r.ok, isFalse);
+      expect(
+        repo.current.keys.where((k) => k.toLowerCase().contains('pokemon red')),
+        ['saves/retroarch/Gambatte/Pokemon Red.srm'],
+      );
+    },
+  );
+
+  test("the save manager's temp files are never synced", () {
+    const m = SyncMap('saves/ppsspp/SAVEDATA', 'x');
+    expect(m.takes('ULUS10000/DATA.BIN.xmb-new'), isFalse);
+    expect(m.takes('ULUS10000/DATA.BIN.xmb-old'), isFalse);
+    expect(m.takes('ULUS10000/DATA.BIN'), isTrue);
+  });
+
+  test('a push race does not list a conflict twice', () async {
+    final repo = FakeRepo();
+    final dir = p.join(root.path, 'a');
+    File(p.join(dir, 'Gambatte', 'Red.srm'))
+      ..createSync(recursive: true)
+      ..writeAsStringSync('phone red');
+    File(p.join(dir, 'Gambatte', 'Blue.srm'))
+      ..createSync(recursive: true)
+      ..writeAsStringSync('phone blue');
+    repo.pushAs('saves/retroarch/Gambatte/Blue.srm', 'pc blue');
+    repo.racer = () => repo.pushAs('saves/retroarch/Gambatte/Gold.srm', 'g');
+    final r = await one(repo, dir, {});
+    expect(r.sent, ['Gambatte/Red.srm']);
+    expect(r.conflicts.length, 1);
+  });
+}
+
+/// A [FakeRepo] whose downloads can be cut short or run code meanwhile.
+class _HookRepo extends FakeRepo {
+  void Function()? onBlob;
+  bool cut = false;
+
+  @override
+  Future<Uint8List> blob(String sha) async {
+    onBlob?.call();
+    final b = await super.blob(sha);
+    return cut ? Uint8List.sublistView(b, 0, b.length ~/ 2) : b;
+  }
 }

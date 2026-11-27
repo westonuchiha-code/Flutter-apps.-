@@ -28,6 +28,8 @@ const skipParts = [
   'desktop.ini',
   'SRAM.raw',
   '.xs-new', // our own temp files
+  '.xmb-new', // save_kit's CardStore (a change, mid-swap)
+  '.xmb-old',
 ];
 
 bool skipped(String name) => skipParts.any(name.contains);
@@ -202,8 +204,15 @@ String _stamp(DateTime t) {
   return '${t.year}${two(t.month)}${two(t.day)}-${two(t.hour)}${two(t.minute)}${two(t.second)}';
 }
 
+/// State keys (never repo paths) holding what a take replaced: `~was/<key>`
+/// = the hash of the local file the repo's copy went over.
+const _wasPrefix = '~was/';
+
 /// Writes [bytes] to [path] safely: a temp file, checked, then swapped in.
-Future<void> _write(String path, Uint8List bytes) async {
+/// With [unchanged] (the hash [path] had when it was read, '' = no file),
+/// nothing is swapped in if the file has changed since (the game or the
+/// other app saved meanwhile): it throws instead.
+Future<void> _write(String path, Uint8List bytes, {String? unchanged}) async {
   await Directory(p.dirname(path)).create(recursive: true);
   final tmp = File('$path.xs-new');
   await tmp.writeAsBytes(bytes, flush: true);
@@ -213,7 +222,17 @@ Future<void> _write(String path, Uint8List bytes) async {
     throw const FileSystemException('the copy did not read back the same');
   }
   final f = File(path);
-  if (await f.exists()) await f.delete();
+  if (unchanged != null) {
+    final now = await f.exists() ? blobSha(await f.readAsBytes()) : '';
+    if (now != unchanged) {
+      await tmp.delete();
+      throw const FileSystemException(
+        'it changed on this device meanwhile, so it was left as it is',
+      );
+    }
+  }
+  // A rename replaces the old file in one step (Windows too): there is never
+  // a moment without the save.
   await tmp.rename(path);
 }
 
@@ -241,6 +260,12 @@ Future<SyncReport> crossSync({
       return rep;
     }
     final send = <String, (String rel, Uint8List bytes, String sha)>{};
+    rep.conflicts.clear(); // this pass lists them again
+    // The repo's names in lower case: a local save named like one of them
+    // but for case is the same save on a case-blind disk (Android's shared
+    // storage, Windows). Sending it would put two names in the repo that
+    // overwrite each other on the PC.
+    final lower = {for (final k in remote.keys) k.toLowerCase(): k};
     for (final m in maps) {
       final names = <String>{...localFiles(m)};
       final prefix = '${m.repo}/';
@@ -258,7 +283,21 @@ Future<SyncReport> crossSync({
         if (await lf.exists()) lb = await lf.readAsBytes();
         final l = lb == null ? '' : blobSha(lb);
         final r = remote[key] ?? '';
-        switch (decide(l, r, state[key] ?? '')) {
+        var what = decide(l, r, state[key] ?? '');
+        final other = lower[key.toLowerCase()];
+        if (what == 'send' && r.isEmpty && other != null && other != key) {
+          rep.error ??=
+              '$rel is named ${other.substring(prefix.length)} in the repo: '
+              'rename it here to match (it was not sent)';
+          continue;
+        }
+        // The emulator wrote back the copy a take replaced (it was still
+        // open with the old save): that is not a new save, so it isn't sent
+        // over the other device's. The player picks.
+        if (what == 'send' && r.isNotEmpty && state['$_wasPrefix$key'] == l) {
+          what = 'conflict';
+        }
+        switch (what) {
           case 'same':
             state[key] = l;
           case 'take':
@@ -273,8 +312,13 @@ Future<SyncReport> crossSync({
                   lb,
                 );
               }
-              await _write(lp, bytes);
+              await _write(lp, bytes, unchanged: l);
               state[key] = r;
+              if (l.isEmpty) {
+                state.remove('$_wasPrefix$key');
+              } else {
+                state['$_wasPrefix$key'] = l;
+              }
               if (!rep.took.contains(rel)) rep.took.add(rel);
             } catch (e) {
               rep.error ??= 'could not take $rel ($e)';
@@ -310,6 +354,7 @@ Future<SyncReport> crossSync({
       if (await repo.moveBranch(commit)) {
         for (final e in send.entries) {
           state[e.key] = e.value.$3;
+          state.remove('$_wasPrefix${e.key}');
           rep.sent.add(e.value.$1);
         }
         return rep;
@@ -343,7 +388,9 @@ Future<String> _keepRepoCopy(
     }
   }
   final copy = p.join(dir.path, '$base$conflictTag$stamp$ext');
-  await _write(copy, await repo.blob(r));
+  final bytes = await repo.blob(r);
+  if (blobSha(bytes) != r) throw const FormatException('bad download');
+  await _write(copy, bytes);
   return copy;
 }
 
@@ -363,6 +410,7 @@ Future<void> keepLocal(
   }
   // R is now "what we last synced", so ours (changed) gets sent.
   state[c.key] = c.repoSha;
+  state.remove('$_wasPrefix${c.key}');
 }
 
 /// The player takes the other device's copy: ours is backed up and replaced.
@@ -374,6 +422,13 @@ Future<void> keepOther(
 ) async {
   final copy = File(c.copy);
   final bytes = await copy.readAsBytes();
+  if (blobSha(bytes) != c.repoSha) {
+    throw FileSystemException(
+      "the other device's copy isn't the repo's any more, so nothing was "
+      'changed (the next sync makes a new one)',
+      c.copy,
+    );
+  }
   final local = File(c.local);
   if (await local.exists()) {
     await _write(
@@ -384,4 +439,5 @@ Future<void> keepOther(
   await _write(c.local, bytes);
   await copy.delete();
   state[c.key] = blobSha(bytes);
+  state.remove('$_wasPrefix${c.key}');
 }

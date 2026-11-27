@@ -299,6 +299,43 @@ void main() {
     expect(onDiskSave('Gambatte', red).boxes[0].count, 1);
   });
 
+  test(
+    "a box.json that can't be read mid-move is never written over",
+    () async {
+      const broken = '{"version": 1, "boxes": "the PC wrote something new"}';
+      final f = File(p.join(dir, 'box.json'));
+      Future<R> hooked<A, R>(R Function(A) work, A arg) async {
+        final out = work(arg);
+        // a sync brings in a box.json this app can't read while the
+        // Pokémon is leaving the game
+        if (work == takeFromGame) f.writeAsStringSync(broken);
+        return out;
+      }
+
+      final c = PokevilleController(
+        PokevilleFolder(dir, runner: hooked),
+        games: PokeGames([saves]),
+        guard: SaveGuard.none(),
+        animate: false,
+      );
+      await c.open();
+      await c.showSource(gameIndex(c, red));
+      c.select(0);
+      await c.confirm();
+      await c.showSource(-1);
+      c.select(5);
+      await c.confirm();
+      expect(f.readAsStringSync(), broken);
+      // the Pokémon is safe in its file, and the notice says where
+      final mons = Directory(p.join(dir, PokeBoxStore.mons))
+          .listSync()
+          .whereType<File>()
+          .toList();
+      expect(mons.where((m) => m.path.endsWith('.pk1')), hasLength(1));
+      expect(c.notice, contains('is safe in'));
+    },
+  );
+
   test('Android: asks first (NOT YET first), a yes counts 2 minutes', () async {
     var now = DateTime(2026, 11, 26, 12);
     final c = await opened(guard: SaveGuard.ask(now: () => now));

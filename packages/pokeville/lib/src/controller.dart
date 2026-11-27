@@ -1120,6 +1120,10 @@ class PokevilleController extends ChangeNotifier {
     _notify();
   }
 
+  static const _unreadable =
+      "box.json changed on disk (a sync came in) and can't be read, so it "
+      'was left as it is';
+
   /// Puts a new Pokémon into box.json at [box] / [slot], or the first empty
   /// slot when a sync filled that one meanwhile. Null when saved.
   Future<String?> _placeInBox(
@@ -1149,6 +1153,9 @@ class PokevilleController extends ChangeNotifier {
           return null;
         case WriteOutcome.changed:
           _apply(r.read!); // a sync came in: place it in that one
+          // One this app can't read is never written over (it would lose
+          // every other slot): the player sees it's broken instead.
+          if (r.read!.state == BoxState.broken) return _unreadable;
         case WriteOutcome.failed:
           return r.error ?? 'write failed';
       }
@@ -1183,6 +1190,9 @@ class PokevilleController extends ChangeNotifier {
           return null;
         case WriteOutcome.changed:
           _apply(r.read!);
+          // One this app can't read is never written over (it would lose
+          // every other slot): the player sees it's broken instead.
+          if (r.read!.state == BoxState.broken) return _unreadable;
         case WriteOutcome.failed:
           return r.error ?? 'write failed';
       }
@@ -1660,6 +1670,9 @@ class PokevilleController extends ChangeNotifier {
           return null;
         case WriteOutcome.changed:
           _apply(r.read!); // a sync came in: change that one
+          // One this app can't read is never written over (it would lose
+          // every other slot): the player sees it's broken instead.
+          if (r.read!.state == BoxState.broken) return _unreadable;
         case WriteOutcome.failed:
           return r.error ?? 'write failed';
       }
