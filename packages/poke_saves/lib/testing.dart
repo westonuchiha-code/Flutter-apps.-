@@ -6,6 +6,7 @@ library;
 
 import 'dart:typed_data';
 
+import 'src/gb_save.dart';
 import 'src/gba_save.dart';
 import 'src/mon.dart';
 import 'src/text.dart';
@@ -145,4 +146,20 @@ Uint8List treeckoPk3() {
   ); // Poké Ball, Ruby, met at 5
   final m = Mon.gba(d);
   return m.bytes;
+}
+
+/// A Game Boy [save] with the PKHeX file [pk] added to the end of its party
+/// (tests and screenshots: the built saves start with an empty party).
+Uint8List withPartyMon(Uint8List save, Uint8List pk, {String? ext}) {
+  final gb = GbSave.detect(save);
+  final m = Mon.fromFile(pk, ext: ext);
+  if (gb == null || m == null) {
+    throw ArgumentError('a Game Boy save and a .pk1 / .pk2 file');
+  }
+  final n = gb.party.where((s) => s.present).length;
+  if (n >= 6) {
+    throw StateError('the party is full');
+  }
+  gb.setSlot(gb.party[n], m, box: false);
+  return gb.write();
 }

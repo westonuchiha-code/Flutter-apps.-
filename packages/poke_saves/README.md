@@ -16,6 +16,10 @@ save.check();        // '' or what's wrong (checksums)
 final t = save.take(0, 2);  // t.save = new save bytes, t.mon!.bytes = the .pk2
 final p = save.put(0, 5, pkBytes, ext: 'pk1'); // p.reason 'converted from pk1 to pk2'
 save.move(0, 0, 3, 0);      // inside one save (onto a Pokémon = swap)
+save.setNickname(0, 1, 'Sparky');      // '' takes it off; box -1 = the party
+save.setItem(PokeSave.partyBox, 0, 0x92); // Leftovers (this game's numbers)
+mon.withNickname('Sparky').mon!.bytes;  // a .pkN file renamed (or .error)
+mon.withItem(0);                       // MonEdit: .mon or .error
 mon.summary;         // the `mon` map Pokéville's box.json keeps
 heldItemChoices(2);  // what the helper's `items` lists
 ```
@@ -56,6 +60,26 @@ emulators) are read with one save slot.
   held item, Gen 2 moves forgotten). Refused: Game Boy → GBA, GBA → Game Boy,
   species a game doesn't have, items or moves a game doesn't have, Eggs to
   Gen 1, and Gen 2 Pokémon holding an item the Time Capsule can't carry.
+
+## Nicknames and held items (the helper's `nick` / `item`)
+
+- At most 10 letters (Gen 1-5). A letter the game can't write is refused
+  (`nicknameCanWrite(format, char)`: e.g. Gold/Silver/Crystal have no plain
+  `'`, only `’`; Gen 1 has no `+`; the GBA games no `×`). Eggs are refused.
+- Game Boy names are written into a cleared buffer, kept in its 0x00 / 0x50
+  style (so the game's leftovers after a name are gone, as with PKHeX);
+  GBA names are written over the old one (PKHeX's StringConverterOption.None),
+  so a shorter name leaves the longer one's letters after the 0xFF. Gen 3's
+  checksum is recomputed.
+- '' puts the species name back as the game writes it (Game Boy: the
+  MR.MIME dot as 0xE8). Only for English Pokémon (German Game Boy and
+  non-English GBA ones are refused: their species names aren't here).
+- Items: Gen 1 Pokémon hold none; Gen 2 / Gen 3 use their own numbers and
+  PKHeX's held lists (`heldItemAllowed`, `heldItemChoices`; Gen 3 without
+  the unreleased Safari Ball and Berry Juice). A Gen 3 party Pokémon gets
+  mail number 0xFF unless it holds mail, as PKHeX's SetPartySlot.
+- Party Pokémon can be renamed and given items; the party is never taken
+  from or added to (as on the PC).
 
 ## Tests
 

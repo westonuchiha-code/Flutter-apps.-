@@ -237,6 +237,18 @@ class GbaSave {
     storage.setRange(at, at + pk3Stored, pk.encrypted3());
   }
 
+  /// PKHeX's SetPartySlot for Gen 3: Pokédex flags, the mail number
+  /// (0xFF = no mail, unless it holds mail), then the party bytes.
+  void setParty(int i, Mon pk) {
+    final at = (game == GbaGame.frlg ? 0x38 : 0x238) + i * pk3Party;
+    _setDex(pk);
+    final item = pk.heldItem;
+    if (item < 121 || item > 132) {
+      pk.data[0x55] = 0xFF;
+    }
+    large.setRange(at, at + pk3Party, pk.encryptedParty3());
+  }
+
   bool _getFlag(Uint8List d, int at, int bit) =>
       (d[at + (bit >> 3)] >> (bit & 7)) & 1 == 1;
   void _setFlag(Uint8List d, int at, int bit) =>

@@ -49,6 +49,20 @@ PokeButton? pokeButtonFor(LogicalKeyboardKey k) => switch (k) {
   _ => null,
 };
 
+/// The pad's own buttons (never typed as letters).
+final _padKeys = <LogicalKeyboardKey>{
+  LogicalKeyboardKey.gameButtonA,
+  LogicalKeyboardKey.gameButtonB,
+  LogicalKeyboardKey.gameButtonX,
+  LogicalKeyboardKey.gameButtonY,
+  LogicalKeyboardKey.gameButtonLeft1,
+  LogicalKeyboardKey.gameButtonRight1,
+  LogicalKeyboardKey.enter,
+  LogicalKeyboardKey.numpadEnter,
+  LogicalKeyboardKey.escape,
+  LogicalKeyboardKey.backspace,
+};
+
 /// Pokéville: view and arrange the Box in [folder] (the synced Pokéville
 /// folder holding box.json). Sprites are cached in [cacheDir].
 ///
@@ -116,6 +130,8 @@ class _PokevilleScreenState extends State<PokevilleScreen>
   Duration _last = Duration.zero;
   Timer? _noticeTimer;
   int _noticeSeen = 0;
+  int _typeSeen = 0;
+  bool _typing = false;
   bool _dragging = false;
 
   @override
@@ -164,6 +180,10 @@ class _PokevilleScreenState extends State<PokevilleScreen>
   )..open();
 
   void _changed() {
+    if (c.typeRequestId != _typeSeen) {
+      _typeSeen = c.typeRequestId;
+      if (!_typing && mounted) unawaited(_typeName());
+    }
     if (c.noticeId != _noticeSeen) {
       _noticeSeen = c.noticeId;
       _noticeTimer?.cancel();
@@ -180,6 +200,47 @@ class _PokevilleScreenState extends State<PokevilleScreen>
     } else if (!c.holding && _sway.isAnimating) {
       _sway.stop();
     }
+  }
+
+  /// "Type": the device's own keyboard, for when typing on touch is easier.
+  Future<void> _typeName() async {
+    _typing = true;
+    final field = TextEditingController(text: c.kbText);
+    final max = c.nicknameMax;
+    final got = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        void done() => Navigator.of(context).pop(field.text);
+        return AlertDialog(
+          title: Text(
+            'Nickname (${c.editWhere})',
+            style: Pen.style(Face.title, 18, Look.ink),
+          ),
+          content: TextField(
+            controller: field,
+            autofocus: true,
+            maxLength: max,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              hintText: 'Empty: the species name',
+            ),
+            onSubmitted: (_) => done(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(onPressed: done, child: const Text('OK')),
+          ],
+        );
+      },
+    );
+    field.dispose();
+    _typing = false;
+    if (!mounted) return;
+    _focus.requestFocus();
+    if (got != null) await c.typedName(got);
   }
 
   void _tick(Duration at) {
@@ -247,6 +308,18 @@ class _PokevilleScreenState extends State<PokevilleScreen>
   KeyEventResult _key(FocusNode node, KeyEvent e) {
     if (e is KeyUpEvent) return KeyEventResult.ignored;
     final k = e.logicalKey;
+    // the nickname keyboard: a real keyboard's letters type themselves
+    // (Enter / arrows / Esc / Backspace still work as the pad's buttons)
+    final ch = e.character;
+    if (c.editStep == EditStep.keyboard &&
+        ch != null &&
+        ch.runes.length == 1 &&
+        ch.runes.first >= 0x20 &&
+        ch.runes.first != 0x7F &&
+        !_padKeys.contains(k)) {
+      c.typeText(ch);
+      return KeyEventResult.handled;
+    }
     var b = pokeButtonFor(k);
     if (b == null) return KeyEventResult.ignored;
     if (widget.swapAB && k == LogicalKeyboardKey.gameButtonA) b = PokeButton.b;
@@ -314,6 +387,12 @@ class _PokevilleScreenState extends State<PokevilleScreen>
         unawaited(c.answer(h.index));
       case HitKind.transfer:
         c.skipTransfer();
+      case HitKind.editRow:
+        unawaited(c.editTap(h.index));
+      case HitKind.kbKey:
+        unawaited(c.kbTap(h.index ~/ 100, h.index % 100));
+      case HitKind.itemRow:
+        unawaited(c.itemTap(h.index));
     }
   }
 

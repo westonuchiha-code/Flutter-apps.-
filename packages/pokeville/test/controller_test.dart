@@ -203,8 +203,10 @@ void main() {
     expect(c.dexPage, 0);
     expect(c.page, 0, reason: 'LB / RB turn the Dex, not the Box');
     await c.confirm();
-    expect(c.notice, OnThePc.edit);
+    expect(c.editStep, EditStep.menu, reason: 'A: the edit menu');
     expect(c.menu(), isFalse, reason: 'no menu in Check');
+    expect(c.cancel(), isTrue);
+    expect(c.editStep, EditStep.none);
     expect(c.cancel(), isTrue);
     expect(c.view, PokeView.box);
   });

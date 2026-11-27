@@ -1,11 +1,14 @@
 // Pokéville's screen logic, ported from the PC's PokeBoxScreen.gd: the
 // cursor, LB / RB boxes, holding a Pokémon (pick up, put down, swap), Check
 // (status, moves) with the Box Dex, and X: the Games list. The grid shows
-// Pokéville or one game save (its boxes: 20 slots, 5 x 4, on Game Boy; 30 on
-// GBA; the party isn't shown, as on the PC). A Pokémon moves between a game
-// and Pokéville, inside a game, or from one game to another; those change
-// the game's save (see games.dart for the safety order) and play the
-// transfer. Pure Dart: the widgets only draw it and feed it buttons.
+// Pokéville or one game save (its party, then its boxes: 20 slots, 5 x 4, on
+// Game Boy; 30 on GBA). A Pokémon moves between a game's boxes and
+// Pokéville, inside a game, or from one game to another; those change the
+// game's save (see games.dart for the safety order) and play the transfer.
+// The party is shown (and its Pokémon renamed or given items) but not moved,
+// as on the PC. Check's A opens the edit menu: Nickname (an on-screen
+// keyboard) and Held item, for Pokémon in Pokéville (their mons/ file) and
+// in a game save. Pure Dart: the widgets only draw it and feed it buttons.
 //
 // Every change is written at once (atomically). If box.json or a game save
 // changed on disk since it was read (a sync came in), it is read again and
@@ -95,9 +98,62 @@ class PokeGames {
 abstract final class OnThePc {
   static const games =
       'Moving Pokémon in and out of your games happens on the PC (it needs PKHeX)';
-  static const edit =
-      'Nicknames and held items are changed on the PC (they need PKHeX)';
+
+  /// Pokémon of newer games (pk4 and up) in Pokéville.
+  static String edit(String format) =>
+      '${format.isEmpty ? 'These' : format.toUpperCase()} Pokémon are '
+      'changed on the PC (they need PKHeX)';
 }
+
+/// Check's A: the edit menu, the nickname keyboard, the item list.
+enum EditStep { none, menu, keyboard, items }
+
+/// The Pokémon being edited: in Pokéville ([file]) or in the game save
+/// [save] (box [box], -1 = the party).
+class EditTarget {
+  const EditTarget({
+    required this.box,
+    required this.slot,
+    required this.mon,
+    this.file = '',
+    this.save = '',
+    this.saveBytes,
+    this.game = '',
+  });
+
+  final int box;
+  final int slot;
+  final Mon mon;
+  final String file;
+  final String save;
+  final Uint8List? saveBytes;
+
+  /// "Gold" ('' = Pokéville).
+  final String game;
+
+  bool get inGame => save.isNotEmpty;
+
+  /// 1, 2 or 3 (the file type: pk1 / pk2 / pk3).
+  int get format => formatNumber(mon.format);
+
+  EditTarget withMon(Mon m) => EditTarget(
+    box: box,
+    slot: slot,
+    mon: m,
+    file: file,
+    save: save,
+    saveBytes: saveBytes,
+    game: game,
+  );
+}
+
+/// 1, 2 or 3 for "pk1" / "pk2" / "pk3"; 0 for anything else.
+int formatNumber(String format) => switch (format.toLowerCase()) {
+  'pk1' => 1,
+  'pk2' => 2,
+  'pk3' => 3,
+  _ => 0,
+};
 
 class PokevilleController extends ChangeNotifier {
   PokevilleController(
@@ -153,9 +209,22 @@ class PokevilleController extends ChangeNotifier {
   ps.PokeSave? _game;
   Uint8List? _gameBytes;
   List<List<Mon?>> _gameBoxes = const [];
+  List<Mon> _gameParty = const [];
   ClosedQuestion? _asking;
   Transfer? _transfer;
   final _rnd = math.Random();
+
+  // editing (Check's A)
+  EditStep _edit = EditStep.none;
+  int _editI = 0;
+  EditTarget? _target;
+  String _kbText = '';
+  int _kbRow = 0;
+  int _kbCol = 0;
+  bool _kbLower = false;
+  List<({int id, String name})> _items = const [];
+  int _itemI = 0;
+  int _typeId = 0;
 
   // ---- what there is to draw ------------------------------------------------
 
@@ -216,27 +285,41 @@ class PokevilleController extends ChangeNotifier {
   Transfer? get transfer => _transfer;
   bool get transferring => _transfer?.playing ?? false;
 
+  /// A game's pages: the party first, then its boxes.
   int get pageCount =>
-      onGame ? _gameBoxes.length : PokeBoxStore.boxCount(_data);
+      onGame ? _gameBoxes.length + 1 : PokeBoxStore.boxCount(_data);
 
-  /// Pokémon in what the grid shows.
+  /// A game's page [page] as its box number (-1: the party).
+  static int gameBoxOf(int page) => page - 1;
+
+  /// The grid shows a game's party (its first page).
+  bool get onParty => onGame && _page == 0;
+
+  /// Pokémon in what the grid shows (a game's boxes and party).
   int get total => onGame
-      ? _gameBoxes.fold(0, (n, b) => n + b.where((m) => m != null).length)
+      ? _gameBoxes.fold(0, (n, b) => n + b.where((m) => m != null).length) +
+            _gameParty.length
       : PokeBoxStore.total(_data);
   int get slotIndex => _row < 0 ? -1 : _row * cols + _col;
 
   String pageTitle(int page) {
     if (!onGame) return PokeBoxStore.boxName(_data, page);
     final g = _game;
-    if (g == null || page < 0 || page >= g.boxCount) return '';
-    final name = g.boxName(page).trim();
-    return name.isEmpty ? 'Box ${page + 1}' : name;
+    if (page == 0) return 'PARTY';
+    final box = gameBoxOf(page);
+    if (g == null || box < 0 || box >= g.boxCount) return '';
+    final name = g.boxName(box).trim();
+    return name.isEmpty ? 'Box ${box + 1}' : name;
   }
 
   Mon? pageMon(int page, int slot) {
     if (!onGame) return Mon.of(PokeBoxStore.slot(_data, page, slot));
-    if (page < 0 || page >= _gameBoxes.length) return null;
-    final b = _gameBoxes[page];
+    if (page == 0) {
+      return slot >= 0 && slot < _gameParty.length ? _gameParty[slot] : null;
+    }
+    final box = gameBoxOf(page);
+    if (box < 0 || box >= _gameBoxes.length) return null;
+    final b = _gameBoxes[box];
     return slot < 0 || slot >= b.length ? null : b[slot];
   }
 
@@ -252,7 +335,7 @@ class PokevilleController extends ChangeNotifier {
   bool heldIsHere(int i) =>
       _held != null &&
       _held!.save == _shownSave &&
-      _held!.box == _page &&
+      _held!.box == (onGame ? gameBoxOf(_page) : _page) &&
       _held!.slot == i;
 
   /// Where the carried one came from ("Box 2", "Gold BOX 3").
@@ -318,6 +401,7 @@ class PokevilleController extends ChangeNotifier {
         _page = _boxPage;
         _game = null;
         _gameBoxes = const [];
+        _gameParty = const [];
       } else {
         _source = i;
       }
@@ -378,6 +462,70 @@ class PokevilleController extends ChangeNotifier {
   bool get _ready =>
       _state == BoxState.ready && !_busy && !transferring && _asking == null;
 
+  // ---- editing: what there is to draw -----------------------------------------
+
+  /// The nickname keyboard: letters (Y or "abc" turns them lower case), the
+  /// digits and signs, then [kbKeys]. Letters a game can't write are
+  /// greyed out ([kbCanType]).
+  static const kbRows = [
+    'ABCDEFGHIJKLM',
+    'NOPQRSTUVWXYZ',
+    "0123456789.-'",
+    '!?,/♂♀():;&+×',
+  ];
+
+  /// The keyboard's last row. "Type" opens the device's own keyboard.
+  static const kbKeys = ['Space', 'abc', 'Delete', 'Type', 'OK'];
+
+  /// The edit menu's rows.
+  static const editRows = ['Nickname', 'Held item', 'Done'];
+
+  EditStep get editStep => _edit;
+  bool get editing => _edit != EditStep.none;
+  int get editIndex => _editI;
+  EditTarget? get editTarget => _target;
+  String get kbText => _kbText;
+  int get kbRow => _kbRow;
+  int get kbCol => _kbCol;
+  bool get kbLower => _kbLower;
+
+  /// The most letters a nickname takes (10 up to Gen 5).
+  int get nicknameMax => ps.maxNicknameLength;
+
+  /// What the keyboard key at [row] / [col] types ('' for the last row).
+  String kbChar(int row, int col) {
+    if (row < 0 || row >= kbRows.length) return '';
+    final keys = _letters(kbRows[row]);
+    if (col < 0 || col >= keys.length) return '';
+    final c = keys[col];
+    return _kbLower ? c.toLowerCase() : c;
+  }
+
+  int kbCells(int row) =>
+      row == kbRows.length ? kbKeys.length : _letters(kbRows[row]).length;
+
+  /// Can the Pokémon being renamed have [char] in its name?
+  bool kbCanType(String char) {
+    final t = _target;
+    if (t == null || char.isEmpty) return false;
+    return ps.nicknameCanWrite(t.format, char);
+  }
+
+  /// The item list (None first) and the highlighted row.
+  List<({int id, String name})> get editItems => _items;
+  int get itemIndex => _itemI;
+
+  /// Bumps when "Type" asks for the device's own keyboard (the screen opens
+  /// a text field).
+  int get typeRequestId => _typeId;
+
+  /// "Gold" or "Pokéville": where the Pokémon being edited is.
+  String get editWhere {
+    final t = _target;
+    if (t == null) return '';
+    return t.inGame ? t.game : 'Pokéville';
+  }
+
   // ---- what the grid shows: Pokéville or one game ------------------------------
 
   /// Shows Pokéville (-1) or the game [src]. Each keeps the box it was on.
@@ -389,7 +537,7 @@ class PokevilleController extends ChangeNotifier {
       _boxPage = _page;
     }
     final load = src >= 0 && (_saves[src].path != _gamePath || _game == null);
-    if (load && _saves[src].path != _gamePath) _gamePage = 0;
+    if (load && _saves[src].path != _gamePath) _gamePage = 1; // Box 1
     _source = src;
     _page = src >= 0 ? _gamePage : _boxPage;
     if (load) {
@@ -405,6 +553,7 @@ class PokevilleController extends ChangeNotifier {
     _game = null;
     _gameBytes = null;
     _gameBoxes = const [];
+    _gameParty = const [];
     _gamePath = g.path;
     _busy = true;
     _busyText = 'Reading ${g.title}…';
@@ -434,6 +583,7 @@ class PokevilleController extends ChangeNotifier {
       for (final b in save.boxes)
         [for (final m in b.slots) m == null ? null : Mon(_map(m.summary))],
     ];
+    _gameParty = [for (final m in save.party) Mon(_map(m.summary))];
   }
 
   static Map<String, dynamic> _map(Map<String, Object?> m) =>
@@ -465,6 +615,7 @@ class PokevilleController extends ChangeNotifier {
       return true;
     }
     if (transferring) return false;
+    if (_edit != EditStep.none) return _busy ? false : _editStep(dx, dy);
     if (_menuOpen) {
       final i = (_menuI + dy).clamp(0, _menu.length - 1);
       if (i == _menuI) return false;
@@ -502,7 +653,8 @@ class PokevilleController extends ChangeNotifier {
   /// LB / RB: the boxes of whatever the grid shows (wrapping). In Check:
   /// the Box Dex's pages.
   bool turnPage(int dir) {
-    if (!_ready || _menuOpen) return false;
+    if (_edit == EditStep.items && _ready) return _editStep(0, dir * 10);
+    if (!_ready || _menuOpen || _edit != EditStep.none) return false;
     if (_view == PokeView.check) {
       _dexPage = (_dexPage + dir) % dexPages;
       _notify();
@@ -518,6 +670,7 @@ class PokevilleController extends ChangeNotifier {
   /// Shows box [p] (the strip, a tap).
   void goToPage(int p) {
     if (!_ready || p < 0 || p >= pageCount || _view != PokeView.box) return;
+    if (_edit != EditStep.none) return;
     _page = p;
     _notify();
   }
@@ -543,7 +696,12 @@ class PokevilleController extends ChangeNotifier {
   /// Y: Check the Pokémon under the cursor (or the carried one); Y again
   /// goes back.
   bool check() {
-    if (_menuOpen || !_ready) return false;
+    if (_edit == EditStep.keyboard && _ready) {
+      _kbLower = !_kbLower; // Y: upper / lower case
+      _notify();
+      return true;
+    }
+    if (_menuOpen || !_ready || _edit != EditStep.none) return false;
     if (_view == PokeView.check) {
       _view = PokeView.box;
     } else {
@@ -557,7 +715,9 @@ class PokevilleController extends ChangeNotifier {
 
   /// X: the Games list (X again closes it). Not in Check.
   bool menu() {
-    if (!_ready || _view == PokeView.check) return false;
+    if (!_ready || _view == PokeView.check || _edit != EditStep.none) {
+      return false;
+    }
     if (_menuOpen) {
       _menuOpen = false;
       _notify();
@@ -621,8 +781,10 @@ class PokevilleController extends ChangeNotifier {
       return;
     }
     if (!_ready) return;
+    if (_edit != EditStep.none) return _editConfirm();
     if (_view == PokeView.check) {
-      if (shown != null) _say(OnThePc.edit);
+      _openEdit();
+      _notify();
       return;
     }
     if (_row < 0) return;
@@ -643,6 +805,10 @@ class PokevilleController extends ChangeNotifier {
     }
     if (transferring) {
       skipTransfer();
+      return true;
+    }
+    if (_edit != EditStep.none) {
+      if (!_busy) _editBack();
       return true;
     }
     if (_menuOpen) {
@@ -731,13 +897,26 @@ class PokevilleController extends ChangeNotifier {
 
   // ---- picking up and putting down -------------------------------------------
 
+  /// Said when a party Pokémon is picked up (as on the PC, the party stays).
+  static const partyStays =
+      'Party Pokémon stay in the party here: move them to a box in the game';
+
+  /// Said when one is put down on the party page.
+  static const partyFull =
+      "Pokémon can't join the party here: put it in one of the game's boxes";
+
   void _pickUp(int slot) {
     if (onGame) {
       final g = currentGame;
       final m = pageMon(_page, slot);
       if (g == null || m == null || _game == null) return;
+      if (onParty) {
+        _say(partyStays);
+        _notify();
+        return;
+      }
       _held = Held(
-        _page,
+        gameBoxOf(_page),
         slot,
         '',
         m,
@@ -774,14 +953,20 @@ class PokevilleController extends ChangeNotifier {
     }
     final g = currentGame;
     if (g == null || _game == null) return;
+    final box = gameBoxOf(_page);
+    if (box < 0) {
+      _say(partyFull);
+      _notify();
+      return;
+    }
     final taken = pageMon(_page, slot) != null;
     if (h.fromGame && h.save == g.path) {
-      if (h.box == _page && h.slot == slot) {
+      if (h.box == box && h.slot == slot) {
         _held = null; // back where it was
         _notify();
         return;
       }
-      return _guarded([g.path], () => _moveIn(h, g, _page, slot));
+      return _guarded([g.path], () => _moveIn(h, g, box, slot));
     }
     if (taken) {
       _say("Pick an empty spot in the game's box");
@@ -789,9 +974,9 @@ class PokevilleController extends ChangeNotifier {
       return;
     }
     if (h.fromGame) {
-      return _guarded([h.save, g.path], () => _send(h, g, _page, slot));
+      return _guarded([h.save, g.path], () => _send(h, g, box, slot));
     }
-    return _guarded([g.path], () => _put(h, g, _page, slot));
+    return _guarded([g.path], () => _put(h, g, box, slot));
   }
 
   Future<void> _boxMove(Held h, int slot) async {
@@ -1105,6 +1290,393 @@ class PokevilleController extends ChangeNotifier {
       _say('${h.mon.shownName} went to ${g.game} (${r.reason})');
     }
     _notify();
+  }
+
+  // ---- editing (Check's A, as the PC's edit menu) ----------------------------------
+
+  void _openEdit() {
+    if (_held != null) {
+      _say('Put it down first, then change it');
+      return;
+    }
+    final m = hovered;
+    if (m == null) {
+      _say('Point at a Pokémon first');
+      return;
+    }
+    if (m.egg) {
+      _say("Eggs can't be renamed or hold items");
+      return;
+    }
+    if (formatNumber(m.format) == 0) {
+      _say(OnThePc.edit(m.format));
+      return;
+    }
+    final i = slotIndex;
+    if (onGame) {
+      final g = currentGame;
+      if (g == null || _game == null) return;
+      _target = EditTarget(
+        box: gameBoxOf(_page),
+        slot: i,
+        mon: m,
+        save: g.path,
+        saveBytes: _gameBytes,
+        game: g.game,
+      );
+    } else {
+      final file = '${PokeBoxStore.slot(_data, _page, i)['file']}';
+      _target = EditTarget(box: _page, slot: i, mon: m, file: file);
+    }
+    _edit = EditStep.menu;
+    _editI = 0;
+  }
+
+  bool _editStep(int dx, int dy) {
+    switch (_edit) {
+      case EditStep.none:
+        return false;
+      case EditStep.menu:
+        final i = (_editI + dy).clamp(0, editRows.length - 1);
+        if (i == _editI) return false;
+        _editI = i;
+      case EditStep.items:
+        final i = (_itemI + dy)
+            .clamp(0, math.max(0, _items.length - 1))
+            .toInt();
+        if (i == _itemI) return false;
+        _itemI = i;
+      case EditStep.keyboard:
+        final rows = kbRows.length + 1;
+        if (dy != 0) {
+          _kbRow = (_kbRow + dy) % rows;
+          if (_kbRow < 0) _kbRow += rows;
+          _kbCol = math.min(_kbCol, kbCells(_kbRow) - 1);
+        }
+        if (dx != 0) {
+          final n = kbCells(_kbRow);
+          _kbCol = ((_kbCol + dx) % n + n) % n;
+        }
+    }
+    _notify();
+    return true;
+  }
+
+  /// A tap on the edit menu's row [i].
+  Future<void> editTap(int i) async {
+    if (_edit != EditStep.menu || !_ready) return;
+    if (i < 0 || i >= editRows.length) return;
+    _editI = i;
+    await _editConfirm();
+  }
+
+  /// A tap on the keyboard key at [row] / [col].
+  Future<void> kbTap(int row, int col) async {
+    if (_edit != EditStep.keyboard || !_ready) return;
+    if (row < 0 || row > kbRows.length || col < 0 || col >= kbCells(row)) {
+      return;
+    }
+    _kbRow = row;
+    _kbCol = col;
+    await _editConfirm();
+  }
+
+  /// A tap on the item list's row [i] (the first highlights, the next
+  /// gives it).
+  Future<void> itemTap(int i) async {
+    if (_edit != EditStep.items || !_ready || i < 0 || i >= _items.length) {
+      return;
+    }
+    if (_itemI != i) {
+      _itemI = i;
+      _notify();
+      return;
+    }
+    await _editConfirm();
+  }
+
+  /// Letters typed on a real keyboard (or the device's own, through
+  /// "Type"): added to the name; ones the game can't write are refused.
+  void typeText(String text) {
+    if (_edit != EditStep.keyboard || !_ready) return;
+    for (final ch in _letters(text)) {
+      if (!_kbAdd(ch)) break;
+    }
+    _notify();
+  }
+
+  /// The device's keyboard gave [text]: it becomes the name, then OK.
+  Future<void> typedName(String text) async {
+    if (_edit != EditStep.keyboard || !_ready) return;
+    final name = text.trim();
+    final bad = <String>{
+      for (final ch in _letters(name))
+        if (ch != ' ' && !kbCanType(ch)) ch,
+    };
+    if (bad.isNotEmpty) {
+      _kbText = [
+        for (final ch in _letters(name))
+          if (!bad.contains(ch)) ch,
+      ].join();
+      if (_kbText.length > nicknameMax) {
+        _kbText = _kbText.substring(0, nicknameMax);
+      }
+      _say("$editWhere can't write ${bad.join(' ')}");
+      _notify();
+      return;
+    }
+    if (name.length > nicknameMax) {
+      _kbText = name.substring(0, nicknameMax);
+      _say('$nicknameMax letters at most');
+      _notify();
+      return;
+    }
+    _kbText = name;
+    await _runEdit(nickname: name);
+  }
+
+  /// The keyboard: a letter less (B, Delete).
+  void kbBackspace() {
+    if (_edit != EditStep.keyboard || _kbText.isEmpty) return;
+    final l = _letters(_kbText);
+    _kbText = l.take(l.length - 1).join();
+    _notify();
+  }
+
+  bool _kbAdd(String ch) {
+    if (_kbText.length >= nicknameMax) {
+      _say('$nicknameMax letters at most');
+      return false;
+    }
+    if (ch != ' ' && !kbCanType(ch)) {
+      _say("$editWhere can't write $ch");
+      return false;
+    }
+    _kbText += ch;
+    return true;
+  }
+
+  Future<void> _editConfirm() async {
+    final t = _target;
+    if (t == null) return;
+    switch (_edit) {
+      case EditStep.none:
+        return;
+      case EditStep.menu:
+        switch (_editI) {
+          case 0:
+            _kbText = t.mon.nickname;
+            _kbRow = 0;
+            _kbCol = 0;
+            _edit = EditStep.keyboard;
+          case 1:
+            if (t.format <= 1) {
+              _say("Gen 1 Pokémon can't hold items");
+            } else {
+              _items = ps.heldItemChoices(t.format);
+              _itemI = math.max(
+                0,
+                _items.indexWhere((it) => it.name == t.mon.item),
+              );
+              _edit = EditStep.items;
+            }
+          default:
+            _closeEdit();
+        }
+      case EditStep.items:
+        if (_items.isEmpty) return;
+        await _runEdit(item: _items[_itemI].id);
+        return;
+      case EditStep.keyboard:
+        if (_kbRow < kbRows.length) {
+          _kbAdd(kbChar(_kbRow, _kbCol));
+        } else {
+          switch (kbKeys[_kbCol]) {
+            case 'Space':
+              _kbAdd(' ');
+            case 'abc':
+              _kbLower = !_kbLower;
+            case 'Delete':
+              kbBackspace();
+            case 'Type':
+              _typeId++;
+            case 'OK':
+              await _runEdit(nickname: _kbText.trim());
+              return;
+          }
+        }
+    }
+    _notify();
+  }
+
+  // B: a letter less on the keyboard, else a step back.
+  void _editBack() {
+    switch (_edit) {
+      case EditStep.keyboard when _kbText.isNotEmpty:
+        kbBackspace();
+        return;
+      case EditStep.menu:
+        _closeEdit();
+      case EditStep.none:
+        return;
+      default:
+        _edit = EditStep.menu;
+    }
+    _notify();
+  }
+
+  void _closeEdit() {
+    _edit = EditStep.none;
+    _target = null;
+    _items = const [];
+  }
+
+  Future<void> _runEdit({String? nickname, int? item}) async {
+    final t = _target;
+    if (t == null) return;
+    if (!t.inGame) return _editBox(t, nickname, item);
+    return _guarded([t.save], () => _editGame(t, nickname, item));
+  }
+
+  void _edited(EditTarget t, Mon m, {required bool nick}) {
+    final name = m.shownName;
+    _say(
+      nick
+          ? (m.nickname.isEmpty
+                ? '$name: nickname taken off'
+                : '$name: nickname saved')
+          : (m.item.isEmpty
+                ? '$name holds nothing now'
+                : '$name now holds ${m.item}'),
+    );
+    _target = t.withMon(m);
+    _closeEdit();
+  }
+
+  Future<void> _editGame(EditTarget t, String? nickname, int? item) async {
+    _busy = true;
+    _busyText = nickname != null
+        ? 'Saving the nickname…'
+        : 'Giving it ${_itemName(item)}…';
+    _notify();
+    final r = await _run(editInGame, (
+      save: t.save,
+      expected: t.saveBytes!,
+      box: t.box,
+      slot: t.slot,
+      nickname: nickname,
+      item: item,
+      backups: backups,
+    ));
+    _busy = false;
+    if (!r.ok) {
+      _say(r.error);
+      if (r.changedOnDisk) {
+        _closeEdit();
+        if (t.save == _gamePath && _source >= 0) await _loadGame(_source);
+      } else {
+        _edit = EditStep.menu;
+      }
+      _notify();
+      return;
+    }
+    _gameChanged(t.save, r.save!);
+    _edited(t, Mon(r.mon!), nick: nickname != null);
+    _notify();
+  }
+
+  Future<void> _editBox(EditTarget t, String? nickname, int? item) async {
+    if (await _boxChanged()) {
+      _closeEdit();
+      _notify();
+      return;
+    }
+    if ('${PokeBoxStore.slot(_data, t.box, t.slot)['file']}' != t.file) {
+      _closeEdit();
+      _say("That Pokémon isn't where it was any more");
+      _notify();
+      return;
+    }
+    _busy = true;
+    _busyText = nickname != null
+        ? 'Saving the nickname…'
+        : 'Giving it ${_itemName(item)}…';
+    _notify();
+    final r = await _run(editPokevilleFile, (
+      pokeville: folder.dir,
+      file: t.file,
+      nickname: nickname,
+      item: item,
+    ));
+    if (!r.ok) {
+      _busy = false;
+      _say(r.error);
+      _edit = EditStep.menu;
+      _notify();
+      return;
+    }
+    final err = await _updateSummary(t, r.mon!);
+    _busy = false;
+    final m = Mon(r.mon!);
+    if (err != null) {
+      _say("${m.shownName} was changed, but Pokéville couldn't be saved: $err");
+      _target = t.withMon(m);
+      _closeEdit();
+    } else {
+      _edited(t, m, nick: nickname != null);
+    }
+    _notify();
+  }
+
+  /// The slot holding [t]'s file (wherever it is now) takes the new summary
+  /// (its keys over the old ones, as the PC does). Null when saved.
+  Future<String?> _updateSummary(EditTarget t, Map<String, dynamic> mon) async {
+    for (var tries = 0; tries < 4; tries++) {
+      final next = PokeBoxStore.copy(_data);
+      SlotData? found;
+      if ('${PokeBoxStore.slot(next, t.box, t.slot)['file']}' == t.file) {
+        found = PokeBoxStore.slot(next, t.box, t.slot);
+      } else {
+        for (var b = 0; b < PokeBoxStore.boxCount(next) && found == null; b++) {
+          for (var i = 0; i < PokeBoxStore.slots; i++) {
+            if ('${PokeBoxStore.slot(next, b, i)['file']}' == t.file) {
+              found = PokeBoxStore.slot(next, b, i);
+              break;
+            }
+          }
+        }
+      }
+      if (found == null) return 'its slot is gone';
+      final old = found['mon'];
+      final merged = <String, dynamic>{
+        if (old is Map) ...Map<String, dynamic>.from(old),
+        ...mon,
+      };
+      found['mon'] = merged;
+      final r = await folder.write(next);
+      switch (r.outcome) {
+        case WriteOutcome.saved:
+          _data = next;
+          return null;
+        case WriteOutcome.changed:
+          _apply(r.read!); // a sync came in: change that one
+        case WriteOutcome.failed:
+          return r.error ?? 'write failed';
+      }
+    }
+    return 'box.json kept changing';
+  }
+
+  /// [s] letter by letter (whole code points).
+  static List<String> _letters(String s) => [
+    for (final r in s.runes) String.fromCharCode(r),
+  ];
+
+  String _itemName(int? id) {
+    for (final it in _items) {
+      if (it.id == id) return it.name;
+    }
+    return 'it';
   }
 
   // ---- Check -------------------------------------------------------------------

@@ -12,6 +12,51 @@ const int pk2Body = 48, pk2Box = 32, pk2File = 73;
 const int pk3Party = 100, pk3Stored = 80;
 const int gbNameLength = 11;
 
+/// The longest nickname the games before Gen 6 take (PKHeX's
+/// MaxStringLengthNickname for the western Gen 1-5 games; 12 from Gen 6).
+const int maxNicknameLength = 10;
+
+/// Can a Pokémon of [format] (1, 2 or 3) have [char] (one letter) in its
+/// nickname? (The Game Boy games can't write every letter; the keyboards
+/// grey out the others.)
+bool nicknameCanWrite(int format, String char) =>
+    format == 3 ? gbaByteFor(char) >= 0 : gbCanWrite(char, gen2: format == 2);
+
+/// Items a Pokémon of [format] may be given to hold (PKHeX's
+/// ItemRestrictions.IsHeldItemAllowed: Gen 2's held list; Gen 3's without
+/// the unreleased Safari Ball and Berry Juice). Gen 1: none.
+bool heldItemAllowed(int format, int item) {
+  if (format <= 1) {
+    return item == 0;
+  }
+  if (item == 0) {
+    return true;
+  }
+  if (format == 2) {
+    return item > 0 && item <= 255 && heldItemsGen2.contains(item);
+  }
+  return item > 0 &&
+      item <= maxItemGen3 &&
+      item != 5 &&
+      item != 44 &&
+      heldItemsGen3.contains(item);
+}
+
+/// PKHeX's MaxItemID for a Gen 3 Pokémon (Emerald's list).
+const int maxItemGen3 = 376;
+
+/// A nickname or held-item change: the changed Pokémon, or why not.
+class MonEdit {
+  const MonEdit.ok(Mon this.mon) : error = '';
+  const MonEdit.fail(this.error) : mon = null;
+
+  final Mon? mon;
+
+  /// '' when it worked.
+  final String error;
+  bool get ok => error.isEmpty;
+}
+
 /// A Pokémon. GB formats keep the party struct ([data], 44 / 48 bytes) and the
 /// trainer / nickname buffers separately, as PKHeX does; Gen 3 keeps the
 /// decrypted 100-byte party struct.
@@ -338,6 +383,111 @@ class Mon {
     };
   }
 
+  // ------------------------------------------------------------ changes
+
+  /// The Game Boy games' German versions (PKHeX guesses German from the
+  /// trainer name's Ä Ö Ü ä ö ü).
+  bool get _germanGb => format < 3 && ot.any((b) => b >= 0xC0 && b <= 0xC6);
+
+  /// This Pokémon with the nickname [name], as the PC's helper (PKHeX)
+  /// gives it: '' takes the nickname off (the species name, as the game
+  /// writes it). Refused: Eggs, more than [maxNicknameLength] letters, and
+  /// letters this game can't write. Game Boy names are written into a
+  /// cleared buffer (PKHeX keeps the buffer's 0x00 / 0x50 style); GBA names
+  /// go over the old one, as PKHeX writes them, so renaming back gives the
+  /// same bytes. Gen 3's checksum is refreshed when the bytes are read.
+  MonEdit withNickname(String name) {
+    if (species == 0) {
+      return const MonEdit.fail('no Pokémon there to name');
+    }
+    if (isEgg) {
+      return const MonEdit.fail("Eggs can't be renamed");
+    }
+    if (name.length > maxNicknameLength) {
+      return const MonEdit.fail(
+        'too long: this game allows $maxNicknameLength letters',
+      );
+    }
+    final m = clone();
+    if (format == 3) {
+      final lang = language;
+      if (lang == 1) {
+        return const MonEdit.fail("Japanese Pokémon can't be renamed here");
+      }
+      final buf = Uint8List.sublistView(m.data, 8, 18);
+      if (name.isEmpty) {
+        if (lang != 2) {
+          return const MonEdit.fail(
+            "only an English Pokémon's species name can be put back here",
+          );
+        }
+        encodeGbaInto(buf, gbaSpeciesName(species), language: lang);
+        return MonEdit.ok(m);
+      }
+      encodeGbaInto(buf, name, language: lang);
+      if (m.nickname != name) {
+        return const MonEdit.fail(
+          "this game can't write some of those letters",
+        );
+      }
+      return MonEdit.ok(m);
+    }
+    if (name.isEmpty) {
+      if (_germanGb) {
+        return const MonEdit.fail(
+          "only an English Pokémon's species name can be put back here",
+        );
+      }
+      // PKHeX's SetNotNicknamed: the species name, 0x50s after it, and the
+      // Game Boy "." as the MR.MIME dot.
+      final b = encodeGb(
+        gbSpeciesName(species),
+        gbNameLength,
+        gen2: format == 2,
+      );
+      if (b == null) {
+        return const MonEdit.fail("this game can't write that species name");
+      }
+      for (var i = 0; i < b.length; i++) {
+        if (b[i] == 0xF2) {
+          b[i] = 0xE8;
+        }
+      }
+      m.nick.setAll(0, b);
+      return MonEdit.ok(m);
+    }
+    m.nick.setAll(0, encodeGbNickname(name, nick, gen2: format == 2));
+    if (m.nickname != name) {
+      return const MonEdit.fail("this game can't write some of those letters");
+    }
+    return MonEdit.ok(m);
+  }
+
+  /// This Pokémon holding [item] (this game's own item number; 0 = none),
+  /// as the helper's `item` gives it. Refused: Eggs, Gen 1 Pokémon (they
+  /// can't hold items) and items the game doesn't let a Pokémon hold.
+  MonEdit withItem(int item) {
+    if (species == 0) {
+      return const MonEdit.fail('no Pokémon there');
+    }
+    if (isEgg) {
+      return const MonEdit.fail("Eggs can't hold items");
+    }
+    if (format <= 1) {
+      return const MonEdit.fail("Gen 1 Pokémon can't hold items");
+    }
+    if (!heldItemAllowed(format, item)) {
+      return const MonEdit.fail("this game doesn't let a Pokémon hold that");
+    }
+    final m = clone();
+    if (format == 2) {
+      m.data[1] = item;
+    } else {
+      m._bd.setUint16(0x22, item, Endian.little);
+    }
+    return MonEdit.ok(m);
+  }
+
   // ------------------------------------------------------------ files
 
   /// The PKHeX file: a single-entry list for .pk1/.pk2 (count, species mark,
@@ -371,6 +521,14 @@ class Mon {
   void refreshChecksum3() {
     data[0x13] &= ~1;
     _bd.setUint16(0x1C, pk3Sum(data), Endian.little);
+  }
+
+  /// Gen 3: the 100 party bytes as the save holds them (the stored part
+  /// encrypted, the party stats after it as they are).
+  Uint8List encryptedParty3() {
+    final out = Uint8List(pk3Party)..setRange(0, pk3Stored, encrypted3());
+    out.setRange(pk3Stored, pk3Party, data, pk3Stored);
+    return out;
   }
 
   /// Gen 3: the 80 stored bytes, encrypted as the save holds them.

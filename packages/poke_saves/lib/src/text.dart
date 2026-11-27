@@ -165,3 +165,106 @@ String decodeGba(List<int> bytes, {int language = 2}) {
 
 // Only what a Gen 3 Egg's name ("タマゴ", always Japanese) needs.
 const Map<int, String> _gbaJapanese = {0x60: 'タ', 0x6F: 'マ', 0x8B: 'ゴ'};
+
+// ------------------------------------------------------------ nicknames
+
+/// PKHeX's StringConverter1/2.SetString for a nickname buffer (English
+/// table): the buffer is cleared the way it was (zeros if it held any zero
+/// byte, else 0x50s: SetStringKeepTerminatorStyle), then the letters, then
+/// the 0x50 terminator when there's room. A letter the table doesn't have
+/// ends the name there (PKHeX's rule; the caller then refuses it).
+Uint8List encodeGbNickname(
+  String text,
+  List<int> existing, {
+  required bool gen2,
+}) {
+  final length = existing.length;
+  final zeroed = existing.contains(0);
+  final out = Uint8List(length);
+  if (!zeroed) {
+    out.fillRange(0, length, gbTerminator);
+  }
+  if (text.isEmpty) {
+    return out;
+  }
+  if (text.codeUnitAt(0) == 0x2A) {
+    // '*': the in-game trade mark
+    out[0] = gbTradeOt;
+    if (length > 1) {
+      out[1] = gbTerminator;
+    }
+    return out;
+  }
+  final units = text.codeUnits;
+  final table = gen2 ? _gen2 : _gen1;
+  var i = 0;
+  for (; i < units.length && i < length; i++) {
+    final at = table.indexOf(String.fromCharCode(units[i]));
+    if (at <= 0) {
+      break;
+    }
+    out[i] = at;
+  }
+  if (i < length) {
+    out[i] = gbTerminator;
+  }
+  return out;
+}
+
+/// Can a Game Boy game write [char] (one letter) in a name?
+bool gbCanWrite(String char, {required bool gen2}) {
+  if (char.length != 1 || char == '*') {
+    return false;
+  }
+  return (gen2 ? _gen2 : _gen1).indexOf(char) > 0;
+}
+
+const int _gbaQuoteLeft = 0xB1, _gbaQuoteRight = 0xB2, _gbaApostrophe = 0xB4;
+
+/// The GBA byte for [c] (PKHeX's StringConverter3.TryGetIndex with its
+/// user-friendly remaps), or -1 when the games can't write it.
+int gbaByteFor(String c, {int language = 2}) {
+  if (c.length != 1) {
+    return -1;
+  }
+  final at = _gba.indexOf(c);
+  if (at < 0 || c == '“') {
+    return switch (c) {
+      '’' => _gbaApostrophe,
+      '“' => language != 5 ? _gbaQuoteLeft : _gbaQuoteRight,
+      '”' => _gbaQuoteRight,
+      '«' => _gbaQuoteLeft,
+      '»' => _gbaQuoteRight,
+      '„' => _gbaQuoteLeft,
+      '『' => _gbaQuoteLeft,
+      '』' => _gbaQuoteRight,
+      _ => -1,
+    };
+  }
+  return at;
+}
+
+/// PKHeX's StringConverter3.SetString with StringConverterOption.None (what
+/// PK3.Nickname's setter uses): the letters go over what's there, then 0xFF
+/// when there's room; the bytes after it stay as they were. Changes
+/// [buffer] in place.
+void encodeGbaInto(
+  Uint8List buffer,
+  String text, {
+  int language = 2,
+  int maxLength = 10,
+}) {
+  final units = text.codeUnits;
+  final n = units.length > maxLength ? maxLength : units.length;
+  var i = 0;
+  for (; i < n && i < buffer.length; i++) {
+    final b = gbaByteFor(String.fromCharCode(units[i]), language: language);
+    if (b < 0) {
+      break;
+    }
+    buffer[i] = b;
+  }
+  if (i < buffer.length) {
+    buffer[i] = gbaTerminator;
+  }
+}

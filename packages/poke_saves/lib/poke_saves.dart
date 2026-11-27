@@ -5,5 +5,6 @@
 library;
 
 export 'src/dex.dart' show speciesName, moveName, heldItemChoices;
-export 'src/mon.dart' show Mon;
+export 'src/mon.dart'
+    show Mon, MonEdit, maxNicknameLength, nicknameCanWrite, heldItemAllowed;
 export 'src/poke_save.dart';

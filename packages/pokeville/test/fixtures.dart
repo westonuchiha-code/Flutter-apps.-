@@ -46,6 +46,11 @@ String makeGames(String root, {bool more = false}) {
       l = withMon(l, treeckoPk3(), 'pk3', i * 3);
     }
   }
+  if (more) {
+    // a party for the PARTY page
+    c = withPartyMon(c, chikoritaPk2(), ext: 'pk2');
+    c = withPartyMon(c, chikoritaPk2(), ext: 'pk2');
+  }
   put(p.join('Gambatte', red), r);
   put(p.join('Gambatte', crystal), c);
   put(p.join('mGBA', leaf), l);

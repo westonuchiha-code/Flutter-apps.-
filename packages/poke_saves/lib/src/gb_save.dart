@@ -177,9 +177,11 @@ class GbSave {
 
   /// What PKHeX's SetBoxSlot does for these games: Pokédex flags, Gen 1's
   /// "box level", then the slot holds the Pokémon as a single-entry list.
-  void setSlot(GbSlot slot, Mon pk) {
+  /// A party slot: the same, without the box level (PKHeX only sets it when
+  /// a Pokémon is stored in a box).
+  void setSlot(GbSlot slot, Mon pk, {bool box = true}) {
     _setDex(pk);
-    if (gen == 1) {
+    if (gen == 1 && box) {
       pk.data[3] =
           pk.level; // PKHeX: Stat_LevelBox = CurrentLevel (1 for a blank)
     }

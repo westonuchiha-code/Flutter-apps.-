@@ -49,6 +49,9 @@ enum HitKind {
   menuOutside,
   answer, // the emulators-closed question: 0 NOT YET, 1 YES
   transfer, // the whole screen while the transfer plays (a tap skips)
+  editRow, // the edit menu's rows
+  kbKey, // the nickname keyboard: row * 100 + column
+  itemRow, // the held item list's rows
 }
 
 class Hit {
@@ -178,6 +181,7 @@ class PokevillePainter extends CustomPainter {
       }
     }
     if (c.menuOpen) _menu(kind);
+    if (c.editing) _editOverlay(kind);
     if (c.asking != null) _question(kind);
     _notice(kind);
     if (kind == LayoutKind.wide) canvas.restore();
@@ -207,7 +211,7 @@ class PokevillePainter extends CustomPainter {
     final k = _k;
     k.say('POKéMON BOX', const Offset(70, 92), Face.title, 58, Look.line);
     k.say(
-      '${_pokemon(c.total)} · ${c.pageCount} boxes · in ${_where()}',
+      '${_pokemon(c.total)} · ${_boxes()} · in ${_where()}',
       const Offset(74, 134),
       Face.title,
       24,
@@ -448,6 +452,17 @@ class PokevillePainter extends CustomPainter {
     for (var i = 0; i < c.slotCount; i++) {
       final r = _cellRect(grid, cell, i);
       _hit(r, HitKind.slot, i);
+      if (c.onParty && i >= 6) {
+        // a party has 6 places: the rest of the grid isn't one
+        k.box(
+          r.deflate(3 * u),
+          Look.paper.withValues(alpha: 0.55),
+          Look.paper,
+          0,
+          10 * u,
+        );
+        continue;
+      }
       final m = c.pageMon(c.page, i);
       if (m == null || c.heldIsHere(i)) continue;
       final at = r.center;
@@ -658,7 +673,7 @@ class PokevillePainter extends CustomPainter {
     const m = 12.0;
     k.say('POKéMON BOX', const Offset(m, m + 24), Face.title, 26, Look.line);
     k.say(
-      '${_pokemon(c.total)} · ${c.pageCount} boxes',
+      '${_pokemon(c.total)} · ${_boxes()}',
       const Offset(m + 2, m + 44),
       Face.title,
       13,
@@ -970,14 +985,20 @@ class PokevillePainter extends CustomPainter {
     }
     _wideDex(m);
     final foot = Rect.fromLTWH(560, 1044, 800, 36);
-    k.say(
-      'Left / Right  Status / Moves     Up / Down  other Pokémon     LB RB  Dex page     B  back',
-      const Offset(960, 1068),
-      Face.title,
-      20,
-      Look.soft,
-      align: 1,
-    );
+    if (m != null && !c.holding) {
+      final e = k.button('A', 'Edit', const Offset(540, 118), w: 170, h: 56);
+      _hit(e, HitKind.button, 0);
+    }
+    if (!c.editing) {
+      k.say(
+        'A  edit     Left / Right  Status / Moves     Up / Down  other Pokémon     LB RB  Dex page     B  back',
+        const Offset(960, 1068),
+        Face.title,
+        20,
+        Look.soft,
+        align: 1,
+      );
+    }
     _hit(foot, HitKind.button, 3);
     _hit(
       Rect.fromLTWH(panel.right - 120, panel.top + 10, 50, 50),
@@ -1369,18 +1390,23 @@ class PokevillePainter extends CustomPainter {
     // bottom: ▲ ▼ other Pokémon (or ◀ ▶ Dex pages), B back
     final r = Rect.fromLTRB(m, hintTop, w - m, hintTop + hintH);
     const gap = 6.0;
-    final bw = (r.width - 2 * gap) / 3;
     final dex = c.tab == 2;
+    // ▲ ▼ (or the Dex's ◀ ▶), A Edit when there's a Pokémon, B Back
+    final edit = !dex && mon != null && !c.holding;
+    final n = edit ? 4 : 3;
+    final bw = (r.width - (n - 1) * gap) / n;
     for (var i = 0; i < 2; i++) {
       final b = Rect.fromLTWH(r.left + i * (bw + gap), r.top, bw, hintH - 4);
       k.box(b.shift(Offset(0, 4 * k.u)), Look.line, Look.line, 0, 8);
       k.box(b, Look.white, Look.line, 2, 8);
       final dir = i == 0 ? -1 : 1;
-      final at = Offset(b.left + hintH * 0.5, b.center.dy);
+      final at = edit ? b.center : Offset(b.left + hintH * 0.5, b.center.dy);
       dex
           ? k.arrow(at, dir, s: hintH * 0.2)
           : k.arrowV(at, dir, s: hintH * 0.2);
-      final what = dex
+      final what = edit
+          ? ''
+          : dex
           ? (i == 0 ? 'Dex back' : 'Dex on')
           : (i == 0 ? 'Previous' : 'Next');
       k.say(
@@ -1398,12 +1424,26 @@ class PokevillePainter extends CustomPainter {
             : (i == 0 ? HitKind.checkPrev : HitKind.checkNext),
       );
     }
+    if (edit) {
+      final e = k.button(
+        'A',
+        'Edit',
+        Offset(r.left + 2 * (bw + gap), r.top),
+        w: bw,
+        h: hintH - 4,
+        fixed: true,
+        fs: math.min(hintH * 0.38, 15),
+      );
+      _hit(e, HitKind.button, 0);
+    }
     final b = k.button(
       'B',
       'Back',
-      Offset(r.left + 2 * (bw + gap), r.top),
+      Offset(r.left + (n - 1) * (bw + gap), r.top),
       w: bw,
       h: hintH - 4,
+      fixed: edit,
+      fs: edit ? math.min(hintH * 0.38, 15) : null,
     );
     _hit(b, HitKind.button, 3);
   }
@@ -1758,6 +1798,433 @@ class PokevillePainter extends CustomPainter {
     );
   }
 
+  // ---- editing: Check's A (the PC's edit menu, keyboard and item list) -----------
+
+  void _editOverlay(LayoutKind kind) {
+    final k = _k;
+    final wide = kind == LayoutKind.wide;
+    final all = wide
+        ? const Rect.fromLTWH(-2000, -200, 6000, 1600)
+        : Offset.zero & _size;
+    k.c.drawRect(all, Paint()..color = Look.line.withValues(alpha: 0.45));
+    _hit(all, HitKind.menuOutside);
+    final t = c.editTarget;
+    if (t == null) return;
+    final title = '${t.mon.shownName}  ·  ${c.editWhere}';
+    switch (c.editStep) {
+      case EditStep.none:
+        return;
+      case EditStep.menu:
+        _editMenu(kind, title);
+      case EditStep.keyboard:
+        _keyboard(kind, title);
+      case EditStep.items:
+        _itemList(kind, title);
+    }
+  }
+
+  /// A compact overlay's panel: the screen less a margin, at most [maxW]
+  /// wide and [maxH] tall, centred.
+  Rect _compactPanel(double maxW, double maxH) {
+    final m = _size.shortestSide < 420 ? 8.0 : 12.0;
+    final w = math.min(maxW, _size.width - 2 * m);
+    final h = math.min(maxH, _size.height - 2 * m);
+    return Rect.fromCenter(
+      center: _size.center(Offset.zero),
+      width: w,
+      height: h,
+    );
+  }
+
+  /// The compact overlays' touch buttons (A / Y / B ...) along [r]'s
+  /// bottom; returns the space above them.
+  Rect _editButtons(Rect r, List<(int, String, String)> buttons, double bh) {
+    const gap = 6.0;
+    final pad = 10.0;
+    final row = Rect.fromLTRB(
+      r.left + pad,
+      r.bottom - pad - bh,
+      r.right - pad,
+      r.bottom - pad,
+    );
+    final bw = (row.width - (buttons.length - 1) * gap) / buttons.length;
+    for (var i = 0; i < buttons.length; i++) {
+      final (index, key, what) = buttons[i];
+      final b = _k.button(
+        key,
+        what,
+        Offset(row.left + i * (bw + gap), row.top),
+        w: bw,
+        h: bh - 4,
+        fixed: true,
+        fs: math.min(bh * 0.4, 15),
+      );
+      _hit(b, HitKind.button, index);
+    }
+    return Rect.fromLTRB(r.left, r.top, r.right, row.top - gap);
+  }
+
+  void _editMenu(LayoutKind kind, String title) {
+    final k = _k;
+    final t = c.editTarget!;
+    final wide = kind == LayoutKind.wide;
+    const rows = PokevilleController.editRows;
+    final side = kind == LayoutKind.side;
+    final rowH = wide ? 70.0 : (side ? 36.0 : 48.0);
+    final step = wide ? 84.0 : rowH + (side ? 6 : 10);
+    final head = wide ? 80.0 : (side ? 44.0 : 56.0);
+    final bh = side ? 34.0 : 44.0;
+    final r = wide
+        ? Rect.fromLTWH(660, 330, 600, 120 + 84.0 * rows.length)
+        : _compactPanel(460, head + rows.length * step + 16 + bh + 14);
+    k.panel(r);
+    _hit(r, HitKind.menuRow, -1);
+    final s = wide ? 1.0 : (side ? 0.5 : 0.6);
+    final lfs = wide ? 20.0 : 11.0;
+    k.label('EDIT', r.topLeft + Offset(24 * s, 20 * s), fs: lfs);
+    final lw = k.width('EDIT', Face.title, lfs) + 26 * lfs / 20;
+    k.say(
+      title,
+      r.topLeft + Offset(24 * s + lw + 18 * s, 20 * s + 25 * lfs / 20),
+      Face.title,
+      wide ? 24 : 13,
+      Look.ink,
+      maxW: r.width - lw - 60 * s,
+    );
+    final tfs = wide ? 30.0 : (side ? 14.0 : 16.0);
+    final dfs = wide ? 24.0 : (side ? 12.0 : 13.0);
+    for (var i = 0; i < rows.length; i++) {
+      final b = Rect.fromLTWH(
+        r.left + (wide ? 30 : 12),
+        r.top + head + i * step,
+        r.width - (wide ? 60 : 24),
+        rowH,
+      );
+      final on = i == c.editIndex;
+      k.box(
+        b,
+        on ? Look.lit : Look.white,
+        on ? Look.gold : Look.line,
+        wide ? 4 : 2.5,
+        wide ? 10 : 8,
+      );
+      _hit(b, HitKind.editRow, i);
+      var detail = '';
+      if (i == 0) {
+        detail = t.mon.nickname.isEmpty ? 'none' : t.mon.nickname;
+      } else if (i == 1) {
+        detail = t.format <= 1
+            ? "Gen 1: can't hold items"
+            : (t.mon.item.isEmpty ? 'nothing' : t.mon.item);
+      }
+      final x = b.left + (wide ? 24 : 12);
+      final tw = k.say(
+        rows[i],
+        Offset(x, b.center.dy + tfs * 0.36),
+        Face.title,
+        tfs,
+        Look.ink,
+      );
+      k.say(
+        detail,
+        Offset(b.right - (wide ? 24 : 12), b.center.dy + dfs * 0.36),
+        Face.text,
+        dfs,
+        Look.soft,
+        align: 2,
+        maxW: b.width - tw - (wide ? 70 : 34),
+      );
+    }
+    if (wide) {
+      k.say(
+        'A  choose     B  back',
+        Offset(960, r.bottom + 44),
+        Face.title,
+        22,
+        Look.white,
+        align: 1,
+      );
+    } else {
+      _editButtons(r, const [(0, 'A', 'Choose'), (3, 'B', 'Back')], bh);
+    }
+  }
+
+  void _keyboard(LayoutKind kind, String title) {
+    final k = _k;
+    final wide = kind == LayoutKind.wide;
+    final side = kind == LayoutKind.side;
+    const letterRows = PokevilleController.kbRows;
+    const keys = PokevilleController.kbKeys;
+    final nRows = letterRows.length;
+    final cols = c.kbCells(0);
+    // sizes: the PC's 1120-wide panel, or the screen
+    final Rect r;
+    final double cell, cellH, keyH, fieldH, head, pad;
+    if (wide) {
+      r = const Rect.fromLTWH(400, 200, 1120, 690);
+      pad = 66;
+      cell = 76;
+      cellH = 74;
+      keyH = 74;
+      fieldH = 80;
+      head = 80;
+    } else {
+      final bh = side ? 30.0 : 44.0;
+      final most = _compactPanel(520, _size.height);
+      pad = side ? 8 : 10;
+      head = side ? 34 : 50;
+      fieldH = side ? 34 : 48;
+      cell = (most.width - 2 * pad) / cols;
+      final extra = head + fieldH + 8 + 4 + 6 + bh + 20;
+      final room = most.height - extra;
+      cellH = math.min(cell * 1.25, room / (nRows + 1) - 4);
+      keyH = cellH;
+      // as tall as what's in it
+      r = Rect.fromCenter(
+        center: most.center,
+        width: most.width,
+        height: math.min(most.height, extra + (nRows + 1) * (cellH + 4)),
+      );
+    }
+    k.panel(r);
+    _hit(r, HitKind.menuRow, -1);
+    final s = wide ? 1.0 : (side ? 0.45 : 0.6);
+    final lfs = wide ? 20.0 : 11.0;
+    k.label('NICKNAME', r.topLeft + Offset(24 * s, 20 * s), fs: lfs);
+    final lw = k.width('NICKNAME', Face.title, lfs) + 26 * lfs / 20;
+    k.say(
+      title,
+      r.topLeft + Offset(24 * s + lw + 18 * s, 20 * s + 25 * lfs / 20),
+      Face.title,
+      wide ? 24 : 12,
+      Look.ink,
+      maxW: r.width - lw - 60 * s,
+    );
+    // the name so far, the cursor, "n / 10"
+    final field = Rect.fromLTWH(
+      r.left + (wide ? 40 : pad),
+      r.top + head,
+      r.width - (wide ? 80 : 2 * pad),
+      fieldH,
+    );
+    k.box(field, Look.white, Look.line, wide ? 4 : 2, wide ? 10 : 8);
+    final max = c.nicknameMax;
+    final n = c.kbText.length;
+    final ffs = wide ? 44.0 : (side ? 18.0 : 24.0);
+    final cfs = wide ? 22.0 : 11.0;
+    final count = '$n / $max';
+    final cw = k.width(count, Face.text, cfs);
+    final empty = c.kbText.isEmpty;
+    k.say(
+      empty ? 'species name' : c.kbText + (n < max ? '_' : ''),
+      Offset(field.left + (wide ? 28 : 10), field.center.dy + ffs * 0.36),
+      Face.title,
+      empty ? ffs * 0.7 : ffs,
+      empty ? Look.faint : Look.ink,
+      maxW: field.width - cw - (wide ? 70 : 26),
+    );
+    k.say(
+      count,
+      Offset(field.right - (wide ? 24 : 8), field.center.dy + cfs * 0.36),
+      Face.text,
+      cfs,
+      n >= max ? Look.red : Look.soft,
+      align: 2,
+    );
+    // the letters
+    final top = field.bottom + (wide ? 40 : 8);
+    final rowStep = cellH + (wide ? 12 : 4);
+    final kfs = wide ? 34.0 : math.min(cellH * 0.5, side ? 14.0 : 17.0);
+    final gap = wide ? 8.0 : 3.0;
+    for (var row = 0; row < nRows; row++) {
+      for (var col = 0; col < c.kbCells(row); col++) {
+        final ch = c.kbChar(row, col);
+        final b = Rect.fromLTWH(
+          r.left + pad + col * cell,
+          top + row * rowStep,
+          cell - gap,
+          cellH,
+        );
+        final on = row == c.kbRow && col == c.kbCol;
+        final can = c.kbCanType(ch);
+        k.box(
+          b,
+          on ? Look.lit : (can ? Look.white : const Color(0xFFE6E8F6)),
+          on ? Look.gold : (can ? Look.lilac : const Color(0xFFD5D8EE)),
+          (on ? 4 : 3) * (wide ? 1 : 0.6),
+          wide ? 8 : 5,
+        );
+        _hit(b, HitKind.kbKey, row * 100 + col);
+        // the title font has no ♂ ♀ (DotGothic16 has)
+        final plain = !can || ch == '♂' || ch == '♀';
+        k.say(
+          ch,
+          Offset(b.center.dx, b.center.dy + kfs * 0.38),
+          plain ? Face.text : Face.title,
+          kfs,
+          can ? Look.ink : Look.faint,
+          align: 1,
+        );
+      }
+    }
+    // Space abc Delete Type OK
+    final ky = top + nRows * rowStep + (wide ? 10 : 4);
+    final kw = (r.width - 2 * pad) / keys.length;
+    final kks = wide ? 28.0 : math.min(keyH * 0.42, side ? 12.0 : 14.0);
+    for (var i = 0; i < keys.length; i++) {
+      final b = Rect.fromLTWH(
+        r.left + pad + i * kw,
+        ky,
+        kw - (wide ? 12 : 4),
+        keyH,
+      );
+      final on = c.kbRow == nRows && c.kbCol == i;
+      final label = keys[i] == 'abc' ? (c.kbLower ? 'ABC' : 'abc') : keys[i];
+      k.box(
+        b,
+        on
+            ? Look.lit
+            : (keys[i] == 'OK' ? const Color(0xFFE3F6E8) : Look.white),
+        on ? Look.gold : Look.line,
+        (on ? 4 : 3) * (wide ? 1 : 0.6),
+        wide ? 10 : 6,
+      );
+      _hit(b, HitKind.kbKey, nRows * 100 + i);
+      k.say(
+        label,
+        Offset(b.center.dx, b.center.dy + kks * 0.38),
+        Face.title,
+        kks,
+        Look.ink,
+        align: 1,
+        maxW: b.width - 4,
+      );
+    }
+    if (wide) {
+      k.say(
+        'A  type     B  delete     Y  abc / ABC     OK saves  '
+        '(an empty name goes back to the species name)',
+        Offset(960, r.bottom + 44),
+        Face.title,
+        22,
+        Look.white,
+        align: 1,
+      );
+    } else {
+      _editButtons(r, const [
+        (0, 'A', 'Type'),
+        (1, 'Y', 'abc'),
+        (3, 'B', 'Back'),
+      ], side ? 30 : 44);
+    }
+  }
+
+  void _itemList(LayoutKind kind, String title) {
+    final k = _k;
+    final t = c.editTarget!;
+    final wide = kind == LayoutKind.wide;
+    final side = kind == LayoutKind.side;
+    final bh = side ? 30.0 : 44.0;
+    final r = wide
+        ? const Rect.fromLTWH(560, 150, 800, 860)
+        : _compactPanel(460, _size.height);
+    k.panel(r);
+    _hit(r, HitKind.menuRow, -1);
+    final s = wide ? 1.0 : (side ? 0.45 : 0.6);
+    final lfs = wide ? 20.0 : 11.0;
+    k.label('HELD ITEM', r.topLeft + Offset(24 * s, 20 * s), fs: lfs);
+    final lw = k.width('HELD ITEM', Face.title, lfs) + 26 * lfs / 20;
+    k.say(
+      title,
+      r.topLeft + Offset(24 * s + lw + 18 * s, 20 * s + 25 * lfs / 20),
+      Face.title,
+      wide ? 24 : 12,
+      Look.ink,
+      maxW: r.width - lw - 60 * s,
+    );
+    final head = wide ? 80.0 : (side ? 34.0 : 50.0);
+    final rowH = wide ? 58.0 : (side ? 26.0 : 38.0);
+    final step = wide ? 66.0 : rowH + (side ? 4 : 6);
+    final listBottom = wide ? r.bottom - 44 : r.bottom - bh - 30;
+    final visible = math.max(1, ((listBottom - r.top - head) / step).floor());
+    final items = c.editItems;
+    final first = (c.itemIndex - visible ~/ 2)
+        .clamp(0, math.max(0, items.length - visible))
+        .toInt();
+    final fs = wide ? 28.0 : (side ? 13.0 : 15.0);
+    final hfs = wide ? 22.0 : 11.0;
+    for (var j = 0; j < math.min(visible, items.length); j++) {
+      final i = first + j;
+      final b = Rect.fromLTWH(
+        r.left + (wide ? 30 : 10),
+        r.top + head + j * step,
+        r.width - (wide ? 60 : 20),
+        rowH,
+      );
+      final on = i == c.itemIndex;
+      k.box(
+        b,
+        on ? Look.lit : Look.white,
+        on ? Look.gold : Look.lilac,
+        (on ? 4 : 3) * (wide ? 1 : 0.6),
+        wide ? 8 : 6,
+      );
+      _hit(b, HitKind.itemRow, i);
+      final it = items[i];
+      final holding =
+          it.name == t.mon.item || (it.id == 0 && t.mon.item.isEmpty);
+      final hw = holding ? k.width('holding', Face.text, hfs) : 0.0;
+      k.say(
+        it.name,
+        Offset(b.left + (wide ? 22 : 10), b.center.dy + fs * 0.36),
+        Face.title,
+        fs,
+        Look.ink,
+        maxW: b.width - hw - (wide ? 60 : 28),
+      );
+      if (holding) {
+        k.say(
+          'holding',
+          Offset(b.right - (wide ? 22 : 10), b.center.dy + hfs * 0.36),
+          Face.text,
+          hfs,
+          Look.soft,
+          align: 2,
+        );
+      }
+    }
+    final count = '${c.itemIndex + 1} / ${items.length}';
+    if (wide) {
+      k.say(
+        count,
+        Offset(r.right - 30, r.bottom - 24),
+        Face.text,
+        20,
+        Look.soft,
+        align: 2,
+      );
+      k.say(
+        'A  give     Up / Down  choose     LB RB  10 at a time     B  back',
+        Offset(960, r.bottom + 44),
+        Face.title,
+        22,
+        Look.white,
+        align: 1,
+      );
+    } else {
+      k.say(
+        '$count   ·   LB RB: 10 at a time',
+        Offset(r.center.dx, r.bottom - bh - 16),
+        Face.text,
+        side ? 10 : 11,
+        Look.soft,
+        align: 1,
+        maxW: r.width - 20,
+      );
+      _editButtons(r, const [(0, 'A', 'Give'), (3, 'B', 'Back')], bh);
+    }
+  }
+
   // ---- notices and messages ---------------------------------------------------------
 
   // The emulators-closed question (Android; or when the running programs
@@ -1943,6 +2410,10 @@ class PokevillePainter extends CustomPainter {
   }
 
   // ---- words ------------------------------------------------------------------------------
+
+  /// "8 boxes" (and a game's party).
+  String _boxes() =>
+      c.onGame ? 'party + ${c.pageCount - 1} boxes' : '${c.pageCount} boxes';
 
   /// "Pokéville", or "Pokémon Gold".
   String _where() => c.currentGame?.title ?? 'Pokéville';

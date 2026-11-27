@@ -292,6 +292,75 @@ class PokeSave {
     }
   }
 
+  /// [box] for the party in [setNickname] / [setItem] (as the helper's
+  /// `nick <save> party <i>`).
+  static const int partyBox = -1;
+
+  /// The Pokémon at [box] / [slot] ([partyBox]: the party), or null.
+  Mon? monAt(int box, int slot) {
+    if (box == partyBox) {
+      final p = party;
+      return slot >= 0 && slot < p.length ? p[slot] : null;
+    }
+    return _validSlot(box, slot) ? boxMon(box, slot) : null;
+  }
+
+  /// Gives the Pokémon at [box] / [slot] ([partyBox] = the party) the
+  /// nickname [name] ('' takes it off), as the helper's `nick` does.
+  PokeResult setNickname(int box, int slot, String name) =>
+      _edit(box, slot, (m) => m.withNickname(name));
+
+  /// Gives the Pokémon at [box] / [slot] ([partyBox] = the party) [item]
+  /// (this game's item number, 0 = none), as the helper's `item` does.
+  PokeResult setItem(int box, int slot, int item) =>
+      _edit(box, slot, (m) => m.withItem(item));
+
+  PokeResult _edit(int box, int slot, MonEdit Function(Mon) change) {
+    final pk = monAt(box, slot);
+    if (pk == null) {
+      return PokeResult.fail(
+        box == partyBox
+            ? 'no Pokémon in that party slot'
+            : 'no Pokémon in that box slot',
+      );
+    }
+    final e = change(pk);
+    if (!e.ok) {
+      return PokeResult.fail(e.error);
+    }
+    final want = e.mon!;
+    final w = _fresh();
+    final total = w._countAll(), inParty = w.party.length;
+    if (box == partyBox) {
+      w._setParty(slot, want);
+    } else {
+      w._setBox(box, slot, want);
+    }
+    final out = w._finish();
+    final again = PokeSave.open(out);
+    final now = again?.monAt(box, slot);
+    if (again == null ||
+        now == null ||
+        again._countAll() != total ||
+        again.party.length != inParty ||
+        now.species != want.species ||
+        now.nickname != want.nickname ||
+        now.heldItem != want.heldItem) {
+      return PokeResult.fail(
+        "the changed save didn't read back right, nothing was changed",
+      );
+    }
+    return PokeResult.ok(out, now);
+  }
+
+  void _setParty(int i, Mon pk) {
+    if (_gb != null) {
+      _gb.setSlot(_gb.party[i], pk, box: false);
+    } else {
+      _gba!.setParty(i, pk);
+    }
+  }
+
   /// Takes the Pokémon in a box slot out: the new save (Game Boy boxes close
   /// the gap) and the Pokémon, whose [Mon.bytes] are the PKHeX file.
   PokeResult take(int box, int slot) {

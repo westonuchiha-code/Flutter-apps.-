@@ -105,15 +105,17 @@ void main() {
       await c.confirm();
       expect(c.onGame, isTrue);
       expect((c.cols, c.rows, c.slotCount), (5, 4, 20));
-      expect(c.pageCount, 12);
-      expect(c.pageMon(0, 0)!.name, 'Bulbasaur');
+      expect(c.pageCount, 13, reason: 'the party, then 12 boxes');
+      expect(c.page, 1, reason: 'a game opens on Box 1');
+      expect(c.pageTitle(0), 'PARTY');
+      expect(c.pageMon(1, 0)!.name, 'Bulbasaur');
       expect(c.total, 1);
       expect(c.turnPage(1), isTrue);
-      expect(c.page, 1);
+      expect(c.page, 2);
       await c.showSource(gameIndex(c, leaf));
-      expect((c.cols, c.rows, c.pageCount), (6, 5, 14));
+      expect((c.cols, c.rows, c.pageCount), (6, 5, 15));
       await c.showSource(gameIndex(c, red));
-      expect(c.page, 0, reason: 'a different game starts on its first box');
+      expect(c.page, 1, reason: 'a different game starts on its first box');
       await c.showSource(-1);
       expect(c.onGame, isFalse);
       expect((c.cols, c.rows), (6, 5));
@@ -187,7 +189,7 @@ void main() {
     expect(red2.check(), '');
     expect(red2.boxes[0].count, 2);
     expect(red2.boxMon(0, 1)!.species, 52, reason: 'no gaps: after Bulbasaur');
-    expect(c.pageMon(0, 1)!.name, 'Meowth');
+    expect(c.pageMon(1, 1)!.name, 'Meowth');
   });
 
   test("refused as PKHeX refuses; the save isn't touched", () async {
@@ -235,7 +237,7 @@ void main() {
     final s = onDiskSave('Gambatte', crystal);
     expect(s.boxes[0].count, 0);
     expect(s.boxMon(1, 0)!.species, 152, reason: 'moved up to the front');
-    expect(c.pageMon(1, 0)!.name, 'Chikorita');
+    expect(c.pageMon(2, 0)!.name, 'Chikorita');
     expect(backupsNow(), hasLength(1));
   });
 
@@ -467,7 +469,7 @@ void main() {
           await c.showSource(i);
           // the first box Pokémon
           var at = (-1, -1);
-          for (var b = 0; b < c.pageCount && at.$1 < 0; b++) {
+          for (var b = 1; b < c.pageCount && at.$1 < 0; b++) {
             for (var s = 0; s < c.slotCount; s++) {
               if (c.pageMon(b, s) != null) {
                 at = (b, s);
@@ -480,7 +482,7 @@ void main() {
           final pk = ps.PokeSave.open(
             before,
             fileName: g.fileName,
-          )!.boxMon(at.$1, at.$2)!;
+          )!.boxMon(at.$1 - 1, at.$2)!;
           c.goToPage(at.$1);
           c.select(at.$2);
           await c.confirm();
@@ -505,8 +507,8 @@ void main() {
           )!;
           expect(out.check(), '', reason: g.game);
           expect(
-            out.boxes[at.$1].count,
-            ps.PokeSave.open(before)!.boxes[at.$1].count - 1,
+            out.boxes[at.$1 - 1].count,
+            ps.PokeSave.open(before)!.boxes[at.$1 - 1].count - 1,
           );
           // and back into the same game
           c.select(es);

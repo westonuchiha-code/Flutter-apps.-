@@ -748,3 +748,115 @@ GameChange sendToGame(SendArgs a) {
     return GameChange.fail('$e');
   }
 }
+
+// ---- nicknames and held items (pkhelper's nick / item / nickfile / itemfile)
+
+/// Arguments of [editInGame]: exactly one of [nickname] ('' takes it off)
+/// and [item] (the game's item number, 0 = none).
+typedef EditArgs = ({
+  String save,
+  Uint8List expected,
+  int box, // -1: the party
+  int slot,
+  String? nickname,
+  int? item,
+  String backups,
+});
+
+/// A nickname or held item for a Pokémon in a game save (box, or the party
+/// with box -1), written the safe way (as the helper's `nick` / `item`:
+/// the save must be unchanged, the new one is read back and checked, the
+/// old one backed up, then swapped in).
+GameChange editInGame(EditArgs a) {
+  try {
+    final s = _openExpected(a.save, a.expected);
+    final r = a.nickname != null
+        ? s.setNickname(a.box, a.slot, a.nickname!)
+        : s.setItem(a.box, a.slot, a.item ?? 0);
+    if (!r.ok) return GameChange.fail(r.error);
+    final want = r.mon!;
+    final total = _countAll(s), party = s.party.length;
+    writeSaveSafely(a.save, a.expected, r.save!, a.backups, (g) {
+      final m = g.monAt(a.box, a.slot);
+      return m != null &&
+          _countAll(g) == total &&
+          g.party.length == party &&
+          m.species == want.species &&
+          m.nickname == want.nickname &&
+          m.heldItem == want.heldItem;
+    });
+    return GameChange.ok(save: r.save, mon: _summary(want));
+  } on _Changed {
+    return const GameChange.changed(changedOnDiskText);
+  } on _Refused catch (e) {
+    return GameChange.fail(e.why);
+  } on Object catch (e) {
+    return GameChange.fail('$e');
+  }
+}
+
+/// Arguments of [editPokevilleFile].
+typedef FileEditArgs = ({
+  String pokeville,
+  String file, // box.json's `file`
+  String? nickname,
+  int? item,
+});
+
+/// A nickname or held item for a Pokémon in Pokéville: its mons/ file is
+/// rewritten as the PC's helper rewrites it (`nickfile` / `itemfile`): the
+/// new bytes to `<file>.new`, read back and checked, the old file kept as
+/// `<file>.bak`, then swapped in. box.json is the caller's (it takes the
+/// new summary, [GameChange.mon]). Only Gen 1-3 files (.pk1 .pk2 .pk3).
+GameChange editPokevilleFile(FileEditArgs a) {
+  final path = PokeBoxStore.absolute(a.pokeville, a.file);
+  final tmp = File('$path.new');
+  try {
+    final f = File(path);
+    if (!f.existsSync()) {
+      return const GameChange.fail(
+        "that Pokémon's file isn't in Pokéville's mons folder",
+      );
+    }
+    final bytes = f.readAsBytesSync();
+    final ext = p.extension(path).replaceFirst('.', '').toLowerCase();
+    final m = ps.Mon.fromFile(bytes, ext: ext);
+    if (m == null) {
+      return GameChange.fail(
+        '${ext.toUpperCase()} Pokémon are changed on the PC (they need PKHeX)',
+      );
+    }
+    final e = a.nickname != null
+        ? m.withNickname(a.nickname!)
+        : m.withItem(a.item ?? 0);
+    if (!e.ok) return GameChange.fail(e.error);
+    final want = e.mon!;
+    final data = want.bytes;
+    tmp.writeAsBytesSync(data, flush: true);
+    final back = tmp.readAsBytesSync();
+    final again = ps.Mon.fromFile(back, ext: ext);
+    if (!_same(back, data) ||
+        again == null ||
+        again.species != want.species ||
+        again.nickname != want.nickname ||
+        again.heldItem != want.heldItem) {
+      _delete(tmp);
+      return const GameChange.fail(
+        "the changed Pokémon didn't read back right, nothing was written",
+      );
+    }
+    if (!_same(f.readAsBytesSync(), bytes)) {
+      _delete(tmp);
+      return const GameChange.changed(
+        "That Pokémon's file changed meanwhile (a sync came in), so nothing "
+        'was changed',
+      );
+    }
+    f.copySync('$path.bak');
+    tmp.renameSync(path); // replaces it (Windows too)
+    return GameChange.ok(file: a.file, mon: _summary(again));
+  } on Object catch (e) {
+    _delete(tmp);
+    return GameChange.fail('$e');
+  }
+}

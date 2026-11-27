@@ -153,7 +153,31 @@ void main() {
           'notice': () async {
             c.select(23); // the egg
             c.check();
-            await c.confirm(); // "on the PC"
+            await c.confirm(); // "Eggs can't be renamed or hold items"
+          },
+          'edit': () async {
+            c.select(0); // Meowth (the PC's example)
+            c.check();
+            await c.confirm();
+          },
+          'keyboard': () async {
+            c.select(0);
+            c.check();
+            await c.confirm();
+            await c.confirm();
+            c.typeText('Ka');
+            c.step(0, 2);
+            c.step(5, 0);
+          },
+          'items': () async {
+            c.select(0);
+            c.check();
+            await c.confirm();
+            c.step(0, 1);
+            await c.confirm();
+            for (var i = 0; i < 4; i++) {
+              c.step(0, 1);
+            }
           },
           'banner': () async {
             c.select(0);
@@ -222,6 +246,21 @@ void main() {
         'gamebox': () async {
           await c.showSource(game(crystal));
           c.select(2);
+        },
+        'party': () async {
+          await c.showSource(game(crystal));
+          c.goToPage(0);
+          c.select(1);
+        },
+        'gamekeyboard': () async {
+          await c.showSource(game(crystal));
+          c.goToPage(0);
+          c.select(0);
+          c.check();
+          await c.confirm();
+          await c.confirm();
+          c.step(0, 2);
+          c.step(-1, 0); // the apostrophe: Crystal can't write it
         },
         'gbabox': () async {
           await c.showSource(game(leaf));
