@@ -4,9 +4,9 @@ import 'dart:math';
 
 import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:pad_input/pad_input.dart';
 
 import '../bindings.dart';
-import '../gamepad.dart';
 import '../models.dart';
 import '../tv_controller.dart';
 import 'skins.dart';

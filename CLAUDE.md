@@ -278,6 +278,9 @@ packages/    # shared Dart/Flutter packages
              #   poke_saves    - pure-Dart Gen 1-3 Pokémon saves (RBY, GSC, RS/E, FRLG; Western): boxes,
              #                   party, take/put/move as PKHeX-identical .pk1/.pk2/.pk3, Time Capsule
              #                   conversion, summaries like the PC helper's (tests: POKE_SAMPLES)
+             #   pad_input     - controllers everywhere: XInput/winmm via FFI (Windows), /dev/input/js*
+             #                   (Linux), Android key events (PadKeys); PadInput + PadListener; used by
+             #                   crt_tv and save_screens (Flutter on Windows gives no gamepad events)
              #   chip_synth    - pure-Dart synth engines: retro chips + polyphonic analog,
              #                   band-limited morphing wavetables (Wavetable; set
              #                   PolySynth.wavetable to play drawn waves), speech chips

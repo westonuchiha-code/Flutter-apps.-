@@ -17,6 +17,17 @@ are `packages/save_kit`; every change is backed up first.
 Controls: d-pad / arrows move, A / Enter select, B / Esc back, Y options,
 X mark (hold: the whole game), RT / F favorite, LB RB / Page Up Down tabs.
 Touch: tap to highlight, tap again to choose; long press = options.
+Controllers work everywhere (`packages/pad_input`): on Windows through
+XInput (Xbox pads) and the joystick API (PlayStation / generic pads), on
+Linux through `/dev/input/js*` (best-effort), on Android as the key events
+the system turns them into. The d-pad and left stick repeat while held.
+
+Start game: this app has no game library. On Android, a PS1, N64,
+Saturn, Dreamcast or GameCube save's Start game hands the save to the XMB
+Frontend (`lib/src/xmb_start.dart`: an intent to its MainActivity with the
+console, title, serial and file), which finds the game in its library and
+starts it. Without the XMB installed it says so; on Windows / Linux games
+start from the XMB.
 
 Android needs "All files access" (asked on first start). It can't see
 whether an emulator is running, so before anything changes a card it asks

@@ -4,10 +4,10 @@ import 'dart:math';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:pad_input/pad_input.dart';
 
 import '../bindings.dart';
 import '../folder_browser.dart';
-import '../gamepad.dart';
 import '../languages.dart';
 import '../models.dart';
 import '../tv_controller.dart';

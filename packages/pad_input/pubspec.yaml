@@ -1,0 +1,19 @@
+name: pad_input
+description: "Game controllers on every platform: XInput and the joystick API on Windows, /dev/input/js* on Linux (best-effort), and Android's controller key events, as positional PadButtons with d-pad repeat."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.14.0
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # XInput / winmm on Windows (supports Windows, Android, Linux).
+  ffi: ^2.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

@@ -6,10 +6,10 @@ import 'dart:ui' show AppExitResponse;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:pad_input/pad_input.dart';
 
 import '../bindings.dart';
 import '../diag.dart';
-import '../gamepad.dart';
 import '../tv_controller.dart';
 import 'controls.dart';
 import 'osd_menu.dart';
@@ -119,6 +119,7 @@ class _TvPageState extends State<TvPage> {
     });
     _gamepad = GamepadInput(
       onButton: _onPad,
+      log: diag,
       onQuitHold: isDesktop ? () => unawaited(_quit()) : null,
       onChanged: () {
         tv.setControllers(_gamepad.kind, _gamepad.connected);

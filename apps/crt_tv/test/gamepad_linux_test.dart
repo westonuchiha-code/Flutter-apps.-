@@ -1,5 +1,5 @@
-import 'package:crt_tv/src/gamepad.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pad_input/pad_input.dart';
 
 /// One raw Linux joystick event: time, value, type, number.
 List<int> event(int value, int type, int number) {

@@ -8,6 +8,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:pad_input/pad_input.dart';
 
 import '../art/art.dart';
 import '../controller.dart';
@@ -64,6 +65,9 @@ class _SaveManagerScreenState extends State<SaveManagerScreen> {
   bool _naming = false;
 
   SaveManagerController get c => widget.controller;
+
+  /// The app's controllers (Windows / Linux; Android's are keys).
+  final PadInput _pads = PadInput.instance;
 
   late Taps _taps = Taps(c, onGame: _game);
 
@@ -190,94 +194,110 @@ class _SaveManagerScreenState extends State<SaveManagerScreen> {
 
   // ---- the gamepad and keyboard --------------------------------------------
 
-  static final _up = {LogicalKeyboardKey.arrowUp};
-  static final _down = {LogicalKeyboardKey.arrowDown};
-  static final _left = {LogicalKeyboardKey.arrowLeft};
-  static final _right = {LogicalKeyboardKey.arrowRight};
-  static final _a = {
-    LogicalKeyboardKey.enter,
-    LogicalKeyboardKey.numpadEnter,
-    LogicalKeyboardKey.space,
-    LogicalKeyboardKey.gameButtonA,
-    LogicalKeyboardKey.select,
-  };
-  static final _b = {
-    LogicalKeyboardKey.escape,
-    LogicalKeyboardKey.backspace,
-    LogicalKeyboardKey.gameButtonB,
-    LogicalKeyboardKey.goBack,
-  };
-  static final _y = {LogicalKeyboardKey.gameButtonY, LogicalKeyboardKey.keyY};
-  static final _x = {LogicalKeyboardKey.gameButtonX, LogicalKeyboardKey.keyX};
-  static final _favorite = {
-    LogicalKeyboardKey.gameButtonRight2,
-    LogicalKeyboardKey.keyF,
-  };
-  static final _pageBack = {
-    LogicalKeyboardKey.gameButtonLeft1,
-    LogicalKeyboardKey.pageUp,
-  };
-  static final _pageOn = {
-    LogicalKeyboardKey.gameButtonRight1,
-    LogicalKeyboardKey.pageDown,
+  /// Keyboard keys that stand for controller buttons. The controller's own
+  /// game-button keys (Android: gameButtonA...) come from [PadKeys.buttons],
+  /// so keys, Android's buttons and XInput all end up in [_press].
+  static final Map<LogicalKeyboardKey, PadButton> _keyboard = {
+    LogicalKeyboardKey.arrowUp: PadButton.up,
+    LogicalKeyboardKey.arrowDown: PadButton.down,
+    LogicalKeyboardKey.arrowLeft: PadButton.left,
+    LogicalKeyboardKey.arrowRight: PadButton.right,
+    LogicalKeyboardKey.enter: PadButton.south,
+    LogicalKeyboardKey.numpadEnter: PadButton.south,
+    LogicalKeyboardKey.space: PadButton.south,
+    LogicalKeyboardKey.select: PadButton.south,
+    LogicalKeyboardKey.escape: PadButton.east,
+    LogicalKeyboardKey.backspace: PadButton.east,
+    LogicalKeyboardKey.goBack: PadButton.east,
+    LogicalKeyboardKey.keyY: PadButton.north,
+    LogicalKeyboardKey.keyX: PadButton.west,
+    LogicalKeyboardKey.keyF: PadButton.r2,
+    LogicalKeyboardKey.pageUp: PadButton.l1,
+    LogicalKeyboardKey.pageDown: PadButton.r1,
   };
 
+  static PadButton? _buttonFor(LogicalKeyboardKey key) =>
+      PadKeys.buttons[key] ?? _keyboard[key];
+
+  /// Keys: the keyboard, and on Android every controller (its buttons
+  /// arrive as key events there, and nothing else reads them).
   KeyEventResult _key(FocusNode node, KeyEvent e) {
-    final k = e.logicalKey;
+    final button = _buttonFor(e.logicalKey);
     if (e is KeyUpEvent) {
-      if (_x.contains(k)) {
-        final waiting = _xTimer?.isActive ?? false;
-        _xTimer?.cancel();
-        _xTimer = null;
-        if (waiting && !_xLong) c.mark();
+      if (button == PadButton.west) {
+        _release(button!);
         return KeyEventResult.handled;
       }
       return KeyEventResult.ignored;
     }
     if (!_sawKeys) setState(() => _sawKeys = true);
-    final repeat = e is KeyRepeatEvent;
-    int dx = 0, dy = 0;
-    if (_up.contains(k)) dy = -1;
-    if (_down.contains(k)) dy = 1;
-    if (_left.contains(k)) dx = -1;
-    if (_right.contains(k)) dx = 1;
-    if (dx != 0 || dy != 0) {
-      _step(dx, dy);
-      return KeyEventResult.handled;
+    if (button == null) return KeyEventResult.ignored;
+    return _press(button, repeat: e is KeyRepeatEvent)
+        ? KeyEventResult.handled
+        : KeyEventResult.ignored;
+  }
+
+  /// Controllers read by [PadInput] (XInput / joysticks on Windows,
+  /// /dev/input/js* on Linux); directions repeat while held.
+  void _onPad(PadButton button) => _press(button);
+
+  void _onPadRelease(PadButton button) {
+    if (button == PadButton.west) _release(button);
+  }
+
+  /// What [button] does: d-pad steps, A confirms, B goes back, Y opens the
+  /// options, X marks (held: the whole game), RT favorites, LB / RB turn
+  /// the page. [repeat]: a held key again (only steps and pages repeat).
+  /// False for a button with nothing to do here.
+  bool _press(PadButton button, {bool repeat = false}) {
+    switch (button) {
+      case PadButton.up:
+        _step(0, -1);
+      case PadButton.down:
+        _step(0, 1);
+      case PadButton.left:
+        _step(-1, 0);
+      case PadButton.right:
+        _step(1, 0);
+      case PadButton.l1 || PadButton.r1:
+        c.turnPage(button == PadButton.l1 ? -1 : 1);
+      case PadButton.south ||
+          PadButton.east ||
+          PadButton.north ||
+          PadButton.west ||
+          PadButton.r2:
+        // held buttons don't repeat
+        if (repeat) return true;
+        switch (button) {
+          case PadButton.south:
+            _taps.confirm();
+          case PadButton.east:
+            c.cancel();
+          case PadButton.north:
+            c.toggleOptions();
+          case PadButton.west:
+            _xLong = false;
+            _xTimer?.cancel();
+            _xTimer = Timer(SaveManagerScreen.holdX, () {
+              _xLong = true;
+              c.markGame();
+            });
+          default:
+            c.toggleFavorite();
+        }
+      default:
+        return false;
     }
-    if (_pageBack.contains(k) || _pageOn.contains(k)) {
-      c.turnPage(_pageBack.contains(k) ? -1 : 1);
-      return KeyEventResult.handled;
-    }
-    if (repeat) {
-      // held buttons don't repeat
-      return _a.contains(k) ||
-              _b.contains(k) ||
-              _x.contains(k) ||
-              _y.contains(k) ||
-              _favorite.contains(k)
-          ? KeyEventResult.handled
-          : KeyEventResult.ignored;
-    }
-    if (_a.contains(k)) {
-      _taps.confirm();
-    } else if (_b.contains(k)) {
-      c.cancel();
-    } else if (_y.contains(k)) {
-      c.toggleOptions();
-    } else if (_x.contains(k)) {
-      _xLong = false;
-      _xTimer?.cancel();
-      _xTimer = Timer(SaveManagerScreen.holdX, () {
-        _xLong = true;
-        c.markGame();
-      });
-    } else if (_favorite.contains(k)) {
-      c.toggleFavorite();
-    } else {
-      return KeyEventResult.ignored;
-    }
-    return KeyEventResult.handled;
+    return true;
+  }
+
+  /// X let go: a short press marks this save (a long one already marked
+  /// the game).
+  void _release(PadButton button) {
+    final waiting = _xTimer?.isActive ?? false;
+    _xTimer?.cancel();
+    _xTimer = null;
+    if (waiting && !_xLong) c.mark();
   }
 
   // Compact pages scroll with up / down (the PC's file window is the whole
@@ -305,8 +325,14 @@ class _SaveManagerScreenState extends State<SaveManagerScreen> {
 
   bool _compact = false;
 
+  /// Hints show on desktops, and once a gamepad or keyboard is used (or
+  /// a controller is plugged in).
   bool get _hints =>
-      widget.showHints ?? (!(Platform.isAndroid || Platform.isIOS) || _sawKeys);
+      widget.showHints ??
+      (!(Platform.isAndroid || Platform.isIOS) ||
+          _sawKeys ||
+          _pads.hasPad ||
+          _pads.used);
 
   // ---- drawing ---------------------------------------------------------------
 
@@ -316,14 +342,23 @@ class _SaveManagerScreenState extends State<SaveManagerScreen> {
     onPopInvokedWithResult: (didPop, _) {
       if (!didPop) c.cancel();
     },
-    child: Focus(
-      focusNode: _focus,
-      autofocus: true,
-      onKeyEvent: _key,
-      child: ListenableBuilder(
-        listenable: c,
-        builder: (context, _) => LayoutBuilder(
-          builder: (context, box) => _page(context, Dims(box.biggest)),
+    // Android's controllers arrive as keys (read by _key); PadListener
+    // only adds the ones Flutter doesn't turn into keys (Windows / Linux).
+    child: PadListener(
+      input: _pads,
+      keys: false,
+      enabled: !_naming,
+      onButton: _onPad,
+      onRelease: _onPadRelease,
+      child: Focus(
+        focusNode: _focus,
+        autofocus: true,
+        onKeyEvent: _key,
+        child: ListenableBuilder(
+          listenable: Listenable.merge([c, _pads]),
+          builder: (context, _) => LayoutBuilder(
+            builder: (context, box) => _page(context, Dims(box.biggest)),
+          ),
         ),
       ),
     ),

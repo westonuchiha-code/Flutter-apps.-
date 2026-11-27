@@ -1,8 +1,8 @@
 import 'package:crt_tv/src/bindings.dart';
-import 'package:crt_tv/src/gamepad.dart';
 import 'package:crt_tv/src/models.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pad_input/pad_input.dart';
 
 void main() {
   test('defaults: every action has a key and its own controller button', () {

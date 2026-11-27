@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
+import 'package:pad_input/pad_input.dart';
 
-import 'gamepad.dart';
 import 'models.dart';
 
 /// Everything a key or controller button can be set to do.

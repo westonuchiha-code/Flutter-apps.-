@@ -5,10 +5,10 @@ import 'dart:io';
 import 'package:crt_tv/src/android_storage.dart';
 import 'package:crt_tv/src/app_store.dart';
 import 'package:crt_tv/src/folder_browser.dart';
-import 'package:crt_tv/src/gamepad.dart';
 import 'package:crt_tv/src/tv_controller.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pad_input/pad_input.dart';
 import 'package:path/path.dart' as p;
 
 import 'fake_player.dart';

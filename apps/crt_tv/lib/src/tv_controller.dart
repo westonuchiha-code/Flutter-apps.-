@@ -7,12 +7,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show WidgetBuilder;
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:pad_input/pad_input.dart';
 
 import 'android_storage.dart';
 import 'app_store.dart';
 import 'bindings.dart';
 import 'diag.dart';
-import 'gamepad.dart';
 import 'languages.dart';
 import 'channel_engine.dart';
 import 'duration_prober.dart';

@@ -15,6 +15,9 @@ dependencies:
     path: ../app_shell
   save_kit:
     path: ../save_kit
+  # Controllers on Windows / Linux (Android's arrive as key events).
+  pad_input:
+    path: ../pad_input
   path: any
   path_provider: any
 
