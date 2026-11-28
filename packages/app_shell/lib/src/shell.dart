@@ -171,6 +171,28 @@ void installErrorHandlers(CrashLog log) {
     unawaited(log.record(error, stack, fatal: true));
     return false; // keep default handling (logs to console)
   };
+  // A widget that fails to build shows what went wrong, readable on a
+  // phone, instead of release mode's plain grey box (or nothing at all).
+  ErrorWidget.builder = shellErrorWidget;
+}
+
+/// The stand-in for a widget that failed to build: the error, selectable
+/// so it can be copied or screenshotted.
+Widget shellErrorWidget(FlutterErrorDetails details) {
+  final text = details.exceptionAsString();
+  return Directionality(
+    textDirection: TextDirection.ltr,
+    child: ColoredBox(
+      color: const Color(0xFF5A1010),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(12),
+        child: Text(
+          'Something on this screen failed to draw:\n$text',
+          style: const TextStyle(color: Color(0xFFFFFFFF), fontSize: 13),
+        ),
+      ),
+    ),
+  );
 }
 
 ThemeData shellTheme(Color accent, Brightness brightness) {
