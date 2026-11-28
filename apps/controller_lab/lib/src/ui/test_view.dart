@@ -551,7 +551,15 @@ class _CheckChip extends StatelessWidget {
             color: checked ? const Color(0xFF2E9E4F) : cs.outline,
           ),
           const SizedBox(width: 3),
-          Text(label, style: const TextStyle(fontSize: 12)),
+          // a chip never wider than its column (wider fonts, narrow screens)
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
