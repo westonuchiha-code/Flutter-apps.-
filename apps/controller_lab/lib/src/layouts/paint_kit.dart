@@ -147,11 +147,17 @@ class PadPainter {
     required Color wellColor,
     required Color capColor,
     Color? capEdge,
+    double? stem,
+    Color? stemColor,
   }) {
     final p = part(id);
     if (p == null) return;
     final travel = well - cap * 0.55;
     canvas.drawCircle(c, well, Paint()..color = wellColor);
+    if (stem != null) {
+      // A tall stick: its stem rises from the well's centre to the cap.
+      canvas.drawCircle(c, stem, Paint()..color = stemColor ?? capEdge!);
+    }
     final st = session.sticks[id];
     final dz = st?.suggestedDeadzone;
     if (dz != null) {
@@ -169,6 +175,24 @@ class PadPainter {
     final moved = p.active(state);
     final clicked = clickId != null && lit(clickId);
     final capPath = Path()..addOval(Rect.fromCircle(center: at, radius: cap));
+    if (stem != null) {
+      canvas.drawLine(
+        c,
+        at,
+        Paint()
+          ..color = stemColor ?? capEdge!
+          ..strokeWidth = stem * 2
+          ..strokeCap = StrokeCap.round,
+      );
+      // The cap stands above the body: its shadow falls below it.
+      canvas.drawCircle(
+        at + Offset(0, cap * 0.12),
+        cap * 1.02,
+        Paint()
+          ..color = const Color(0x40000000)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, cap * 0.12),
+      );
+    }
     if (moved || clicked) glow(capPath);
     canvas.drawPath(capPath, Paint()..color = clicked ? palette.lit : capColor);
     canvas.drawCircle(
@@ -225,6 +249,8 @@ class PadPainter {
     String down = 'down',
     String left = 'left',
     String right = 'right',
+    bool lineMarks = false,
+    Color? markColor,
   }) {
     final w = size * 0.36, h = size / 2;
     Path arm(double dx, double dy) {
@@ -272,6 +298,23 @@ class PadPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5,
       );
+    }
+    if (lineMarks) {
+      // A short groove along each arm (Nintendo's pads).
+      final groove = Paint()
+        ..color = markColor ?? const Color(0x55000000)
+        ..strokeWidth = w * 0.06
+        ..strokeCap = StrokeCap.round;
+      for (final (dx, dy) in [
+        (0.0, -1.0),
+        (0.0, 1.0),
+        (-1.0, 0.0),
+        (1.0, 0.0),
+      ]) {
+        final d = Offset(dx, dy);
+        canvas.drawLine(c + d * (h * 0.5), c + d * (h * 0.8), groove);
+      }
+      return;
     }
     // Arrow marks.
     final mark = Paint()..color = const Color(0x55000000);

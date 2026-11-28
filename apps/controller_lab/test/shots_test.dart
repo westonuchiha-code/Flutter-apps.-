@@ -29,11 +29,12 @@ Future<void> shot(
   String? tab,
   String body = 'white',
   void Function(FakeSdl sdl, ControllerLab lab)? press,
+  ControllerLab Function(FakeSdl sdl)? makeLab,
 }) async {
   tester.view.physicalSize = physical;
   tester.view.devicePixelRatio = dpr;
   addTearDown(tester.view.reset);
-  final lab = ControllerLab(SdlBackend(sdl));
+  final lab = makeLab?.call(sdl) ?? ControllerLab(SdlBackend(sdl));
   addTearDown(lab.dispose);
   final dir = Directory.systemTemp.createTempSync('controller_lab_shot');
   addTearDown(() => dir.deleteSync(recursive: true));
@@ -236,6 +237,25 @@ void main() {
         p.rawAxes[0] = -32768;
         p.rawHats[0] = 1;
       },
+    );
+  });
+
+  testWidgets('Retroid: SDL missing (as on CI), the list', (tester) async {
+    await shot(
+      tester,
+      'nosdl_retroid',
+      const Size(1240, 1080),
+      2.75,
+      wiiU(),
+      makeLab: (sdl) => ControllerLab(
+        SdlBackend(null)
+          ..loadProblem =
+              "SDL couldn't load: libSDL3.so.0: cannot open shared object "
+              'file: No such file or directory. Install SDL3 (libsdl3-0) '
+              'or put libSDL3.so next to the app.',
+        fallback: (r) => SdlBackend(sdl),
+      ),
+      open: '',
     );
   });
 }

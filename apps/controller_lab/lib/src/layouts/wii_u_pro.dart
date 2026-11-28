@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'dart:ui' as ui;
 
@@ -13,9 +12,11 @@ import 'paint_kit.dart';
 /// The Wii U Pro Controller (RVL-CNT-01-UC), drawn from the front as it
 /// is: both sticks high and wide apart on top, the d-pad below and inside
 /// the left stick, A/B/X/Y below and inside the right stick in Nintendo's
-/// diamond (X top, A right, B bottom, Y left), −, HOME and + across the
-/// middle with POWER under HOME, the four player lights at the bottom,
-/// L/R on the top edge with ZL/ZR behind them. White or black body.
+/// diamond (X top, A right, B bottom, Y left), −, HOME and + in a row
+/// across the top between the sticks with POWER under HOME, the four
+/// player lights in slots on the bottom edge, L/R on the top edge with
+/// ZL/ZR behind them, a straight-topped body with grips running down and
+/// out. White (the owner's, without its paint) or black body.
 ///
 /// Through SDL's Wii driver the buttons are positional, so Nintendo's A
 /// (right) is SDL's east, B (bottom) south, X (top) north, Y (left) west.
@@ -58,45 +59,59 @@ class WiiUProLayout extends ControllerLayout {
   List<LayoutPart> parts(ControllerInfo info) => _parts;
 
   @override
-  Size designSize(ControllerInfo info) => const Size(1000, 600);
+  Size designSize(ControllerInfo info) => const Size(1000, 790);
 
-  // Where things are (design units).
-  static const leftStick = Offset(282, 222);
-  static const rightStick = Offset(718, 222);
-  static const dpadAt = Offset(372, 352);
-  static const faceAt = Offset(628, 352);
-  static const faceGap = 46.0;
+  // Where things are (design units), measured off the owner's photos.
+  static const leftStick = Offset(186, 268);
+  static const rightStick = Offset(814, 268);
+  static const dpadAt = Offset(302, 452);
+  static const faceAt = Offset(690, 444);
+  static const faceGap = 64.0;
+  static const minusAt = Offset(418, 306);
+  static const homeAt = Offset(500, 306);
+  static const plusAt = Offset(582, 306);
+  static const powerAt = Offset(500, 432);
+  static const smallButton = 21.0;
 
-  /// The body's outline: a wide top, two long grips.
+  /// The right half of the outline, clockwise from the top centre, as
+  /// cubic segments (two control points and an end each); the left half
+  /// is its mirror. A nearly straight top that rises a little over the
+  /// sticks, rounded top corners, straight outer sides and two grips that
+  /// run down (and a touch out) to round tips, with the bottom edge
+  /// arching up between them.
+  static const _rightHalf = <List<Offset>>[
+    [Offset(600, 120), Offset(700, 110), Offset(810, 110)],
+    [Offset(885, 110), Offset(938, 128), Offset(950, 186)],
+    [Offset(957, 260), Offset(960, 560), Offset(960, 662)],
+    [Offset(960, 728), Offset(928, 756), Offset(890, 756)],
+    [Offset(856, 756), Offset(838, 738), Offset(826, 708)],
+    [Offset(800, 642), Offset(742, 590), Offset(672, 574)],
+    [Offset(620, 562), Offset(562, 556), Offset(500, 556)],
+  ];
+
+  /// The body's outline.
   static Path body() {
-    final main = Path()
-      ..addRRect(
-        RRect.fromLTRBR(118, 104, 882, 420, const Radius.circular(130)),
+    const top = Offset(500, 120);
+    Offset mirror(Offset o) => Offset(1000 - o.dx, o.dy);
+    final path = Path()..moveTo(top.dx, top.dy);
+    for (final seg in _rightHalf) {
+      path.cubicTo(
+        seg[0].dx,
+        seg[0].dy,
+        seg[1].dx,
+        seg[1].dy,
+        seg[2].dx,
+        seg[2].dy,
       );
-    Path grip(Offset c, double angle) {
-      final m = Float64List.fromList([
-        math.cos(angle), math.sin(angle), 0, 0, //
-        -math.sin(angle), math.cos(angle), 0, 0,
-        0, 0, 1, 0,
-        c.dx, c.dy, 0, 1,
-      ]);
-      return (Path()..addOval(
-            Rect.fromCenter(center: Offset.zero, width: 230, height: 300),
-          ))
-          .transform(m);
     }
-
-    var out = Path.combine(
-      PathOperation.union,
-      main,
-      grip(const Offset(232, 400), 0.4),
-    );
-    out = Path.combine(
-      PathOperation.union,
-      out,
-      grip(const Offset(768, 400), -0.4),
-    );
-    return out;
+    // Back along the left half: each segment reversed and mirrored.
+    for (var i = _rightHalf.length - 1; i >= 0; i--) {
+      final seg = _rightHalf[i];
+      final end = i == 0 ? top : _rightHalf[i - 1][2];
+      final a = mirror(seg[1]), b = mirror(seg[0]), e = mirror(end);
+      path.cubicTo(a.dx, a.dy, b.dx, b.dy, e.dx, e.dy);
+    }
+    return path..close();
   }
 
   @override
@@ -108,75 +123,129 @@ class WiiUProLayout extends ControllerLayout {
     PadPalette palette,
   ) {
     final black = palette.variant == 'black';
-    final bodyFill = black ? const Color(0xFF1E1F24) : const Color(0xFFF1F1F3);
-    final bodyEdge = black ? const Color(0xFF0A0A0C) : const Color(0xFFB9BAC2);
-    final shoulder = black ? const Color(0xFF2A2B31) : const Color(0xFFDCDDE2);
-    final zFill = black ? const Color(0xFF16161A) : const Color(0xFFC9CAD1);
-    final btn = black ? const Color(0xFF2E2F36) : const Color(0xFFE2E3E8);
-    final btnEdge = black ? const Color(0xFF4A4B54) : const Color(0xFFA9AAB3);
-    final btnInk = black ? const Color(0xFFD9DAE0) : const Color(0xFF4A4B54);
-    final well = black ? const Color(0xFF0E0E11) : const Color(0xFFC3C4CC);
-    final cap = black ? const Color(0xFF303138) : const Color(0xFFE9E9EE);
+    final bodyFill = black ? const Color(0xFF1E1F24) : const Color(0xFFF4F4F6);
+    final bodyEdge = black ? const Color(0xFF050506) : const Color(0xFFAEB0B8);
+    final bodyShade = black ? const Color(0xFF000000) : const Color(0xFF9EA0AA);
+    final shoulder = black ? const Color(0xFF2A2B31) : const Color(0xFFE6E7EB);
+    final zFill = black ? const Color(0xFF17171B) : const Color(0xFFD2D3D9);
+    final btn = black ? const Color(0xFF2B2C33) : const Color(0xFFFAFAFB);
+    final btnEdge = black ? const Color(0xFF4A4B54) : const Color(0xFFB3B5BD);
+    final btnInk = black ? const Color(0xFFC9CAD2) : const Color(0xFF7A7C86);
+    final shadow = black ? const Color(0x99000000) : const Color(0x33000000);
+    final ring = black ? const Color(0xFF26272D) : const Color(0xFFEDEDF0);
+    final well = black ? const Color(0xFF0E0E11) : const Color(0xFFD5D6DC);
+    final cap = black ? const Color(0xFF303138) : const Color(0xFFF7F7F9);
+    final stem = black ? const Color(0xFF1A1A1F) : const Color(0xFFC4C5CC);
     final pp = PadPainter(canvas, state, session, palette);
 
-    // ZL / ZR (furthest back), then L / R, then the body over them.
-    RRect pill(double l, double t, double r, double b) =>
-        RRect.fromLTRBR(l, t, r, b, const Radius.circular(22));
+    // ZL / ZR on the back of the grips peek over L / R, which sit on the
+    // top edge wrapping the corners; the body goes over both.
     pp.shapePart(
       'zl',
-      Path()..addRRect(pill(176, 40, 352, 110)),
+      Path()..addRRect(
+        RRect.fromLTRBR(118, 40, 282, 110, const Radius.circular(20)),
+      ),
       fill: zFill,
       edge: bodyEdge,
       label: 'ZL',
-      labelAt: const Offset(264, 58),
+      labelAt: const Offset(200, 57),
       labelColor: btnInk,
-      tickAt: const Offset(176, 46),
+      labelSize: 21,
+      tickAt: const Offset(118, 46),
     );
     pp.shapePart(
       'zr',
-      Path()..addRRect(pill(648, 40, 824, 110)),
+      Path()..addRRect(
+        RRect.fromLTRBR(718, 40, 882, 110, const Radius.circular(20)),
+      ),
       fill: zFill,
       edge: bodyEdge,
       label: 'ZR',
-      labelAt: const Offset(736, 58),
+      labelAt: const Offset(800, 57),
       labelColor: btnInk,
-      tickAt: const Offset(824, 46),
+      labelSize: 21,
+      tickAt: const Offset(882, 46),
     );
     pp.shapePart(
       'l',
-      Path()..addRRect(pill(150, 78, 380, 134)),
+      Path()..addRRect(
+        RRect.fromLTRBAndCorners(
+          52,
+          74,
+          296,
+          190,
+          topLeft: const Radius.circular(78),
+          topRight: const Radius.circular(16),
+          bottomLeft: const Radius.circular(16),
+          bottomRight: const Radius.circular(16),
+        ),
+      ),
       fill: shoulder,
       edge: bodyEdge,
       label: 'L',
-      labelAt: const Offset(262, 92),
+      labelAt: const Offset(196, 92),
       labelColor: btnInk,
-      tickAt: const Offset(150, 92),
+      labelSize: 21,
+      tickAt: const Offset(64, 104),
     );
     pp.shapePart(
       'r',
-      Path()..addRRect(pill(620, 78, 850, 134)),
+      Path()..addRRect(
+        RRect.fromLTRBAndCorners(
+          704,
+          74,
+          948,
+          190,
+          topLeft: const Radius.circular(16),
+          topRight: const Radius.circular(78),
+          bottomLeft: const Radius.circular(16),
+          bottomRight: const Radius.circular(16),
+        ),
+      ),
       fill: shoulder,
       edge: bodyEdge,
       label: 'R',
-      labelAt: const Offset(738, 92),
+      labelAt: const Offset(804, 92),
       labelColor: btnInk,
-      tickAt: const Offset(850, 92),
+      labelSize: 21,
+      tickAt: const Offset(936, 104),
     );
 
     final shape = body();
-    canvas.drawShadow(shape, const Color(0xFF000000), 10, false);
+    canvas.drawShadow(shape, const Color(0xFF000000), 12, false);
     canvas.drawPath(shape, Paint()..color = bodyFill);
-    // A soft highlight across the top, like the glossy plastic.
     canvas.save();
     canvas.clipPath(shape);
+    // Glossy across the top, shading down the grips (they curve away).
     canvas.drawRect(
-      const Rect.fromLTRB(0, 100, 1000, 300),
+      const Rect.fromLTRB(0, 100, 1000, 330),
       Paint()
         ..shader = ui.Gradient.linear(
-          const Offset(0, 100),
-          const Offset(0, 300),
-          [Color(black ? 0x18FFFFFF : 0x60FFFFFF), const Color(0x00FFFFFF)],
+          const Offset(0, 110),
+          const Offset(0, 330),
+          [Color(black ? 0x1CFFFFFF : 0x80FFFFFF), const Color(0x00FFFFFF)],
         ),
+    );
+    canvas.drawRect(
+      const Rect.fromLTRB(0, 470, 1000, 760),
+      Paint()
+        ..shader = ui.Gradient.linear(
+          const Offset(0, 470),
+          const Offset(0, 760),
+          [
+            bodyShade.withValues(alpha: 0),
+            bodyShade.withValues(alpha: black ? 0.5 : 0.28),
+          ],
+        ),
+    );
+    // The bottom edge's bevel and the rim along the outer sides.
+    canvas.drawPath(
+      shape,
+      Paint()
+        ..color = bodyShade.withValues(alpha: black ? 0.6 : 0.35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 16
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
     );
     canvas.restore();
     canvas.drawPath(
@@ -187,28 +256,87 @@ class WiiUProLayout extends ControllerLayout {
         ..strokeWidth = 3,
     );
 
-    pp.stick(
-      'ls',
-      'l3',
-      leftStick,
-      well: 74,
-      cap: 48,
-      wellColor: well,
-      capColor: cap,
-      capEdge: btnEdge,
+    // The sticks: a raised ring round each base, a tall stem, a big cap.
+    for (final (id, click, c) in [
+      ('ls', 'l3', leftStick),
+      ('rs', 'r3', rightStick),
+    ]) {
+      canvas.drawCircle(
+        c + const Offset(0, 4),
+        86,
+        Paint()
+          ..color = shadow
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+      );
+      canvas.drawCircle(c, 86, Paint()..color = ring);
+      canvas.drawCircle(
+        c,
+        86,
+        Paint()
+          ..color = btnEdge
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+      pp.stick(
+        id,
+        click,
+        c,
+        well: 70,
+        cap: 54,
+        wellColor: well,
+        capColor: cap,
+        capEdge: btnEdge,
+        stem: 22,
+        stemColor: stem,
+      );
+    }
+
+    // D-pad: a chunky plus sitting in a shallow recess, a groove per arm.
+    const dpadSize = 124.0;
+    final arms = Path.combine(
+      PathOperation.union,
+      Path()..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: dpadAt, width: 46, height: dpadSize),
+          const Radius.circular(8),
+        ),
+      ),
+      Path()..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: dpadAt, width: dpadSize, height: 46),
+          const Radius.circular(8),
+        ),
+      ),
     );
-    pp.stick(
-      'rs',
-      'r3',
-      rightStick,
-      well: 74,
-      cap: 48,
-      wellColor: well,
-      capColor: cap,
-      capEdge: btnEdge,
+    canvas.drawPath(
+      arms.shift(const Offset(0, 5)),
+      Paint()
+        ..color = shadow
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    canvas.drawPath(arms.shift(const Offset(0, 3)), Paint()..color = btnEdge);
+    pp.dpad(
+      dpadAt,
+      dpadSize,
+      fill: btn,
+      lineMarks: true,
+      markColor: btnInk.withValues(alpha: 0.7),
+    );
+    canvas.drawPath(
+      arms,
+      Paint()
+        ..color = btnEdge
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
     );
 
-    pp.dpad(dpadAt, 112, fill: btn, edge: btnEdge);
+    void raised(Offset c, double r) => canvas.drawCircle(
+      c + Offset(0, r * 0.14),
+      r * 1.04,
+      Paint()
+        ..color = shadow
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.12),
+    );
 
     for (final (id, label, dx, dy) in [
       ('x', 'X', 0.0, -1.0),
@@ -216,91 +344,84 @@ class WiiUProLayout extends ControllerLayout {
       ('b', 'B', 0.0, 1.0),
       ('y', 'Y', -1.0, 0.0),
     ]) {
+      final c = faceAt + Offset(dx, dy) * faceGap;
+      raised(c, 31);
       pp.roundButton(
         id,
-        faceAt + Offset(dx, dy) * faceGap,
-        25,
+        c,
+        31,
         fill: btn,
         edge: btnEdge,
         label: label,
         labelColor: btnInk,
-        labelSize: 24,
+        labelSize: 25,
       );
     }
 
-    // − HOME + across the middle, POWER below HOME.
-    pp.roundButton(
-      'minus',
-      const Offset(436, 226),
-      15,
-      fill: btn,
-      edge: btnEdge,
-      label: '−',
-      labelColor: btnInk,
-      labelSize: 22,
-    );
-    pp.roundButton(
-      'plus',
-      const Offset(564, 226),
-      15,
-      fill: btn,
-      edge: btnEdge,
-      label: '+',
-      labelColor: btnInk,
-      labelSize: 22,
-    );
-    pp.roundButton(
-      'home',
-      const Offset(500, 252),
-      21,
-      fill: btn,
-      edge: btnEdge,
-    );
-    _house(canvas, const Offset(500, 252), pp.lit('home') ? bodyEdge : btnInk);
-    pp.text('HOME', const Offset(500, 286), size: 11, color: btnInk);
+    // − HOME + in a row across the top, POWER below HOME: all small.
+    for (final (id, label, c) in [
+      ('minus', '−', minusAt),
+      ('plus', '+', plusAt),
+    ]) {
+      raised(c, smallButton);
+      pp.roundButton(
+        id,
+        c,
+        smallButton,
+        fill: btn,
+        edge: btnEdge,
+        label: label,
+        labelColor: btnInk,
+        labelSize: 26,
+      );
+    }
+    raised(homeAt, smallButton);
+    pp.roundButton('home', homeAt, smallButton, fill: btn, edge: btnEdge);
+    _house(canvas, homeAt, pp.lit('home') ? const Color(0xFF0B1A26) : btnInk);
     // POWER can't be read by any program: drawn, not tested.
-    canvas.drawCircle(const Offset(500, 340), 12, Paint()..color = btn);
+    raised(powerAt, smallButton);
+    canvas.drawCircle(powerAt, smallButton, Paint()..color = btn);
     canvas.drawCircle(
-      const Offset(500, 340),
-      12,
+      powerAt,
+      smallButton,
       Paint()
         ..color = btnEdge
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+        ..strokeWidth = 2,
     );
-    _power(canvas, const Offset(500, 340), btnInk);
-    // The four player lights.
+    _power(canvas, powerAt, btnInk);
+
+    // The four player lights: slots along the bottom edge, player 1 lit.
     for (var i = 0; i < 4; i++) {
       final r = Rect.fromCenter(
-        center: Offset(470 + i * 20.0, 400),
-        width: 10,
-        height: 5,
+        center: Offset(440 + i * 40.0, 536),
+        width: 11,
+        height: 8,
       );
       canvas.drawRect(
         r,
         Paint()
           ..color = i == 0
               ? const Color(0xFF4FC3F7)
-              : (black ? const Color(0xFF3A3B42) : const Color(0xFFC3C4CC)),
+              : (black ? const Color(0xFF050506) : const Color(0xFF55575F)),
       );
     }
-    pp.text('Wii U', const Offset(500, 168), size: 15, color: btnEdge);
   }
 
   static void _power(Canvas canvas, Offset c, Color color) {
     final p = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
+      ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;
     canvas.drawArc(
-      Rect.fromCircle(center: c, radius: 6),
+      Rect.fromCircle(center: c, radius: 8),
       -math.pi / 2 + 0.6,
       2 * math.pi - 1.2,
       false,
       p,
     );
-    canvas.drawLine(c - const Offset(0, 8), c - const Offset(0, 1), p);
+    canvas.drawLine(c - const Offset(0, 11), c - const Offset(0, 2), p);
   }
 
   static void _house(Canvas canvas, Offset c, Color color) {
