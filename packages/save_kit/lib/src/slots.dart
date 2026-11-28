@@ -366,6 +366,8 @@ class CardSlots {
     if (card == null || card.system != slot.system) {
       return 'Only a ${CardSystems.info[slot.system]!['name']} card goes in there';
     }
+    // in a slot the emulator would write to it
+    if (store!.safety.isReadOnly(card.path)) return CardSafety.readOnlyNotice;
     return switch (slot.system) {
       'DC' => _dcPut(slot, card),
       'PS1' => _ps1Put(slot, card),

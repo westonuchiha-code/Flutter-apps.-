@@ -39,8 +39,47 @@ class XmbFolders {
   String get backups => p.join(root, 'Backups');
   String get raConfig => p.join(root, 'RetroArch', 'retroarch.cfg');
 
-  /// The repo's folders this device syncs (PROTOCOL.md's layout).
+  /// Every other folder under the repo's `saves/` (the PC's PS2 cards,
+  /// PS3 saves, N64 and Switch saves, and whatever comes next) is kept here
+  /// as a copy under `Saves/`: download-only (the PC owns them; no emulator
+  /// here uses them) and read-only in the Save Manager. Their first folder
+  /// gets the emulator's name ([copyNames]); others keep the repo's.
+  String get saves => p.join(root, 'Saves');
+  String get pcsx2Cards => p.join(saves, 'PCSX2', 'memcards');
+  String get rpcs3Saves => p.join(saves, 'RPCS3', 'savedata');
+
+  /// Repo folder under `saves/` → this device's folder name under `Saves/`
+  /// (save_screens' CardFolders.pcCopies keeps the copies' ones read-only).
+  static const copyNames = {
+    'retroarch': 'RetroArch',
+    'duckstation': 'DuckStation',
+    'ppsspp': 'PPSSPP',
+    'dolphin': 'Dolphin',
+    'pcsx2': 'PCSX2',
+    'rpcs3': 'RPCS3',
+    'rmg': 'RMG',
+    'switch': 'Switch',
+    'xenia': 'Xenia',
+  };
+
+  /// The repo's folders this device syncs (PROTOCOL.md's layout): the
+  /// two-way ones, then the rest of `saves/` as download-only copies.
   List<SyncMap> get maps => [
+    ..._twoWay,
+    SyncMap(
+      'saves',
+      saves,
+      downloadOnly: true,
+      excludes: [
+        for (final m in _twoWay)
+          if (m.repo.startsWith('saves/')) m.repo.substring('saves/'.length),
+      ],
+      renames: copyNames,
+    ),
+  ];
+
+  /// What this device plays, both ways.
+  List<SyncMap> get _twoWay => [
     SyncMap(
       'saves/retroarch',
       raSaves,
@@ -71,6 +110,8 @@ class XmbFolders {
       pspSaves,
       dolphinGc,
       dolphinWii,
+      pcsx2Cards,
+      rpcs3Saves,
       pokeville,
       comics,
       backups,

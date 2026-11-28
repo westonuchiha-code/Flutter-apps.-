@@ -256,6 +256,7 @@ class CardOpsConfig {
     required this.backupRoot,
     required this.exportDir,
     this.testRoots = const [],
+    this.readOnlyDirs = const [],
     this.favoritesFile = '',
     this.looseDir = '',
     this.slots,
@@ -268,6 +269,9 @@ class CardOpsConfig {
 
   /// Folders a test may write in.
   final List<String> testRoots;
+
+  /// Folders of copies that are never changed ([CardSafety.readOnly]).
+  final List<String> readOnlyDirs;
 
   /// Where backups go.
   final String backupRoot;
@@ -292,7 +296,8 @@ class CardOpsConfig {
   final List<String>? running;
 
   /// The write gate.
-  CardSafety safety() => CardSafety(isApp: isApp, testRoots: testRoots);
+  CardSafety safety() =>
+      CardSafety(isApp: isApp, testRoots: testRoots, readOnly: readOnlyDirs);
 
   /// A [CardOps] (with its slots) from these values.
   CardOps build() {
@@ -1307,6 +1312,8 @@ class MemoryCardFlow {
       if (c.system != system || (from != null && c.key() == from.key())) {
         continue;
       }
+      // a PC copy is kept as it is: nothing lands on it
+      if (c.readOnly) continue;
       if (c.system != 'PS2' || !c.isFolder) targets.add(c);
     }
     if (targets.isEmpty) {

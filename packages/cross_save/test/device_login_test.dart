@@ -201,8 +201,11 @@ void main() {
       findsOneWidget,
     );
     gate.complete();
-    for (var i = 0; i < 10 && result == null; i++) {
-      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    // saving the token writes a real file: give it time (up to 2 s)
+    for (var i = 0; i < 200 && result == null; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
       await tester.pump();
     }
     expect(result, isTrue);

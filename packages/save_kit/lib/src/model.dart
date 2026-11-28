@@ -377,6 +377,9 @@ class MemoryCard {
   /// A PCSX2 folder card or a folder of .gci files (or PS3 saves).
   bool isFolder = false;
 
+  /// A copy another device owns (CardSafety.readOnly): look, never change.
+  bool readOnly = false;
+
   /// "IN PCSX2 SLOT 2": the console sees it.
   String inSlot = '';
   int slotOrder = 0;

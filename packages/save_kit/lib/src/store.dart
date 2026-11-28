@@ -17,22 +17,46 @@ import 'bytes.dart';
 
 /// The one gate every card write goes through. Closed unless told
 /// otherwise: a test or a tool can only ever change copies inside
-/// [testRoots].
+/// [testRoots]. Nothing under [readOnly] is ever changed, by anyone.
 class CardSafety {
-  CardSafety({required this.isApp, this.testRoots = const []});
+  CardSafety({
+    required this.isApp,
+    this.testRoots = const [],
+    this.readOnly = const [],
+  });
 
   /// The app itself is running (it may change the player's real cards).
   final bool isApp;
   final List<String> testRoots;
 
+  /// Folders of copies another device owns (the phone's copies of the PC's
+  /// PS2 cards and PS3 saves, kept by Cross-Save): they can be read,
+  /// exported, backed up and copied from, never changed.
+  final List<String> readOnly;
+
   static const refused =
       'This can only change test copies, not your memory cards';
+
+  static const readOnlyNotice =
+      "This is a copy of your PC's saves, kept for safekeeping: change it "
+      'on the PC';
 
   /// '' = may write.
   String refusal(String path) {
     if (path.trim().isEmpty) return 'No memory card was chosen';
+    if (isReadOnly(path)) return readOnlyNotice;
     if (isApp || isTestCopy(path)) return '';
     return refused;
+  }
+
+  /// [path] is (or is inside) one of the [readOnly] folders.
+  bool isReadOnly(String path) {
+    if (path.trim().isEmpty) return false;
+    final full = _full(path);
+    return readOnly.any((r) {
+      final root = _full(r);
+      return full == root || full.startsWith('$root/');
+    });
   }
 
   bool isTestCopy(String path) {

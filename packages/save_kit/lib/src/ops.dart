@@ -128,6 +128,9 @@ class CardOps {
   /// Which card is in which console slot (null = none).
   CardSlots? slots;
 
+  /// [path] is one of the read-only copies ([CardSafety.readOnly]).
+  bool _locked(String path) => store.safety.isReadOnly(path);
+
   static String _norm(String path) =>
       p.normalize(p.absolute(path)).replaceAll(r'\', '/').toLowerCase();
 
@@ -141,6 +144,7 @@ class CardOps {
   }
 
   OpResult deleteSaves(MemoryCard card, List<String> ids) {
+    if (_locked(card.path)) return _no(CardSafety.readOnlyNotice);
     final from = openCard(card);
     if (from.error.isNotEmpty) return _no(from.error);
     if (ids.isEmpty) return _no('No saves were chosen');
@@ -179,6 +183,12 @@ class CardOps {
     bool replace = false,
     bool move = false,
   }) {
+    // Copying from a read-only copy is fine; onto one, or moving out of
+    // one (it deletes there), is not.
+    if (_locked(target.path) ||
+        (move && groups.any((g) => _locked(g.card.path)))) {
+      return _no(CardSafety.readOnlyNotice);
+    }
     final cards = <MemoryCard>[];
     final lists = <List<String>>[];
     var count = 0;
@@ -320,6 +330,7 @@ class CardOps {
   }
 
   OpResult importFile(MemoryCard card, String path, {bool replace = false}) {
+    if (_locked(card.path)) return _no(CardSafety.readOnlyNotice);
     final pack = saveFile(card.system, path);
     if (!pack.ok) return _no(pack.error);
     return _takeIn(card, pack.data, replace, 'import');
@@ -330,6 +341,7 @@ class CardOps {
       store.history(card.key() + saveMark + id);
 
   OpResult restoreSave(MemoryCard card, Backup entry, {bool replace = false}) {
+    if (_locked(card.path)) return _no(CardSafety.readOnlyNotice);
     final bytes = store.readBackup(entry);
     if (bytes.isEmpty) {
       return _no('That backup is damaged, so nothing was changed');
@@ -372,6 +384,7 @@ class CardOps {
   }
 
   OpResult undelete(MemoryCard card, LostSave entry) {
+    if (_locked(card.path)) return _no(CardSafety.readOnlyNotice);
     if (entry.slot <= 0) return restoreSave(card, entry.backup!);
     final now = openCard(card);
     if (now.error.isNotEmpty) return _no(now.error);
@@ -407,6 +420,7 @@ class CardOps {
   /// The whole card file goes, backed up first. Never one with a favorite on
   /// it, one a console has in its slot, or one sharing its file.
   OpResult deleteCard(MemoryCard card) {
+    if (_locked(card.path)) return _no(CardSafety.readOnlyNotice);
     if (card.isFolder) return _no(folderNo);
     final f = File(card.path);
     final shared =
@@ -458,6 +472,7 @@ class CardOps {
   }
 
   OpResult bringBack(Backup entry) {
+    if (_locked(entry.path)) return _no(CardSafety.readOnlyNotice);
     if (entry.path.isEmpty || File(entry.path).existsSync()) {
       return _no("There's a card there already");
     }
@@ -469,6 +484,7 @@ class CardOps {
 
   /// One pak of a shared file comes back on its own; the others stay.
   OpResult restoreCard(MemoryCard card, Backup entry) {
+    if (_locked(card.path)) return _no(CardSafety.readOnlyNotice);
     if (card.isFolder) return _no(folderNo);
     final old = store.readBackup(entry);
     if (old.isEmpty) {
@@ -498,6 +514,7 @@ class CardOps {
   }
 
   OpResult formatCard(MemoryCard card) {
+    if (_locked(card.path)) return _no(CardSafety.readOnlyNotice);
     if (card.unformatted) return _formatBlank(card);
     final now = openCard(card);
     if (now.error.isNotEmpty) return _no(now.error);
@@ -534,6 +551,8 @@ class CardOps {
   }
 
   OpResult newCard(MemoryCard like) {
+    // a new card goes beside it: not among the PC's copies
+    if (_locked(like.path)) return _no(CardSafety.readOnlyNotice);
     if (like.system == 'PS3') {
       // a PS3 copies saves to a USB stick: RPCS3's own is dev_usb000
       final usb = ps3UsbFor(like.path);
@@ -574,6 +593,7 @@ class CardOps {
   }
 
   OpResult duplicateCard(MemoryCard card) {
+    if (_locked(card.path)) return _no(CardSafety.readOnlyNotice);
     final now = openCard(card);
     if (now.error.isNotEmpty) return _no(now.error);
     if (card.isFolder) return _no(folderNo);

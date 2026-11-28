@@ -33,6 +33,10 @@ const crossSaveWhenLines = [
       'only sends what this device saved. Newer saves wait for the next game.',
   'Sync Now (and signing in) does both: sends and gets. Close any emulator '
       'still open in the background first.',
+  'PS2 cards and PS3 saves (and the other PC saves no emulator here uses: '
+      'N64, Switch) come down as copies, to look at and back up in the '
+      'Save Manager. They are kept as the PC has them: change them on the '
+      'PC, never sent from here.',
 ];
 
 /// The menu: Settings and Game for now (more categories come with the

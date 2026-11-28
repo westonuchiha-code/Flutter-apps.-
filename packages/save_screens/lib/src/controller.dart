@@ -41,6 +41,7 @@ class ReadConfig {
     required this.looksFile,
     required this.isApp,
     this.testRoots = const [],
+    this.readOnlyDirs = const [],
     this.games = const [],
     this.played = const {},
     this.indexNames = const {},
@@ -58,6 +59,9 @@ class ReadConfig {
 
   /// Folders a test may write in.
   final List<String> testRoots;
+
+  /// Folders of copies that are never changed ([CardSafety.readOnly]).
+  final List<String> readOnlyDirs;
 
   /// The library's games, for naming saves.
   final List<LibraryGame> games;
@@ -83,7 +87,14 @@ CardsRead readCardsJob(ReadConfig c) {
   );
   // after matching, which goes by the cards' own names
   CardNames.apply(got.cards, c.namesFile);
-  final safety = CardSafety(isApp: c.isApp, testRoots: c.testRoots);
+  final safety = CardSafety(
+    isApp: c.isApp,
+    testRoots: c.testRoots,
+    readOnly: c.readOnlyDirs,
+  );
+  for (final card in got.cards) {
+    card.readOnly = safety.isReadOnly(card.path);
+  }
   CardFavorites(c.favoritesFile, safety).mark(got.cards);
   // the cards in a console's slots come first, tagged
   c.slots?.build(null).dress(got.cards, got.saves);
@@ -104,6 +115,7 @@ class SaveManagerConfig {
     this.favoritesFile = '',
     this.isApp = false,
     this.testRoots = const [],
+    this.readOnlyDirs = const [],
     this.looseDir = '',
     this.importFolders = const [],
     this.stickerFolder = '',
@@ -139,6 +151,11 @@ class SaveManagerConfig {
 
   /// Folders a test may write in (anything when [isApp]).
   final List<String> testRoots;
+
+  /// Folders of copies another device owns (Android: the PC's PS2 cards
+  /// and PS3 saves Cross-Save keeps in `XMB Frontend/Saves`): read, export,
+  /// back up and copy from them; nothing in them is ever changed.
+  final List<String> readOnlyDirs;
 
   /// The downloaded saves' folder (no emulator holds those open).
   final String looseDir;
@@ -177,7 +194,8 @@ class SaveManagerConfig {
       : p.join(backupRoot, 'favorites.json');
 
   /// The write gate.
-  CardSafety safety() => CardSafety(isApp: isApp, testRoots: testRoots);
+  CardSafety safety() =>
+      CardSafety(isApp: isApp, testRoots: testRoots, readOnly: readOnlyDirs);
 }
 
 /// Android can't see other apps, so it can't tell whether an emulator has
@@ -374,6 +392,7 @@ class SaveManagerController extends ChangeNotifier {
   CardOpsConfig opsConfig() => CardOpsConfig(
     isApp: config.isApp,
     testRoots: config.testRoots,
+    readOnlyDirs: config.readOnlyDirs,
     backupRoot: config.backupRoot,
     exportDir: config.exportDir,
     favoritesFile: config.favoritesPath,
@@ -391,6 +410,7 @@ class SaveManagerController extends ChangeNotifier {
     looksFile: config.looksFile,
     isApp: config.isApp,
     testRoots: config.testRoots,
+    readOnlyDirs: config.readOnlyDirs,
     games: config.games,
     played: config.played,
     indexNames: config.indexNames,

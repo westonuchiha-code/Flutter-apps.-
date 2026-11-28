@@ -352,6 +352,38 @@ void main() {
     );
   });
 
+  test("a PC copy (read-only) doesn't go in a slot", () {
+    final copies = p.join(dir, 'XMB Frontend', 'Saves', 'PCSX2');
+    final locked = CardSlots(
+      store: CardStore(
+        safety: CardSafety(
+          isApp: false,
+          testRoots: [temp.path],
+          readOnly: [copies],
+        ),
+        root: p.join(dir, 'backups'),
+      ),
+      recordFile: record,
+      formats: formats,
+      raRoot: p.join(dir, 'RetroArch'),
+      pcsx2Dir: p.join(dir, 'PCSX2'),
+    );
+    final ini = p.join(dir, 'PCSX2', 'inis', 'PCSX2.ini');
+    const text =
+        '[MemoryCards]\r\nSlot1_Enable = true\r\nSlot1_Filename = Mcd001.ps2\r\n';
+    put(ini, utf8.encode(text));
+    put(p.join(dir, 'PCSX2', 'memcards', 'Mcd001.ps2'), Ps2Writer.blank());
+    final pc = p.join(copies, 'memcards', 'Mcd001.ps2');
+    put(pc, Ps2Writer.blank());
+    expect(locked.putIn('PS2:1', card(pc)), CardSafety.readOnlyNotice);
+    expect(textOf(ini), text);
+    expect(
+      Directory(p.join(dir, 'PCSX2', 'memcards')).listSync().length,
+      1,
+      reason: 'nothing copied in',
+    );
+  });
+
   // PS1 through DuckStation: a card goes in by switching that slot to
   // Shared and naming the card's file, so every game uses it; taking it out
   // sets the slot to None. Only the lines meant change.

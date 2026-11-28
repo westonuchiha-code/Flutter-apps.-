@@ -126,6 +126,7 @@ abstract final class Texts {
     } else if (!CardSlots.systems.contains(c.system) || c.isFolder) {
       where = 'Its emulator picks it per game';
     }
+    if (c.readOnly) where = pcCopyNote;
     final at = CardLooks.paletteIndex(c.color, c.finish);
     var colour = c.color != 0 ? CardLooks.palette[at].$1 : "Console's own";
     if (c.color != 0 && at == 0) {
@@ -145,10 +146,17 @@ abstract final class Texts {
     ];
   }
 
+  /// A read-only card's "In the console" line.
+  static const pcCopyNote = "No: a copy of your PC's, kept as it is";
+
+  /// The tag a read-only card wears on its page.
+  static const pcCopyTag = 'PC COPY';
+
   /// Under a card's name on its page: "Dreamcast memory card - IN ...".
   static String cardTag(MemoryCard c) {
     var tag = '${CardSystems.info[c.system]?['name'] ?? c.system} memory card';
     if (c.inSlot.isNotEmpty) tag += '  -  ${c.inSlot}';
+    if (c.readOnly) tag += '  -  $pcCopyTag';
     return tag;
   }
 

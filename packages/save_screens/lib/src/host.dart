@@ -107,6 +107,7 @@ SaveManagerConfig appConfigFor(
   final on = platform.isNotEmpty ? platform : platformName();
   return SaveManagerConfig(
     cardDirs: CardFolders.toRead(on, at, extra),
+    readOnlyDirs: CardFolders.pcCopies(on, at),
     backupRoot: files.backups,
     exportDir: exports,
     namesFile: files.names,

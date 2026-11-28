@@ -311,7 +311,12 @@ void main() {
       'saves/dolphin/GC',
       'saves/dolphin/Wii/title',
       'pokeville',
+      'saves', // the rest of saves/: download-only copies
     ]);
+    expect(f.maps.last.downloadOnly, isTrue);
+    expect(f.maps.where((m) => m.downloadOnly).length, 1);
+    expect(Directory(f.pcsx2Cards).existsSync(), isTrue);
+    expect(Directory(f.rpcs3Saves).existsSync(), isTrue);
     // RetroArch's own lines stay; ours are set (and not doubled).
     File(f.raConfig).writeAsStringSync(
       'video_shader_enable = "true"\nsavefile_directory = "/old"\n',
@@ -773,6 +778,149 @@ void main() {
     final r = await one(repo, dir, {});
     expect(r.sent, ['Gambatte/Red.srm']);
     expect(r.conflicts.length, 1);
+  });
+
+  // ---- download-only copies (the PC's PS2/PS3/N64/Switch saves) -----------
+
+  Future<SyncReport> copies(
+    SaveRepo repo,
+    XmbFolders f,
+    Map<String, String> st, {
+    bool takes = true,
+  }) => crossSync(
+    repo: repo,
+    maps: f.maps,
+    state: st,
+    device: 'phone',
+    backups: f.backups,
+    takes: takes,
+  );
+
+  test('the PC\'s other saves arrive as copies, under Saves/', () async {
+    final f = XmbFolders(p.join(root.path, 'XMB Frontend'))..create();
+    final repo = FakeRepo()
+      ..pushAs('saves/pcsx2/memcards/Mcd001.ps2', 'ps2 card')
+      ..pushAs('saves/rpcs3/savedata/BLUS30968/PARAM.SFO', 'sfo')
+      ..pushAs('saves/rpcs3/savedata/BLUS30968/E_SLOT_1', 'slot')
+      ..pushAs('saves/rmg/Game/Zelda-1234.eep', 'n64')
+      ..pushAs('saves/switch/user/0100ABC/main', 'switch')
+      ..pushAs('saves/retroarch/Gambatte/Red.srm', 'red');
+    final st = <String, String>{};
+    final r = await copies(repo, f, st);
+    expect(r.ok, isTrue, reason: r.error);
+    String read(List<String> parts) =>
+        File(p.joinAll([f.root, 'Saves', ...parts])).readAsStringSync();
+    expect(read(['PCSX2', 'memcards', 'Mcd001.ps2']), 'ps2 card');
+    expect(File(p.join(f.pcsx2Cards, 'Mcd001.ps2')).existsSync(), isTrue);
+    expect(read(['RPCS3', 'savedata', 'BLUS30968', 'PARAM.SFO']), 'sfo');
+    expect(read(['RPCS3', 'savedata', 'BLUS30968', 'E_SLOT_1']), 'slot');
+    expect(read(['RMG', 'Game', 'Zelda-1234.eep']), 'n64');
+    expect(read(['Switch', 'user', '0100ABC', 'main']), 'switch');
+    // The two-way maps are as they were: RetroArch's comes down once.
+    expect(read(['RetroArch', 'Gambatte', 'Red.srm']), 'red');
+    expect(r.took.where((t) => t.endsWith('Red.srm')).length, 1);
+    // A folder the repo gets later comes down too, without a new map.
+    repo.pushAs('saves/xenia/content/0000/save.bin', 'x360');
+    repo.pushAs('saves/newemu/cards/a.card', 'new');
+    final again = await copies(repo, f, st);
+    expect(again.took.toSet(), {
+      'xenia/content/0000/save.bin',
+      'newemu/cards/a.card',
+    });
+    expect(read(['Xenia', 'content', '0000', 'save.bin']), 'x360');
+    expect(read(['newemu', 'cards', 'a.card']), 'new');
+    expect((await copies(repo, f, st)).took, isEmpty);
+  });
+
+  test('copies are never sent: local edits and new files stay here', () async {
+    final f = XmbFolders(p.join(root.path, 'XMB Frontend'))..create();
+    final repo = FakeRepo()
+      ..pushAs('saves/pcsx2/memcards/Mcd001.ps2', 'pc card');
+    final st = <String, String>{};
+    await copies(repo, f, st);
+    final card = File(p.join(f.pcsx2Cards, 'Mcd001.ps2'));
+    final made = File(p.join(f.pcsx2Cards, 'Mine.ps2'))
+      ..writeAsStringSync('made here');
+    final ps3 = File(p.join(f.rpcs3Saves, 'NEW00000', 'PARAM.SFO'))
+      ..createSync(recursive: true)
+      ..writeAsStringSync('new ps3');
+    card.writeAsStringSync('changed here');
+    final before = repo.branch;
+    final r = await copies(repo, f, st, takes: false);
+    expect(r.sent, isEmpty);
+    expect(r.conflicts, isEmpty);
+    expect(repo.branch, before); // no commit at all
+    expect(made.readAsStringSync(), 'made here');
+    expect(ps3.readAsStringSync(), 'new ps3');
+    expect(card.readAsStringSync(), 'changed here'); // send-only: no take
+    expect(r.waiting, ['pcsx2/memcards/Mcd001.ps2']);
+    final full = await copies(repo, f, st);
+    expect(full.sent, isEmpty);
+    expect(full.conflicts, isEmpty);
+    expect(repo.branch, before);
+    expect(made.readAsStringSync(), 'made here'); // only here: left alone
+  });
+
+  test('a changed copy is backed up and the PC\'s put back', () async {
+    final f = XmbFolders(p.join(root.path, 'XMB Frontend'))..create();
+    final repo = FakeRepo()
+      ..pushAs('saves/rpcs3/savedata/BLUS30968/E_SLOT_1', 'pc v1');
+    final st = <String, String>{};
+    await copies(repo, f, st);
+    final slot = File(p.join(f.rpcs3Saves, 'BLUS30968', 'E_SLOT_1'));
+    slot.writeAsStringSync('phone edit');
+    final r = await copies(repo, f, st);
+    expect(r.took, ['rpcs3/savedata/BLUS30968/E_SLOT_1']);
+    expect(r.conflicts, isEmpty);
+    expect(slot.readAsStringSync(), 'pc v1');
+    final backups = [
+      for (final e in Directory(f.backups).listSync(recursive: true))
+        if (e is File) e,
+    ];
+    expect(backups.single.readAsStringSync(), 'phone edit');
+    expect(backups.single.path, endsWith('E_SLOT_1'));
+    // Changed on both sides (or never synced before): still the PC's.
+    slot.writeAsStringSync('phone again');
+    repo.pushAs('saves/rpcs3/savedata/BLUS30968/E_SLOT_1', 'pc v2');
+    final both = await copies(repo, f, st);
+    expect(both.conflicts, isEmpty);
+    expect(both.sent, isEmpty);
+    expect(slot.readAsStringSync(), 'pc v2');
+    final fresh = <String, String>{};
+    slot.writeAsStringSync('before any sync');
+    expect((await copies(repo, f, fresh)).conflicts, isEmpty);
+    expect(slot.readAsStringSync(), 'pc v2');
+  });
+
+  test('send-only writes nothing for copies, even new ones', () async {
+    final f = XmbFolders(p.join(root.path, 'XMB Frontend'))..create();
+    final repo = FakeRepo()
+      ..pushAs('saves/pcsx2/memcards/Mcd001.ps2', 'pc card')
+      ..pushAs('saves/switch/user/01/main', 'sw');
+    final before = disk();
+    final r = await copies(repo, f, {}, takes: false);
+    expect(disk(), before);
+    expect(r.waiting.toSet(), {
+      'pcsx2/memcards/Mcd001.ps2',
+      'switch/user/01/main',
+    });
+  });
+
+  test('the copies map leaves the two-way folders to their own maps', () {
+    final f = XmbFolders(p.join(root.path, 'XMB Frontend'));
+    final m = f.maps.last;
+    expect(m.takes('retroarch/Gambatte/Red.srm'), isFalse);
+    expect(m.takes('RetroArch/Gambatte/Red.state'), isFalse);
+    expect(m.takes('dolphin/GC/USA/Card A/x.gci'), isFalse);
+    expect(m.takes('dolphin/Wii/title/00000001/x'), isFalse);
+    expect(m.takes('ppsspp/SAVEDATA/ULUS/DATA.BIN'), isFalse);
+    expect(m.takes('pcsx2/memcards/Mcd001.ps2'), isTrue);
+    expect(m.takes('rpcs3/trophy/NPWR0/TROPUSR.DAT'), isTrue);
+    expect(
+      m.localPath('pcsx2/memcards/Mcd001.ps2'),
+      p.join(f.root, 'Saves', 'PCSX2', 'memcards', 'Mcd001.ps2'),
+    );
+    expect(m.limitedTo({'a'}).downloadOnly, isTrue);
   });
 }
 

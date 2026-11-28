@@ -128,6 +128,37 @@ abstract final class CardFolders {
     return out;
   }
 
+  /// The XMB Frontend's own `Saves` folders (Android), where its emulators
+  /// keep the saves Cross-Save syncs both ways.
+  static const xmbTwoWay = ['RetroArch', 'DuckStation', 'PPSSPP', 'Dolphin'];
+
+  /// Folders of read-only copies ([SaveManagerConfig.readOnlyDirs]): on
+  /// Android, everything Cross-Save brings down as a copy of the PC's
+  /// (`XMB Frontend/Saves/PCSX2`, `RPCS3`, `RMG`, `Switch`, `Xenia` and
+  /// any other folder there besides [xmbTwoWay]; see cross_save's
+  /// XmbFolders.copyNames). Nothing elsewhere.
+  static List<String> pcCopies(String platform, Places at) {
+    if (platform != 'android') return const [];
+    final saves = p.join(at.storage, 'XMB Frontend', 'Saves');
+    final two = {for (final n in xmbTwoWay) n.toLowerCase()};
+    final out = <String>[
+      for (final n in const ['PCSX2', 'RPCS3', 'RMG', 'Switch', 'Xenia'])
+        p.join(saves, n),
+    ];
+    try {
+      for (final e in Directory(saves).listSync(followLinks: false)) {
+        final n = p.basename(e.path).toLowerCase();
+        if (e is Directory &&
+            !n.startsWith('.') &&
+            !two.contains(n) &&
+            !out.any((o) => p.basename(o).toLowerCase() == n)) {
+          out.add(e.path);
+        }
+      }
+    } catch (_) {} // not there yet (or not readable): the known ones
+    return out;
+  }
+
   /// [known] plus [added], the ones that exist, each once.
   static List<String> toRead(String platform, Places at, List<String> added) {
     final out = <String>[];

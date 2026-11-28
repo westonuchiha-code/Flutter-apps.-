@@ -48,11 +48,22 @@ class SyncMap {
     this.exts = const [],
     this.skipDirs = const [],
     this.only,
+    this.downloadOnly = false,
+    this.excludes = const [],
+    this.renames = const {},
   });
 
   /// This map limited to the files [names] (relative, '/').
-  SyncMap limitedTo(Set<String> names) =>
-      SyncMap(repo, local, exts: exts, skipDirs: skipDirs, only: names);
+  SyncMap limitedTo(Set<String> names) => SyncMap(
+    repo,
+    local,
+    exts: exts,
+    skipDirs: skipDirs,
+    only: names,
+    downloadOnly: downloadOnly,
+    excludes: excludes,
+    renames: renames,
+  );
 
   /// Folder in the repo ("saves/retroarch").
   final String repo;
@@ -71,7 +82,34 @@ class SyncMap {
   /// Pokémon game saves it found under saves/retroarch.)
   final Set<String>? only;
 
+  /// The repo's copies come down; nothing here is ever sent. For saves
+  /// another device owns (the PC's PS2 cards and PS3 saves: no emulator
+  /// here uses them, the phone keeps copies to look at and back up). A
+  /// copy changed here is not a save to send or a conflict: the next full
+  /// sync backs it up and puts the repo's back. Files only this device has
+  /// are left alone.
+  final bool downloadOnly;
+
+  /// Folders inside [repo] (relative, '/') left out with all they hold,
+  /// whatever their case: the parts other maps sync.
+  final List<String> excludes;
+
+  /// Local names for the first folder of a repo path (`pcsx2` → `PCSX2`),
+  /// so copies sit beside the menu's own `Saves/<Emulator>` folders.
+  final Map<String, String> renames;
+
+  /// Where [rel] (a path inside [repo]) is on this device.
+  String localPath(String rel) {
+    final parts = rel.split('/');
+    if (parts.length > 1) parts[0] = renames[parts[0]] ?? parts[0];
+    return p.joinAll([local, ...parts]);
+  }
+
   bool takes(String rel) {
+    final low = rel.toLowerCase();
+    if (excludes.any((e) => low.startsWith('${e.toLowerCase()}/'))) {
+      return false;
+    }
     final parts = rel.split('/');
     if (parts
         .take(parts.length - 1)
@@ -324,7 +362,9 @@ Future<SyncReport> crossSync({
     // overwrite each other on the PC.
     final lower = {for (final k in remote.keys) k.toLowerCase(): k};
     for (final m in maps) {
-      final names = <String>{...localFiles(m)};
+      // A download-only map leaves files only this device has alone, so
+      // only the repo's names count.
+      final names = <String>{if (!m.downloadOnly) ...localFiles(m)};
       final prefix = '${m.repo}/';
       for (final key in remote.keys) {
         if (key.startsWith(prefix)) {
@@ -334,13 +374,19 @@ Future<SyncReport> crossSync({
       }
       for (final rel in names) {
         final key = '${m.repo}/$rel';
-        final lp = p.joinAll([m.local, ...rel.split('/')]);
+        final lp = m.localPath(rel);
         final lf = File(lp);
         Uint8List? lb;
         if (await lf.exists()) lb = await lf.readAsBytes();
         final l = lb == null ? '' : blobSha(lb);
         final r = remote[key] ?? '';
         var what = decide(l, r, state[key] ?? '');
+        if (m.downloadOnly) {
+          // The repo's copy is the save: one changed here (or not synced
+          // before) is replaced by it, after a backup. Never sent.
+          if (r.isEmpty) continue;
+          if (what == 'send' || what == 'conflict') what = 'take';
+        }
         final other = lower[key.toLowerCase()];
         if (what == 'send' && r.isEmpty && other != null && other != key) {
           rep.error ??=
