@@ -178,7 +178,14 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
 
 ## Proposed · real controllers on the PC (owner's idea, 2026-11-28)
 
-- ⬜ **Controller Lab** (PC): use original controllers through adapters (N64, Saturn standard + 3D
+- 🟨 **Controller Lab** — part 1 built (`apps/controller_lab`): detection through SDL3 (Windows/Linux,
+  SDL3.dll shipped by CI) or Android's input devices, how SDL sees each pad (type, GUID, mapping,
+  connection, battery), live test on a drawing with an "every button checked" list, stick
+  range/gate/rest drift, rumble; the Wii U Pro is the first fully drawn controller, others get a
+  generic pad or raw-joystick drawing. Next: more drawn controllers (DualShock 3, DualSense,
+  Xbox 360, N64, Saturn + 3D pad, Genesis 3/6, PS1/PS2, GameCube, Wii Remote + Nunchuk/Classic,
+  Dreamcast, arcade sticks), then mapping with each console's names, then per-program profiles.
+  The idea: use original controllers through adapters (N64, Saturn standard + 3D
   pad, Genesis 3/6-button, PS1/PS2 incl. odd pads, GameCube, Wii Remote + Nunchuk/Classic for
   Wii games, Dreamcast **with the real VMU** if DreamPicoPort/Flycast allow, else skip Dreamcast)
   plus modern pads (Wii U Pro, PS5 DualSense wireless detected as a PS5 pad, PS3 DualShock 3

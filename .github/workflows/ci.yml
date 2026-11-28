@@ -16,6 +16,12 @@ env:
   # What Flutter's Android builds download (cached between runs).
   ANDROID_NDK_VERSION: "28.2.13676358"
   ANDROID_CMAKE_VERSION: "3.22.1"
+  # SDL3 (zlib licence) for apps that read controllers through it (a
+  # windows/needs_sdl3 or linux/needs_sdl3 marker file, e.g. controller_lab).
+  # Windows: the official release zip, checked against this SHA-256.
+  # Linux: the distro's libsdl3-0 (Ubuntu 25.04+), copied into the bundle.
+  SDL3_VERSION: "3.4.20"
+  SDL3_WIN_X64_SHA256: "368bed8b24e44ad9ea372990814f2343fcfb9e468abb7f8f4a3bc146c7304752"
 
 jobs:
   # Finds every Flutter app under apps/ so each one is checked and built.
@@ -196,6 +202,26 @@ jobs:
       # (paths, line endings, etc.).
       - run: flutter test
       - run: flutter build windows --release
+      # SDL3.dll next to the .exe (where the app loads it from), plus its
+      # licence, for apps with a windows/needs_sdl3 marker.
+      - name: Add SDL3.dll (apps that need it)
+        if: hashFiles(format('apps/{0}/windows/needs_sdl3', matrix.app)) != ''
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP "SDL3.zip"
+          $url = "https://github.com/libsdl-org/SDL/releases/download/release-$env:SDL3_VERSION/SDL3-$env:SDL3_VERSION-win32-x64.zip"
+          for ($i = 1; $i -le 3; $i++) {
+            try { Invoke-WebRequest -Uri $url -OutFile $zip; break }
+            catch { if ($i -eq 3) { throw }; Start-Sleep -Seconds (20 * $i) }
+          }
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne $env:SDL3_WIN_X64_SHA256) { throw "SDL3 zip checksum mismatch: $hash" }
+          $dir = Join-Path $env:RUNNER_TEMP "SDL3"
+          Expand-Archive $zip -DestinationPath $dir -Force
+          $out = "build\windows\x64\runner\Release"
+          Copy-Item (Join-Path $dir "SDL3.dll") $out
+          Copy-Item (Join-Path $dir "LICENSE.txt") (Join-Path $out "SDL3-LICENSE.txt")
+          Get-ChildItem $out -Filter "SDL3*"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.app }}-windows-x64
@@ -231,6 +257,21 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter build linux --release
+      # libSDL3 in the bundle's lib/ (the app looks there first, then the
+      # system) for apps with a linux/needs_sdl3 marker. Ubuntu has
+      # libsdl3-0 from 25.04; on an older runner the app falls back to key
+      # events, as it does on a machine without SDL3.
+      - name: Add libSDL3 (apps that need it)
+        if: hashFiles(format('apps/{0}/linux/needs_sdl3', matrix.app)) != ''
+        run: |
+          if sudo apt-get install -y libsdl3-0; then
+            lib=$(ldconfig -p | awk '/libSDL3\.so\.0 .*x86-64/{print $NF; exit}')
+            cp -L "$lib" build/linux/x64/release/bundle/lib/libSDL3.so.0
+            cp /usr/share/doc/libsdl3-0/copyright build/linux/x64/release/bundle/lib/SDL3-copyright.txt || true
+            ls -l build/linux/x64/release/bundle/lib/
+          else
+            echo "::warning::libsdl3-0 isn't available on this runner; the Linux build has no SDL3 (it falls back to key events)."
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.app }}-linux-x64

@@ -229,6 +229,10 @@ apps/        # one folder per Flutter application
              #                      media_kit (libmpv; third_party/media_kit_video is patched,
              #                      Linux-only changes); Android: All files access, default
              #                      folder XMB Frontend/TV, Retroid buttons arrive as keys
+             #   controller_lab   - real controllers on the PC: SDL3 via dart:ffi (Windows/Linux; CI ships
+             #                      SDL3.dll for apps with windows/needs_sdl3), Android InputDevice
+             #                      channel; how SDL sees each pad, live test on a drawing (Wii U Pro
+             #                      first; generic/raw for others), checklist, stick range/drift
              #   texture_capture  - photo -> game texture: perspective corners, even lighting,
              #                      seamless tiling, photo checks, PS1/N64/PS2/GameCube/Dreamcast
              #                      formats (CLUT, S3TC, VQ) with their memory limits

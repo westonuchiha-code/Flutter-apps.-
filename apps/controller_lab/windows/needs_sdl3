@@ -1,0 +1,1 @@
+Marker for CI (.github/workflows/ci.yml): ship SDL3.dll (official release, checksum-pinned) next to the .exe.

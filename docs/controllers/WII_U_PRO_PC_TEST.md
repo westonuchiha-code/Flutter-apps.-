@@ -22,8 +22,10 @@ uses SDL: the PC XMB (Godot 4.7), RetroArch, PCSX2, RPCS3, and Controller Lab.
      SDL talks to it directly.
 
 ## 3. Try it
-- **Controller Lab** (when it's built): it lists every controller the way SDL sees it. You should
-  see "Nintendo Wii U Pro Controller", and every button lights up on the drawing.
+- **Controller Lab** (`controller_lab-latest` release, Windows zip): it lists every controller the
+  way SDL sees it. You should see "Nintendo Wii U Pro Controller"; open it and every button lights
+  up on the drawing. Controller Lab turns SDL's Wii driver on for itself, so it works even before
+  step 1 (the other programs need step 1).
 - **RetroArch**: Settings > Drivers > **Controller** = `sdl2` (restart RetroArch), then
   Settings > Input > Port 1 Controls: the device should read Nintendo Wii U Pro Controller.
 - **The PC XMB**: restart it and move around the menu with the Wii U Pro.

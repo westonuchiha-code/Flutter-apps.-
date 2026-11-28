@@ -1,0 +1,1 @@
+Marker for CI (.github/workflows/ci.yml): put the distro libSDL3.so.0 in the bundle lib/ folder.

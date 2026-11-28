@@ -47,6 +47,41 @@ final icons = <String, Art>{
       c.plot(12, 6, 0xFFE04A4A);
     },
   ),
+  'controller_lab': (
+    0xFF1E4664,
+    (c) {
+      // A Wii U Pro (sticks high, d-pad and buttons below) with one
+      // button lit up in the test's blue.
+      grid(
+        c,
+        2,
+        2,
+        [
+          '..gg....gg..',
+          '.wwwwwwwwww.',
+          'wwkwwwwwwkww',
+          'wkokwwwwkokw',
+          'wwkwwppwwkww',
+          'wwwwwwwwwwww',
+          'wwwwdwwwbwww',
+          'wwwdddwbwcww',
+          'wwwwdwwwbwww',
+          'wwww....wwww',
+          '.ww......ww.',
+        ],
+        {
+          'w': 0xFFF1F1F3,
+          'g': 0xFFB9BAC2,
+          'k': 0xFF2A2B31,
+          'o': 0xFF8A8B94,
+          'p': 0xFF8A8B94,
+          'd': 0xFF3A3B42,
+          'b': 0xFF3A3B42,
+          'c': 0xFF29B6F6,
+        },
+      );
+    },
+  ),
   'crt_tv': (
     0xFF2F6B3A,
     (c) {
