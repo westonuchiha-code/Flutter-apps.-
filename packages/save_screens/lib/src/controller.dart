@@ -325,6 +325,10 @@ class SaveManagerController extends ChangeNotifier {
     'slot_in',
     'slot_out',
     'slot_out_card',
+    // new files in an emulator's folder: CardStore asks about the emulator
+    // for these too, so the question has to come first
+    'new_card',
+    'duplicate',
   };
 
   final BackgroundRunner _runner;
