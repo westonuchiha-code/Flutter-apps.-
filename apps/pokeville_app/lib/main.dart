@@ -48,6 +48,14 @@ const appConfig = AppShellConfig(
 
 const _channel = MethodChannel('pokeville/android');
 
+/// When this app syncs by itself, in plain words.
+const pokevilleSyncMoments = [
+  'It syncs by itself: when you open Pokéville (or come back to it), saves '
+      'from your other devices arrive and replace the ones here.',
+  'When you leave it, it only sends what changed here; nothing on this '
+      'device is replaced then.',
+];
+
 void main() {
   registerPokevilleLicenses();
   runShellApp(appConfig, (_) => const HomePage());
@@ -146,12 +154,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !_access) unawaited(_start());
-    // Signed in (or again) in the XMB meanwhile: use it.
+    // Coming back is opening Pokéville: a full sync (after taking the XMB's
+    // sign-in, if it changed meanwhile).
     if (state == AppLifecycleState.resumed && _sync != null) {
-      unawaited(_useXmbSignIn(_sync!));
+      unawaited(_opened(_sync!));
     }
-    // Changes made here go to the PC when the app is left.
-    if (state == AppLifecycleState.paused) unawaited(_sync?.sync());
+    // Changes made here go to the PC when the app is left. Send-only: a
+    // game may be started next, so nothing here is replaced now.
+    if (state == AppLifecycleState.paused) unawaited(_sync?.sendOnly());
+  }
+
+  /// Back in Pokéville: the XMB's sign-in, then a full sync.
+  Future<void> _opened(CrossSaveController sync) async {
+    final synced = await _useXmbSignIn(sync);
+    if (!synced && sync.token.isNotEmpty) await _syncNow();
   }
 
   Future<void> _start() async {
@@ -191,18 +207,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (sync != null && sync.token.isNotEmpty) await _syncNow();
   }
 
-  /// Takes the XMB Frontend's token when it has one this app lacks.
-  Future<void> _useXmbSignIn(CrossSaveController sync) async {
+  /// Takes the XMB Frontend's token when it has one this app lacks; true
+  /// if it then synced.
+  Future<bool> _useXmbSignIn(CrossSaveController sync) async {
     final t = await sharedToken();
-    if (t.isEmpty) return;
+    if (t.isEmpty) return false;
     final changed = t != sync.token;
     await sync.adoptToken(t);
-    if (!mounted) return;
+    if (!mounted) return false;
     setState(() => _viaXmb = true);
-    if (changed && _sync != null) await _syncNow();
+    if (changed && _sync != null) {
+      await _syncNow();
+      return true;
+    }
+    return false;
   }
 
+  /// A full sync (Pokéville was opened): saves from other devices arrive.
+  /// Waits for one still running (the send when the app was left).
   Future<void> _syncNow() async {
+    await _sync?.whenIdle();
     final rep = await _sync?.sync();
     if (!mounted || rep == null) return;
     setState(() => _generation++);
@@ -336,11 +360,17 @@ class _SyncPageState extends State<SyncPage> {
     messenger.showSnackBar(
       const SnackBar(content: Text('Signed in. Getting your saves…')),
     );
+    await c.whenIdle();
     final rep = await c.sync();
     if (rep == null) return;
     messenger.showSnackBar(
       SnackBar(
-        content: Text(syncReportLines(rep).take(3).join('\n')),
+        content: Text(
+          syncReportLines(
+            rep,
+            moments: pokevilleSyncMoments,
+          ).take(3).join('\n'),
+        ),
         duration: const Duration(seconds: 6),
       ),
     );
@@ -414,6 +444,16 @@ class _SyncPageState extends State<SyncPage> {
                     ),
                     enabled: c.token.isNotEmpty && !c.busy,
                     onTap: () => unawaited(c.sync()),
+                  ),
+                  const ListTile(
+                    leading: Icon(Icons.schedule),
+                    title: Text('When it syncs'),
+                    subtitle: Text(
+                      'Opening Pokéville gets your newest saves from your '
+                      'other devices. Leaving it only sends what changed '
+                      'here. Close the game emulator before opening '
+                      'Pokéville.',
+                    ),
                   ),
                   for (final k in c.conflicts)
                     ListTile(

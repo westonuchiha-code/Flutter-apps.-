@@ -22,6 +22,19 @@ import '../comics/pdf_book.dart';
 import 'comic_reader.dart';
 import 'xmb.dart';
 
+/// Cross Save › When It Syncs, in plain words.
+const crossSaveWhenLines = [
+  'Right before a game starts, the menu gets your newest saves from your '
+      'other devices (12 seconds at most), then starts the emulator.',
+  'That is the only time it replaces a save on this device by itself, '
+      'because an emulator left open in the background could otherwise '
+      'write its old copy over the new one later.',
+  'When the menu opens, when you come back to it and after a game, it '
+      'only sends what this device saved. Newer saves wait for the next game.',
+  'Sync Now (and signing in) does both: sends and gets. Close any emulator '
+      'still open in the background first.',
+];
+
 /// The menu: Settings and Game for now (more categories come with the
 /// save sync, comics, save manager, Pokéville and CRT TV).
 class HomePage extends StatefulWidget {
@@ -100,7 +113,9 @@ class _HomePageState extends State<HomePage> {
       await _scan(quiet: _s.games.isNotEmpty);
     }
     _bump();
-    unawaited(_sync(quiet: true));
+    // Send-only: a save on this device is only replaced right before a game
+    // starts (an emulator left in the background may still have it open).
+    unawaited(_sync(quiet: true, takes: false));
     // Start game from the Save Manager app: one that came with the start,
     // and any that comes while the menu runs.
     _a.listenForStartRequests(() => unawaited(_startFromSaveManager()));
@@ -162,7 +177,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// A cross save now (if set up); says what moved ([say]: as a toast).
-  Future<SyncReport?> _sync({bool quiet = false, bool say = true}) async {
+  /// [takes] false: send-only, nothing on this device is replaced (see
+  /// [CrossSaveController.sync]); a full sync happens only right before a
+  /// game starts, from Sync Now and right after signing in.
+  Future<SyncReport?> _sync({
+    bool quiet = false,
+    bool say = true,
+    bool takes = true,
+    bool Function()? stopTakes,
+  }) async {
     final cs = _cs;
     if (cs == null || cs.token.isEmpty) return null;
     if (cs.folders == null) {
@@ -173,7 +196,7 @@ class _HomePageState extends State<HomePage> {
       }
       return null;
     }
-    final rep = await cs.sync();
+    final rep = await cs.sync(takes: takes, stopTakes: stopTakes);
     if (rep == null) return null;
     if (rep.took.isNotEmpty) await _scan(quiet: true);
     final line = rep.summary;
@@ -227,14 +250,26 @@ class _HomePageState extends State<HomePage> {
       await _scan(quiet: true);
     }
     _bump();
-    // Back from a game: send what it saved. Otherwise now and then.
+    // Signed in before storage access was allowed: that sign-in's first
+    // sync (the one that brings the saves) happens now.
+    if (_firstSyncPending && _cs?.folders != null) {
+      _firstSyncPending = false;
+      await _afterSignIn();
+      return;
+    }
+    // Back from a game: send what it saved. Otherwise now and then. Only
+    // sends: the emulator may still be open in the background with its
+    // saves, so nothing here is replaced (that waits for the next game).
     final last = _cs?.last;
     if (fromGame ||
         last == null ||
         DateTime.now().difference(last) > const Duration(minutes: 10)) {
-      await _sync(quiet: true);
+      await _sync(quiet: true, takes: false);
     }
   }
+
+  /// Signed in, but the saves couldn't arrive yet (no storage access).
+  bool _firstSyncPending = false;
 
   void _changed() {
     _saveTimer?.cancel();
@@ -312,13 +347,22 @@ class _HomePageState extends State<HomePage> {
       );
       return;
     }
-    // Pull first, so the game loads the newest save (give up after 12 s).
+    // Pull first, so the game loads the newest save. This is the one
+    // automatic sync that replaces saves here: the emulator isn't running
+    // yet. It waits for a sync already running, then gives up after 12 s
+    // in all; from then on it replaces nothing more (a save mid-swap still
+    // finishes or is left as it was), so nothing changes under the game.
     final cs = _cs;
     if (cs != null && cs.ready) {
       _xmb.currentState?.toast('Getting your newest saves…');
+      var started = false;
       try {
-        await _sync(quiet: true).timeout(const Duration(seconds: 12));
+        await () async {
+          await cs.whenIdle();
+          await _sync(quiet: true, stopTakes: () => started);
+        }().timeout(const Duration(seconds: 12));
       } catch (_) {}
+      started = true;
     }
     final err = await _a.launch(
       launchSpec(
@@ -1185,6 +1229,15 @@ class _HomePageState extends State<HomePage> {
           icon: Icons.sync,
           onPress: () => _sync(),
         ),
+      if (cs.token.isNotEmpty)
+        XItem(
+          title: 'When It Syncs',
+          subtitle: 'Saves here are only replaced when a game starts',
+          icon: Icons.schedule,
+          onPress: () => _xmb.currentState?.showPanel(
+            XPanel(title: 'When It Syncs', lines: crossSaveWhenLines),
+          ),
+        ),
       if (cs.conflicts.isNotEmpty)
         XItem(
           title: 'Changed on Both Sides',
@@ -1267,10 +1320,16 @@ class _HomePageState extends State<HomePage> {
     }
 
     final name = p.basenameWithoutExtension(c.key);
+    // A conflict found by a send-only sync has no copy here yet.
+    final other = c.copy.isEmpty
+        ? 'The other copy is still in the repo: it comes down if you pick '
+              'it (or beside this one when a game starts).'
+        : 'The other copy (from the repo) is beside it: ${p.basename(c.copy)}.';
     return XItem(
       title: name,
-      subtitle:
-          'This device: ${when(c.local)}  ·  other copy arrived ${when(c.copy)}',
+      subtitle: c.copy.isEmpty
+          ? 'This device: ${when(c.local)}  ·  other copy in the repo'
+          : 'This device: ${when(c.local)}  ·  other copy arrived ${when(c.copy)}',
       icon: Icons.call_split,
       onPress: () => _xmb.currentState?.showPanel(
         XPanel(
@@ -1278,7 +1337,7 @@ class _HomePageState extends State<HomePage> {
           lines: [
             'This save changed here and on another device before they synced.',
             'This device saved it ${when(c.local)}.',
-            'The other copy (from the repo) is beside it: ${p.basename(c.copy)}.',
+            other,
             'Whichever you pick, the other one is backed up first.',
           ],
           options: [
@@ -1388,13 +1447,14 @@ class _HomePageState extends State<HomePage> {
   Future<void> _afterSignIn() async {
     final cs = _cs!;
     if (cs.folders == null) {
+      _firstSyncPending = true;
       _xmb.currentState?.showPanel(
         XPanel(
           title: 'Signed In',
           lines: const [
             'Cross-Save is connected.',
             'Next: Settings › Storage Access. Your saves arrive in the XMB '
-                'Frontend folder, and they sync as soon as access is allowed.',
+                'Frontend folder as soon as you come back with access allowed.',
           ],
           options: [
             XOption('Allow Storage Access', () => _a.requestAllFiles()),
@@ -1405,6 +1465,8 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     _xmb.currentState?.toast('Signed in. Getting your saves…');
+    // A full sync (the player just signed in): the saves arrive.
+    await cs.whenIdle();
     final rep = await _sync(quiet: true, say: false);
     _xmb.currentState?.showPanel(
       XPanel(title: 'Signed In to Cross-Save', lines: syncReportLines(rep)),

@@ -479,6 +479,8 @@ void main() {
     String dir,
     Map<String, String> st, {
     String backups = 'bk',
+    bool takes = true,
+    bool Function()? stopTakes,
   }) => crossSync(
     repo: repo,
     maps: [
@@ -487,6 +489,162 @@ void main() {
     state: st,
     device: 'phone',
     backups: p.join(root.path, backups),
+    takes: takes,
+    stopTakes: stopTakes,
+  );
+
+  /// Every file under the test folder: path → contents and time.
+  Map<String, String> disk() => {
+    for (final e in root.listSync(recursive: true))
+      if (e is File) e.path: '${e.readAsStringSync()}@${e.lastModifiedSync()}',
+  };
+
+  // ---- send-only (saves are only replaced when a game is opened) ----------
+
+  test('send-only never writes here, even when the repo is newer', () async {
+    final repo = FakeRepo();
+    final dir = p.join(root.path, 'a');
+    final crystal = File(p.join(dir, 'Gambatte', 'Crystal.srm'))
+      ..createSync(recursive: true)
+      ..writeAsStringSync('phone v1');
+    final st = <String, String>{};
+    await one(repo, dir, st); // v1 sent: what was last synced
+    repo
+      ..pushAs('saves/retroarch/Gambatte/Crystal.srm', 'pc v2')
+      ..pushAs('saves/retroarch/Gambatte/Gold.srm', 'pc gold'); // new here
+    // Something this device saved meanwhile.
+    File(p.join(dir, 'Gambatte', 'Red.srm')).writeAsStringSync('phone red');
+    final before = disk();
+    final was = {...st};
+    final r = await one(repo, dir, st, takes: false);
+    expect(disk(), before); // not one file written, made or replaced
+    expect(Directory(p.join(root.path, 'bk')).existsSync(), isFalse);
+    expect(r.took, isEmpty);
+    expect(r.sent, ['Gambatte/Red.srm']);
+    expect(
+      repo.current['saves/retroarch/Gambatte/Red.srm'],
+      blobSha('phone red'.codeUnits),
+    );
+    expect(r.waiting.toSet(), {'Gambatte/Crystal.srm', 'Gambatte/Gold.srm'});
+    expect(r.summary, contains('2 newer saves waiting'));
+    // The would-be takes were not recorded as synced...
+    for (final k in [
+      'saves/retroarch/Gambatte/Crystal.srm',
+      'saves/retroarch/Gambatte/Gold.srm',
+    ]) {
+      expect(st[k], was[k]);
+    }
+    // ...so another send-only sync leaves them waiting too,
+    final again = await one(repo, dir, st, takes: false);
+    expect(again.sent, isEmpty);
+    expect(again.waiting.length, 2);
+    expect(crystal.readAsStringSync(), 'phone v1');
+    // and the next full sync (a game opens) takes them.
+    final full = await one(repo, dir, st);
+    expect(full.took.toSet(), {'Gambatte/Crystal.srm', 'Gambatte/Gold.srm'});
+    expect(full.waiting, isEmpty);
+    expect(crystal.readAsStringSync(), 'pc v2');
+    expect(
+      File(p.join(dir, 'Gambatte', 'Gold.srm')).readAsStringSync(),
+      'pc gold',
+    );
+  });
+
+  test('send-only reports conflicts the same way, writing nothing', () async {
+    final repo = FakeRepo();
+    final dir = p.join(root.path, 'a');
+    final save = File(p.join(dir, 'mGBA', 'Emerald.srm'))
+      ..createSync(recursive: true)
+      ..writeAsStringSync('phone');
+    repo.pushAs('saves/retroarch/mGBA/Emerald.srm', 'pc');
+    final st = <String, String>{};
+    final before = disk();
+    final r = await one(repo, dir, st, takes: false);
+    expect(disk(), before); // no conflict copy either
+    expect(r.sent, isEmpty);
+    expect(r.waiting, isEmpty);
+    final c = r.conflicts.single;
+    expect(c.key, 'saves/retroarch/mGBA/Emerald.srm');
+    expect(c.repoSha, blobSha('pc'.codeUnits));
+    expect(c.copy, '');
+    expect(r.summary, contains('changed on both sides: Emerald'));
+    // A full sync leaves the copy; a send-only one after it points at it.
+    final full = await one(repo, dir, st);
+    final copy = full.conflicts.single.copy;
+    expect(File(copy).readAsStringSync(), 'pc');
+    final later = await one(repo, dir, st, takes: false);
+    expect(later.conflicts.single.copy, copy);
+    expect(save.readAsStringSync(), 'phone');
+    // The emulator writing back what a take replaced is still caught.
+    final st2 = <String, String>{};
+    final dir2 = p.join(root.path, 'b');
+    final crystal = File(p.join(dir2, 'Gambatte', 'Crystal.srm'))
+      ..createSync(recursive: true)
+      ..writeAsStringSync('v1');
+    await one(repo, dir2, st2);
+    repo.pushAs('saves/retroarch/Gambatte/Crystal.srm', 'pc v2');
+    await one(repo, dir2, st2); // took v2
+    crystal.writeAsStringSync('v1'); // stale emulator writes v1 back
+    final stale = await one(repo, dir2, st2, takes: false);
+    expect(stale.sent, isEmpty);
+    expect(stale.conflicts.single.key, 'saves/retroarch/Gambatte/Crystal.srm');
+  });
+
+  test('stopTakes: no save is replaced once it says stop', () async {
+    final repo = _HookRepo();
+    final dir = p.join(root.path, 'a');
+    final save = File(p.join(dir, 'Gambatte', 'Crystal.srm'))
+      ..createSync(recursive: true)
+      ..writeAsStringSync('v1');
+    final st = <String, String>{};
+    await one(repo, dir, st);
+    repo.pushAs('saves/retroarch/Gambatte/Crystal.srm', 'pc v2');
+    var stop = false;
+    // The XMB gives up waiting (and starts the game) mid-download.
+    repo.onBlob = () => stop = true;
+    final r = await one(repo, dir, st, stopTakes: () => stop);
+    expect(save.readAsStringSync(), 'v1');
+    expect(r.took, isEmpty);
+    expect(r.waiting, ['Gambatte/Crystal.srm']);
+    expect(r.ok, isTrue);
+    expect(
+      Directory(p.join(dir, 'Gambatte'))
+          .listSync()
+          .map((e) => p.basename(e.path)),
+      ['Crystal.srm'],
+    );
+    repo.onBlob = null;
+    expect((await one(repo, dir, st)).took, ['Gambatte/Crystal.srm']);
+    expect(save.readAsStringSync(), 'pc v2');
+  });
+
+  test(
+    'controller: sendOnly, then a conflict without a copy resolved',
+    () async {
+      final storage = AppStorage(Directory(p.join(root.path, 'app')));
+      final repo = FakeRepo()
+        ..pushAs('saves/retroarch/mGBA/Emerald.srm', 'pc')
+        ..pushAs('saves/retroarch/mGBA/Ruby.srm', 'pc ruby');
+      final f = XmbFolders(p.join(root.path, 'XMB Frontend'))..create();
+      final emerald = File(p.join(f.raSaves, 'mGBA', 'Emerald.srm'))
+        ..createSync(recursive: true)
+        ..writeAsStringSync('phone');
+      final cs = CrossSaveController(storage, makeRepo: (_) => repo)
+        ..folders = f;
+      expect(await cs.setToken('t'), isNull);
+      final rep = (await cs.sendOnly())!;
+      expect(rep.waiting, ['mGBA/Ruby.srm']);
+      expect(File(p.join(f.raSaves, 'mGBA', 'Ruby.srm')).existsSync(), isFalse);
+      expect(cs.conflicts.single.copy, '');
+      expect(cs.lastSummary, contains('1 newer save waiting'));
+      await cs.resolve(cs.conflicts.single, keepThisDevice: false);
+      await cs.whenIdle(); // resolve() sends by itself; it takes nothing
+      expect(emerald.readAsStringSync(), 'pc');
+      expect(File(p.join(f.raSaves, 'mGBA', 'Ruby.srm')).existsSync(), isFalse);
+      expect(cs.conflicts, isEmpty);
+      final full = (await cs.sync())!;
+      expect(full.took, ['mGBA/Ruby.srm']);
+    },
   );
 
   test(

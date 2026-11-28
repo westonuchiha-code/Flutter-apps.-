@@ -142,6 +142,10 @@ class SyncReport {
   final took = <String>[];
   final sent = <String>[];
   final conflicts = <Conflict>[];
+
+  /// Newer saves from the repo a send-only sync left alone (relative
+  /// names): the next full sync takes them.
+  final waiting = <String>[];
   String? error;
   bool get ok => error == null;
 
@@ -151,6 +155,8 @@ class SyncReport {
       if (took.isNotEmpty)
         '${took.length} save${took.length == 1 ? '' : 's'} from your other devices',
       if (sent.isNotEmpty) '${sent.length} sent',
+      if (waiting.isNotEmpty)
+        '${waiting.length} newer save${waiting.length == 1 ? '' : 's'} waiting',
       if (conflicts.isNotEmpty)
         'changed on both sides: ${p.basenameWithoutExtension(conflicts.first.key)}'
             '${conflicts.length > 1 ? ' and ${conflicts.length - 1} more' : ''}',
@@ -160,8 +166,12 @@ class SyncReport {
   }
 }
 
-/// What a sync did, as lines for a panel (null: one was already running).
-List<String> syncReportLines(SyncReport? rep) {
+/// What a sync did, as lines for a panel (null: one was already running),
+/// ending with [moments]: when the app syncs by itself.
+List<String> syncReportLines(
+  SyncReport? rep, {
+  List<String> moments = syncMomentLines,
+}) {
   if (rep == null) {
     return const ['A sync is already running; Sync Now shows how it went.'];
   }
@@ -178,13 +188,31 @@ List<String> syncReportLines(SyncReport? rep) {
     if (rep.conflicts.isNotEmpty)
       '${plural(rep.conflicts.length, 'save')} changed on both sides: pick '
           'which to keep in Cross Save › Changed on Both Sides.',
-    if (rep.took.isEmpty && rep.sent.isEmpty && rep.conflicts.isEmpty && rep.ok)
+    if (rep.waiting.isNotEmpty)
+      '${plural(rep.waiting.length, 'newer save')} from your other devices '
+          '${rep.waiting.length == 1 ? 'is' : 'are'} waiting: '
+          '${rep.waiting.length == 1 ? 'it arrives' : 'they arrive'} the next '
+          'time saves are fetched.',
+    if (rep.took.isEmpty &&
+        rep.sent.isEmpty &&
+        rep.conflicts.isEmpty &&
+        rep.waiting.isEmpty &&
+        rep.ok)
       'Everything is up to date: the repo has nothing this device is missing.',
     if (!rep.ok) 'Not finished: ${rep.error}',
-    'From now on it syncs by itself: when the menu opens, before a game '
-        'starts and when you come back from one.',
+    ...moments,
   ];
 }
+
+/// When the XMB Frontend syncs by itself (the default for
+/// [syncReportLines]; an app with other moments passes its own).
+const syncMomentLines = [
+  'From now on it syncs by itself. Saves from your other devices only '
+      'replace the ones here right before a game starts (or when you pick '
+      'Sync Now), never while a game might still be open.',
+  'When the menu opens, when you come back to it and after a game, it only '
+      'sends what this device saved.',
+];
 
 /// Local files under [dir] (relative, '/' separators) that [m] syncs.
 List<String> localFiles(SyncMap m) {
@@ -211,8 +239,14 @@ const _wasPrefix = '~was/';
 /// Writes [bytes] to [path] safely: a temp file, checked, then swapped in.
 /// With [unchanged] (the hash [path] had when it was read, '' = no file),
 /// nothing is swapped in if the file has changed since (the game or the
-/// other app saved meanwhile): it throws instead.
-Future<void> _write(String path, Uint8List bytes, {String? unchanged}) async {
+/// other app saved meanwhile): it throws instead. With [stop], nothing is
+/// swapped in once it says so (checked last, right before the swap).
+Future<void> _write(
+  String path,
+  Uint8List bytes, {
+  String? unchanged,
+  bool Function()? stop,
+}) async {
   await Directory(p.dirname(path)).create(recursive: true);
   final tmp = File('$path.xs-new');
   await tmp.writeAsBytes(bytes, flush: true);
@@ -231,14 +265,34 @@ Future<void> _write(String path, Uint8List bytes, {String? unchanged}) async {
       );
     }
   }
+  if (stop?.call() ?? false) {
+    await tmp.delete();
+    throw const _Stopped();
+  }
   // A rename replaces the old file in one step (Windows too): there is never
   // a moment without the save.
   await tmp.rename(path);
 }
 
-/// One full sync (PROTOCOL.md). [state] (repo path → hash last synced) is
+/// A take [crossSync] gave up on because its `stopTakes` said so.
+class _Stopped implements Exception {
+  const _Stopped();
+}
+
+/// One sync (PROTOCOL.md). [state] (repo path → hash last synced) is
 /// updated in place; save it afterwards. [conflicts] holds the unresolved
 /// ones from earlier syncs (kept, not copied again).
+///
+/// With [takes] false it only sends: nothing on this device is written
+/// (no save replaced, no backup, no conflict copy). Saves the repo has newer
+/// are left alone and not recorded, so the next full sync still takes them
+/// ([SyncReport.waiting]); conflicts are still found and reported (with a
+/// conflict copy only if an earlier full sync already left one, else
+/// [Conflict.copy] is '').
+///
+/// [stopTakes]: once it returns true, no more saves are replaced (checked
+/// right before each swap); the rest wait like a send-only sync's. The XMB
+/// sets it when it stops waiting and starts a game.
 Future<SyncReport> crossSync({
   required SaveRepo repo,
   required List<SyncMap> maps,
@@ -246,6 +300,8 @@ Future<SyncReport> crossSync({
   required String device,
   required String backups,
   DateTime? now,
+  bool takes = true,
+  bool Function()? stopTakes,
 }) async {
   final rep = SyncReport();
   final stamp = _stamp(now ?? DateTime.now());
@@ -261,6 +317,7 @@ Future<SyncReport> crossSync({
     }
     final send = <String, (String rel, Uint8List bytes, String sha)>{};
     rep.conflicts.clear(); // this pass lists them again
+    rep.waiting.clear();
     // The repo's names in lower case: a local save named like one of them
     // but for case is the same save on a case-blind disk (Android's shared
     // storage, Windows). Sending it would put two names in the repo that
@@ -297,6 +354,11 @@ Future<SyncReport> crossSync({
         if (what == 'send' && r.isNotEmpty && state['$_wasPrefix$key'] == l) {
           what = 'conflict';
         }
+        if (what == 'take' && (!takes || (stopTakes?.call() ?? false))) {
+          // Left for the next full sync: nothing written, nothing recorded.
+          if (!rep.waiting.contains(rel)) rep.waiting.add(rel);
+          continue;
+        }
         switch (what) {
           case 'same':
             state[key] = l;
@@ -306,13 +368,14 @@ Future<SyncReport> crossSync({
               if (blobSha(bytes) != r) {
                 throw const FormatException('bad download');
               }
+              if (stopTakes?.call() ?? false) throw const _Stopped();
               if (lb != null) {
                 await _write(
                   p.joinAll([backups, stamp, ...key.split('/')]),
                   lb,
                 );
               }
-              await _write(lp, bytes, unchanged: l);
+              await _write(lp, bytes, unchanged: l, stop: stopTakes);
               state[key] = r;
               if (l.isEmpty) {
                 state.remove('$_wasPrefix$key');
@@ -320,6 +383,8 @@ Future<SyncReport> crossSync({
                 state['$_wasPrefix$key'] = l;
               }
               if (!rep.took.contains(rel)) rep.took.add(rel);
+            } on _Stopped {
+              if (!rep.waiting.contains(rel)) rep.waiting.add(rel);
             } catch (e) {
               rep.error ??= 'could not take $rel ($e)';
             }
@@ -327,7 +392,9 @@ Future<SyncReport> crossSync({
             send[key] = (rel, lb!, l);
           case 'conflict':
             try {
-              final copy = await _keepRepoCopy(repo, lp, r, stamp);
+              final copy = takes
+                  ? await _keepRepoCopy(repo, lp, r, stamp)
+                  : await _findRepoCopy(lp, r) ?? '';
               rep.conflicts.add(Conflict(key, lp, copy, r));
             } catch (e) {
               rep.error ??= 'could not keep the other copy of $rel ($e)';
@@ -369,16 +436,11 @@ Future<SyncReport> crossSync({
   return rep;
 }
 
-/// The repo's side of a conflict goes next to ours, once.
-Future<String> _keepRepoCopy(
-  SaveRepo repo,
-  String local,
-  String r,
-  String stamp,
-) async {
+/// The conflict copy of [local] an earlier sync left with the repo's
+/// [r], or null.
+Future<String?> _findRepoCopy(String local, String r) async {
   final dir = Directory(p.dirname(local));
   final base = p.basenameWithoutExtension(local);
-  final ext = p.extension(local);
   if (await dir.exists()) {
     await for (final e in dir.list()) {
       final n = p.basename(e.path);
@@ -387,6 +449,21 @@ Future<String> _keepRepoCopy(
       }
     }
   }
+  return null;
+}
+
+/// The repo's side of a conflict goes next to ours, once.
+Future<String> _keepRepoCopy(
+  SaveRepo repo,
+  String local,
+  String r,
+  String stamp,
+) async {
+  final found = await _findRepoCopy(local, r);
+  if (found != null) return found;
+  final dir = Directory(p.dirname(local));
+  final base = p.basenameWithoutExtension(local);
+  final ext = p.extension(local);
   final copy = p.join(dir.path, '$base$conflictTag$stamp$ext');
   final bytes = await repo.blob(r);
   if (blobSha(bytes) != r) throw const FormatException('bad download');
@@ -414,14 +491,19 @@ Future<void> keepLocal(
 }
 
 /// The player takes the other device's copy: ours is backed up and replaced.
+/// A conflict a send-only sync found has no copy ([Conflict.copy] ''): then
+/// [download] (the repo's bytes, [Conflict.repoSha]) is used instead.
 Future<void> keepOther(
   Conflict c,
   Map<String, String> state,
   String backups,
-  DateTime now,
-) async {
+  DateTime now, {
+  Uint8List? download,
+}) async {
   final copy = File(c.copy);
-  final bytes = await copy.readAsBytes();
+  final bytes = c.copy.isEmpty && download != null
+      ? download
+      : await copy.readAsBytes();
   if (blobSha(bytes) != c.repoSha) {
     throw FileSystemException(
       "the other device's copy isn't the repo's any more, so nothing was "
@@ -437,7 +519,7 @@ Future<void> keepOther(
     );
   }
   await _write(c.local, bytes);
-  await copy.delete();
+  if (c.copy.isNotEmpty) await copy.delete();
   state[c.key] = blobSha(bytes);
   state.remove('$_wasPrefix${c.key}');
 }

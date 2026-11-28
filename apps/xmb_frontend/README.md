@@ -77,7 +77,19 @@ RetroArch settings, `controller.dart` token, state and conflicts).
   Next step, if wanted: the menu reaches that provider itself (a one-time
   folder pick of Dolphin's user folder, then copy before/after a GameCube
   game).
-- Syncs on start, before a game (12 s at most), after a game, every 10 min.
+- When it syncs (owner's decision: saves on the phone are only replaced
+  when a game is opened, because an emulator left in the background could
+  write its old copy back over the PC's):
+  - **Full sync** (sends and takes): right before a game starts (waits for a
+    sync already running, 12 s at most in all; once it gives up and the
+    emulator starts, `stopTakes` lets nothing more be replaced), Sync Now,
+    and right after signing in (or, if storage access wasn't allowed yet,
+    when the player comes back with it allowed).
+  - **Send-only** (`CrossSaveController.sendOnly()`: uploads this device's
+    changes, writes nothing here; newer saves wait, conflicts are still
+    listed): when the menu starts, after a game, on resume every 10 min, and
+    after picking a side of a conflict.
+  - Settings > Cross Save > When It Syncs says this in plain words.
 - **Start game from the Save Manager app**: it sends an explicit intent to
   `MainActivity` with `start_game_system` (save_kit's console), `_title`,
   `_serial`, `_file`; the menu (cold: the launching intent, warm:

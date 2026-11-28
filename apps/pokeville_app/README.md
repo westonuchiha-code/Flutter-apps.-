@@ -1,17 +1,19 @@
 # pokeville_app
 
-Pokéville
+Pokéville standalone (`packages/pokeville`): the PC's Pokémon Box.
 
-## Getting Started
+- **Android**: opens the XMB Frontend's `Pokeville` folder and syncs it with
+  Cross-Save itself (`pokeville/` plus only the Pokémon game saves it found
+  under `saves/retroarch`). It uses the XMB Frontend's GitHub sign-in when
+  there is one.
+- **Windows**: opens the PC menu's own folder (XMB Pokemon Box); the PC XMB
+  Frontend does the syncing.
 
-This project is a starting point for a Flutter application.
+## When it syncs (Android)
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- **Opening Pokéville** (start, and coming back to it): a full sync. Saves
+  from other devices arrive and replace the ones here (backed up first).
+- **Leaving it** (paused): send-only. What changed here goes to the repo;
+  nothing on the device is replaced, so a game started next never has a
+  save swapped under it.
+- **Sync now** (and signing in): a full sync.

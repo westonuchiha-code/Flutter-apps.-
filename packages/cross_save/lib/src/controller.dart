@@ -108,11 +108,24 @@ class CrossSaveController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Completer<void>? _running;
+
+  /// Done when no sync is running (at once if none is).
+  Future<void> whenIdle() => _running?.future ?? Future.value();
+
   /// One sync. Null when not set up or already running.
-  Future<SyncReport?> sync() async {
+  ///
+  /// [takes] false: send-only ([crossSync]): this device's changes go to
+  /// the repo, nothing here is written; newer saves wait for a full sync.
+  /// [stopTakes]: once true, no more saves are replaced (see [crossSync]).
+  Future<SyncReport?> sync({
+    bool takes = true,
+    bool Function()? stopTakes,
+  }) async {
     final f = folders;
     if (token.isEmpty || f == null || busy) return null;
     busy = true;
+    final running = _running = Completer<void>();
     notifyListeners();
     try {
       f.create();
@@ -131,6 +144,8 @@ class CrossSaveController extends ChangeNotifier {
         state: state,
         device: device,
         backups: f.backups,
+        takes: takes,
+        stopTakes: stopTakes,
       );
       // An early failure (no network) compared nothing: keep the old list.
       if (!(rep.error ?? '').startsWith("couldn't reach")) {
@@ -143,9 +158,15 @@ class CrossSaveController extends ChangeNotifier {
       return rep;
     } finally {
       busy = false;
+      _running = null;
+      running.complete();
       notifyListeners();
     }
   }
+
+  /// Sends this device's changes and writes nothing here: [sync] with
+  /// `takes: false`.
+  Future<SyncReport?> sendOnly() => sync(takes: false);
 
   /// The player picked a side of [c]; the next sync sends or settles it.
   Future<void> resolve(Conflict c, {required bool keepThisDevice}) async {
@@ -154,7 +175,10 @@ class CrossSaveController extends ChangeNotifier {
     if (keepThisDevice) {
       await keepLocal(c, state, f.backups);
     } else {
-      await keepOther(c, state, f.backups, DateTime.now());
+      // Found by a send-only sync: no copy beside it yet, so fetch it.
+      Uint8List? download;
+      if (c.copy.isEmpty) download = await _repo().blob(c.repoSha);
+      await keepOther(c, state, f.backups, DateTime.now(), download: download);
     }
     conflicts = [
       for (final o in conflicts)
@@ -162,6 +186,7 @@ class CrossSaveController extends ChangeNotifier {
     ];
     await save();
     notifyListeners();
-    unawaited(sync());
+    // Sends the kept side (or settles the taken one); takes nothing else.
+    unawaited(sendOnly());
   }
 }
