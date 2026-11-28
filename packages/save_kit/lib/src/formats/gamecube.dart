@@ -145,9 +145,14 @@ abstract final class GcCard {
         ? Uint8List.fromList(gci.sublist(entrySize))
         : Uint8List(0);
     final comment = Bytes.be32(gci, 0x3C);
+    // Japanese games write their comments in Shift-JIS, the rest in
+    // Windows-1252 ("POKéMON XD" read as Shift-JIS came out "POK餉ON").
+    final japanese = gci.length > 3 && gci[3] == 0x4A; // game code's 'J'
     if (Bytes.has(body, comment, 64)) {
       for (var i = 0; i < 2; i++) {
-        final line = Bytes.title(body, comment + i * 32, 32);
+        final line = japanese
+            ? Bytes.title(body, comment + i * 32, 32)
+            : Bytes.western(body, comment + i * 32, 32);
         if (line.isNotEmpty) s.titleLines.add(line);
       }
     }
