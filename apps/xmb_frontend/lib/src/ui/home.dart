@@ -755,19 +755,19 @@ class _HomePageState extends State<HomePage> {
     final storage = Shell.of(context).storage;
     final cache = p.join(storage.directory.path, 'pokemon sprites');
     final nav = Navigator.of(context);
-    await nav.push(
-      MaterialPageRoute<void>(
-        builder: (_) => poke.PokevilleHome(
-          f.pokeville,
-          cache,
-          swapAB: _s.swapAB,
-          // the Pokémon game saves RetroArch keeps here (moving Pokémon in
-          // and out changes them; the XMB syncs all of saves/retroarch)
-          games: poke.PokeGames([f.raSaves]),
-          onLeave: () => nav.maybePop(),
-        ),
+    late final MaterialPageRoute<void> route;
+    route = MaterialPageRoute<void>(
+      builder: (_) => poke.PokevilleHome(
+        f.pokeville,
+        cache,
+        swapAB: _s.swapAB,
+        // the Pokémon game saves RetroArch keeps here (moving Pokémon in
+        // and out changes them; the XMB syncs all of saves/retroarch)
+        games: poke.PokeGames([f.raSaves]),
+        onLeave: () => leaveRoute(nav, route),
       ),
     );
+    await nav.push(route);
     if (mounted) setState(() => _revision++);
   }
 
@@ -787,13 +787,14 @@ class _HomePageState extends State<HomePage> {
         ),
     };
     final nav = Navigator.of(context);
+    late final MaterialPageRoute<void> route;
     await nav.push(
-      MaterialPageRoute<void>(
+      route = MaterialPageRoute<void>(
         builder: (context) => saves.SaveManagerHome(
           games: games,
           played: played,
           onTick: Shell.of(context).tick,
-          onLeave: () => nav.maybePop(),
+          onLeave: () => leaveRoute(nav, route),
           onGame: (id) {
             final g = _s.games.where((g) => g.id == id).firstOrNull;
             if (g == null) return;
@@ -1665,5 +1666,17 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+}
+
+/// Closes a screen the menu opened, when the screen asks to leave. Not
+/// `maybePop`: those screens handle Back themselves (their PopScope says
+/// no to a polite pop and asks to leave again), so a polite pop went round
+/// in circles and the screen never closed.
+void leaveRoute(NavigatorState nav, Route<void> route) {
+  if (route.isCurrent) {
+    nav.pop();
+  } else if (route.isActive) {
+    nav.removeRoute(route);
   }
 }
