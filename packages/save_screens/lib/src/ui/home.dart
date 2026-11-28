@@ -81,6 +81,13 @@ class _SaveManagerHomeState extends State<SaveManagerHome>
     with WidgetsBindingObserver {
   SaveManagerController? _c;
   bool? _access;
+
+  /// What starting up is doing now, shown until the screen is ready (a
+  /// silent blank screen tells nobody anything).
+  String _step = 'Checking storage access';
+
+  /// Why starting up failed (null = it hasn't).
+  String? _error;
   final EmulatorCheck? _check = Platform.isAndroid ? EmulatorCheck() : null;
 
   @override
@@ -123,28 +130,54 @@ class _SaveManagerHomeState extends State<SaveManagerHome>
   }
 
   Future<void> _checkAccess() async {
-    final ok = widget.makeConfig != null || await hasAllFiles();
+    _say('Checking storage access');
+    bool ok;
+    try {
+      ok =
+          widget.makeConfig != null ||
+          await hasAllFiles().timeout(const Duration(seconds: 10));
+    } catch (e) {
+      _fail('Checking storage access failed: $e');
+      return;
+    }
     if (!mounted) return;
     final was = _access;
     setState(() => _access = ok);
     if (ok && was != true) unawaited(_build());
   }
 
+  void _say(String step) {
+    if (mounted) setState(() => _step = step);
+  }
+
+  void _fail(String why) {
+    debugPrint('Save Manager: $why');
+    if (mounted) setState(() => _error = why);
+  }
+
   Future<void> _build() async {
-    final extra = splitFolders(widget.extraFolders);
-    final make = widget.makeConfig;
+    _error = null;
     final SaveManagerConfig config;
-    if (make != null) {
-      config = await make(extra, _check);
-    } else {
-      final at = await resolvePlaces();
-      config = appConfigFor(
-        at,
-        extra: extra,
-        check: _check,
-        games: widget.games,
-        played: widget.played,
-      );
+    try {
+      final extra = splitFolders(widget.extraFolders);
+      final make = widget.makeConfig;
+      if (make != null) {
+        config = await make(extra, _check);
+      } else {
+        _say('Finding the storage');
+        final at = await resolvePlaces().timeout(const Duration(seconds: 10));
+        _say('Looking for the emulators\' folders');
+        config = appConfigFor(
+          at,
+          extra: extra,
+          check: _check,
+          games: widget.games,
+          played: widget.played,
+        );
+      }
+    } catch (e) {
+      _fail('$_step failed: $e');
+      return;
     }
     if (!mounted) return;
     final c = SaveManagerController(
@@ -206,7 +239,7 @@ class _SaveManagerHomeState extends State<SaveManagerHome>
         onCheck: () => unawaited(_checkAccess()),
       );
     } else if (c == null) {
-      body = const MemoryBackdrop();
+      body = MemoryBackdrop(child: _starting());
     } else {
       body = SaveManagerScreen(
         key: ObjectKey(c),
@@ -220,6 +253,72 @@ class _SaveManagerHomeState extends State<SaveManagerHome>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(backgroundColor: const Color(0xFF0B0D3A), body: body),
+    );
+  }
+
+  /// Until the screen is ready: what it's doing, or what went wrong with a
+  /// way to try again and a way back.
+  Widget _starting() {
+    final error = _error;
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (error == null) ...[
+                const SizedBox.square(
+                  dimension: 28,
+                  child: CircularProgressIndicator(color: Colors.white70),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '$_step...',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+              ] else ...[
+                const Text(
+                  "The Save Manager couldn't start",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SelectableText(
+                  error,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 12,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    FilledButton(
+                      autofocus: true,
+                      onPressed: () {
+                        setState(() => _error = null);
+                        unawaited(_checkAccess());
+                      },
+                      child: const Text('Try again'),
+                    ),
+                    if (widget.onLeave != null)
+                      OutlinedButton(
+                        onPressed: widget.onLeave,
+                        child: const Text('Back'),
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
