@@ -251,8 +251,9 @@ class PadPainter {
     String right = 'right',
     bool lineMarks = false,
     Color? markColor,
+    double armRatio = 0.36,
   }) {
-    final w = size * 0.36, h = size / 2;
+    final w = size * armRatio, h = size / 2;
     Path arm(double dx, double dy) {
       // An arm from the centre square out to [dx, dy].
       final r = dx == 0
@@ -340,4 +341,29 @@ class PadPainter {
       Paint()..color = palette.lit,
     );
   }
+}
+
+/// A smooth path through [pts] (centripetal Catmull-Rom, as cubic
+/// Béziers): it passes through every point without overshooting where
+/// points bunch up, so a traced outline keeps its curves.
+Path smoothPath(List<Offset> pts, {bool closed = true}) {
+  final path = Path();
+  final n = pts.length;
+  if (n < 2) return path;
+  Offset at(int i) => closed ? pts[(i % n + n) % n] : pts[i.clamp(0, n - 1)];
+  path.moveTo(pts[0].dx, pts[0].dy);
+  final segments = closed ? n : n - 1;
+  for (var i = 0; i < segments; i++) {
+    final p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
+    double knot(Offset a, Offset b) =>
+        math.max(1e-6, math.sqrt((b - a).distance));
+    final d0 = knot(p0, p1), d1 = knot(p1, p2), d2 = knot(p2, p3);
+    // Tangents at p1 and p2 (Barry–Goldman form for non-uniform knots).
+    final m1 = ((p1 - p0) / d0 - (p2 - p0) / (d0 + d1) + (p2 - p1) / d1) * d1;
+    final m2 = ((p2 - p1) / d1 - (p3 - p1) / (d1 + d2) + (p3 - p2) / d2) * d1;
+    final c1 = p1 + m1 / 3, c2 = p2 - m2 / 3;
+    path.cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, p2.dx, p2.dy);
+  }
+  if (closed) path.close();
+  return path;
 }
