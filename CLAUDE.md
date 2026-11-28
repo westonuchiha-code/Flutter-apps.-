@@ -310,3 +310,10 @@ Never require steps that need a desktop (environment approval cards,
 local IDEs, Windows machines). Verify through this container (analyze, test,
 Linux build) and GitHub Actions (Android + Windows builds). Make test builds
 easy to install from a phone.
+
+Don't tell the owner that something hasn't been tested on a device or
+computer: they know, and they test when they can (owner's request). Don't
+push APK links or install steps at them in every message either. When
+something truly needs their testing, ask "are you at your computer?" (or
+near the device); they say when they will be, and you set a reminder
+(send_later) and bring it up then.
