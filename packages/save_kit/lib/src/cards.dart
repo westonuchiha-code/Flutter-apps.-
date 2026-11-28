@@ -134,6 +134,21 @@ abstract final class MemoryCards {
     Set<String> seen,
     List<MemoryCard> out,
   ) {
+    // Android 11+ refuses even a look into another app's private folder
+    // (Android/data/...): such a folder is skipped, never the whole scan.
+    try {
+      _walkIn(dir, level, seen, out);
+    } on FileSystemException {
+      return;
+    }
+  }
+
+  static void _walkIn(
+    String dir,
+    int level,
+    Set<String> seen,
+    List<MemoryCard> out,
+  ) {
     final d = Directory(dir);
     if (level > depth || !d.existsSync() || !seen.add(dir.toLowerCase())) {
       return;

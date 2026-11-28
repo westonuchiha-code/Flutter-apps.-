@@ -134,10 +134,21 @@ abstract final class CardFolders {
     final seen = <String>{};
     for (final d in [...known(platform, at), ...added]) {
       final key = p.normalize(d).toLowerCase();
-      if (d.isNotEmpty && Directory(d).existsSync() && seen.add(key)) {
+      if (d.isNotEmpty && _exists(d) && seen.add(key)) {
         out.add(d);
       }
     }
     return out;
+  }
+}
+
+/// Whether [dir] is there. Android 11+ answers a look into another app's
+/// private folder (Android/data/...) with "permission denied" rather than
+/// no: that counts as not there, so one refused folder can't stop the rest.
+bool _exists(String dir) {
+  try {
+    return Directory(dir).existsSync();
+  } on FileSystemException {
+    return false;
   }
 }

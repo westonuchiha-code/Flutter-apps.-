@@ -302,7 +302,12 @@ class _SaveManagerHomeState extends State<SaveManagerHome>
                     FilledButton(
                       autofocus: true,
                       onPressed: () {
-                        setState(() => _error = null);
+                        // _access back to "not checked", so the check goes
+                        // on to start the screen again
+                        setState(() {
+                          _error = null;
+                          _access = null;
+                        });
                         unawaited(_checkAccess());
                       },
                       child: const Text('Try again'),
