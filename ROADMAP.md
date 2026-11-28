@@ -176,6 +176,19 @@ Status key: ⬜ not started · 🔨 in progress · ✅ done · ⏸ on hold
        Retroid buttons as the controller, My Files folder names) ✅, first
        Android build and a try on the Retroid ⬜, the XMB's TV item ⬜.
 
+## Proposed · real controllers on the PC (owner's idea, 2026-11-28)
+
+- ⬜ **Controller Lab** (PC): use original controllers through adapters (N64, Saturn standard + 3D
+  pad, Genesis 3/6-button, PS1/PS2 incl. odd pads, GameCube, Wii Remote + Nunchuk/Classic for
+  Wii games, Dreamcast **with the real VMU** if DreamPicoPort/Flycast allow, else skip Dreamcast)
+  plus modern pads (Wii U Pro, PS5 DualSense wireless detected as a PS5 pad, PS3 DualShock 3
+  wireless, Xbox 360). Detect, test (drawn controllers), map with each console's own button names,
+  export per-emulator profiles; each retro pad set up for its own console, modern pads for every
+  console. The PC XMB loads the mappings and uses the held controller's profile when starting a
+  game (a PC-side change, asked for in Cross-Save). Wii U GamePad: not possible without a Wii U.
+- ⬜ **Later (note):** the XMB should support custom controllers and arcade sticks / fight pads
+  (owner plans to buy a good arcade stick).
+
 ## On hold · needs AI (voices or a language model)
 
 The owner won't pay a per-minute voice or AI service. These wait until voices can
